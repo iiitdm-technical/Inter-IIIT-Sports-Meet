@@ -90,6 +90,8 @@ export default function LoginPage() {
             className="font-bold text-3xl leading-tight mb-4"
             style={{ color: "#ffffff" }}
           >
+            All India
+            <br />
             Inter-IIIT
             <br />
             Sports Meet
@@ -118,7 +120,7 @@ export default function LoginPage() {
           className="relative z-10 text-xs"
           style={{ color: "rgba(10,33,18,0.6)" }}
         >
-          © 2026 Inter-IIIT Sports Meet
+          © 2026 All India Inter-IIIT Sports Meet
         </div>
 
         <div style={{ flexGrow: 2 }} />

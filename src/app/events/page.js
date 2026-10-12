@@ -407,7 +407,7 @@ export default function Events() {
 
           <div className="block">
             <span className="text-xs font-bold tracking-widest uppercase text-[#0a2112]">
-              9th Inter-IIIT Sports Meet · 2026
+              9th All India Inter-IIIT Sports Meet · 2026
             </span>
           </div>
 

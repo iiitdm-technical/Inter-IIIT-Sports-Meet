@@ -14,7 +14,7 @@ export default function Footer() {
                 <Image src="/assets/brand/inter-iiit-logo.png" alt="Logo" fill className="object-contain p-1" />
               </div>
               <div>
-                <div className="font-black text-base text-white tracking-wide">INTER IIIT</div>
+                <div className="font-black text-base text-white tracking-wide">ALL INDIA INTER-IIIT</div>
                 <div className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: '#c9972f' }}>Sports Meet 2026</div>
               </div>
             </div>
@@ -58,7 +58,7 @@ export default function Footer() {
               </div>
               <a href="mailto:sports@iiitdm.ac.in" className="text-sm transition-colors hover:text-white"
                 style={{ color: 'rgba(255,255,255,0.5)' }}
-                aria-label="Email the Inter-IIIT Sports Meet organising team">
+                aria-label="Email the All India Inter-IIIT Sports Meet organising team">
                 sports@iiitdm.ac.in
               </a>
             </div>
@@ -74,7 +74,7 @@ export default function Footer() {
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-3"
           style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            © 2026 Inter-IIIT Sports Meet. All rights reserved.
+            © 2026 All India Inter-IIIT Sports Meet. All rights reserved.
           </p>
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Hosted by {eventInfo.host}

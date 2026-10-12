@@ -379,7 +379,7 @@ export default function Location() {
             </span>
             <h3 className="mt-1 font-black text-2xl">Need Local Travel Coordination?</h3>
             <p className="mt-2 text-sm max-w-xl leading-relaxed text-white/70">
-              Student volunteer transport marshals will coordinate assistance at Tambaram Railway Station and Kilambakkam Bus Terminus during peak arrival hours for the 9th Inter-IIIT Meet.
+              Student volunteer transport marshals will coordinate assistance at Tambaram Railway Station and Kilambakkam Bus Terminus during peak arrival hours for the 9th All India Inter-IIIT Sports Meet.
             </p>
           </div>
 

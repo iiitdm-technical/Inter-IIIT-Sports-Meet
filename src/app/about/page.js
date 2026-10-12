@@ -240,7 +240,7 @@ export default function About() {
                 Beyond the Field: <br />Two Great Traditions
               </h2>
               <p className="text-sm sm:text-base leading-relaxed text-white/75 mb-6">
-                The Inter-IIIT Sports Meet celebrates athletics across the entire community through two distinct meets: the <strong>Students&apos; Sports Meet</strong> and the <strong>Employees&apos; Sports Meet</strong>.
+                The All India Inter-IIIT Sports Meet celebrates athletics across the entire community through two distinct meets: the <strong>Students&apos; Sports Meet</strong> and the <strong>Employees&apos; Sports Meet</strong>.
               </p>
               <p className="text-sm leading-relaxed text-white/60">
                 While student-athletes contend for inter-collegiate championship glory, faculty and staff from participating IIITs compete in friendly matches that reinforce collegial bonds and institution-wide fitness.

@@ -172,7 +172,7 @@ export default function Home() {
           {/* Hero logo centered in green panel */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="relative w-52 h-52 opacity-85 transition-transform duration-700 hover:scale-105">
-              <Image src="/assets/brand/inter-iiit-logo.png" alt="Inter-IIIT Logo" fill className="object-contain drop-shadow-2xl" />
+              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill className="object-contain drop-shadow-2xl" />
             </div>
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function Home() {
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
                 {eventInfo.host}
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
-                9th Inter-IIIT Sports Meet
+                9th All India Inter-IIIT Sports Meet
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
                 20+ Participating Institutes
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
@@ -367,7 +367,7 @@ export default function Home() {
                 {eventInfo.description}
               </p>
               <p className="mt-4 text-base leading-relaxed text-gray-700">
-                Organized every four years, the Inter-IIIT Meet serves as the flagship arena for student-athletes to demonstrate teamwork, athletic excellence, and sportsmanship. The 9th edition celebrates this tradition at IIITDM Kancheepuram.
+                Organized every four years, the All India Inter-IIIT Sports Meet serves as the flagship arena for student-athletes to demonstrate teamwork, athletic excellence, and sportsmanship. The 9th edition celebrates this tradition at IIITDM Kancheepuram.
               </p>
               <Link href="/about"
                 className="inline-flex items-center gap-2 mt-8 font-bold text-sm group transition-all"
@@ -526,11 +526,11 @@ export default function Home() {
             ))}
           </div>
           <div className="mt-12 text-center">
-            <p className="text-sm mb-4 text-gray-600">Interested in supporting the 9th Inter-IIIT Sports Meet?</p>
+            <p className="text-sm mb-4 text-gray-600">Interested in supporting the 9th All India Inter-IIIT Sports Meet?</p>
             <a href="mailto:sports@iiitdm.ac.in"
               className="dark-surface inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5 shadow-sm"
               style={{ background: '#1b5e20', color: '#fff' }}
-              aria-label="Email the Inter-IIIT Sports Meet organising team">
+              aria-label="Email the All India Inter-IIIT Sports Meet organising team">
               Contact us &rarr; sports@iiitdm.ac.in
             </a>
           </div>

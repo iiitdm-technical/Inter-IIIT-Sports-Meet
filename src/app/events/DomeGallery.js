@@ -678,7 +678,7 @@ export default function DomeGallery({
             {/* Content info */}
             <div className="p-6 pt-2 bg-[#1C2E24]">
               <span className="text-[10px] font-bold tracking-[0.25em] text-[#f5c518] uppercase">
-                Inter-IIIT 2026 Event
+                All India Inter-IIIT Sports Meet 2026
               </span>
               <h3
                 className="text-2xl sm:text-3xl font-black uppercase tracking-wide mt-1"
@@ -687,7 +687,7 @@ export default function DomeGallery({
                 {zoomedItem.text}
               </h3>
               <p className="mt-3 text-xs sm:text-sm text-white/75 leading-relaxed font-light">
-                Official competitive event of the 9th Inter-IIIT Sports Meet at IIITDM Kancheepuram. Click outside or press Esc to return.
+                Official competitive event of the 9th All India Inter-IIIT Sports Meet at IIITDM Kancheepuram. Click outside or press Esc to return.
               </p>
             </div>
           </div>

@@ -93,7 +93,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#c9972f] block">9th Inter-IIIT Sports Meet</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#c9972f] block">9th All India Inter-IIIT Sports Meet</span>
               <span className="font-bold text-white text-lg">{registration.iiitName}</span>
             </div>
           </div>

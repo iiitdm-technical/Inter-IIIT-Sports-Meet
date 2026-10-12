@@ -34,7 +34,7 @@ export default function Contact() {
             <a href="mailto:sports@iiitdm.ac.in"
               className="text-sm font-bold transition-colors hover:underline"
               style={{ color: '#1b5e20' }}
-              aria-label="Email the Inter-IIIT Sports Meet organising team">
+              aria-label="Email the All India Inter-IIIT Sports Meet organising team">
               sports@iiitdm.ac.in
             </a>
           </div>
@@ -72,7 +72,7 @@ export default function Contact() {
           <a href="mailto:sports@iiitdm.ac.in"
             className="yellow-button inline-flex items-center gap-2 px-7 py-3 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5"
             style={{ background: '#f5c518', color: '#0a2112' }}
-            aria-label="Email the Inter-IIIT Sports Meet organising team about sponsorship">
+            aria-label="Email the All India Inter-IIIT Sports Meet organising team about sponsorship">
             sports@iiitdm.ac.in
           </a>
         </div>
