@@ -404,19 +404,6 @@ export default function Events() {
         />
 
         <div className="relative max-w-10xl mx-auto z-20 px-4 sm:px-6 lg:px-8">
-          {/* Square Sticky Note Patch Tag */}
-          <div
-            className="relative inline-flex flex-col items-center justify-center w-24 h-24 -rotate-3 select-none mb-6 shadow-[4px_4px_14px_rgba(0,0,0,0.45)] hover:rotate-0 hover:scale-105 transition-all duration-300 ease-out cursor-default"
-            style={{ background: '#3d5a06ff' }}
-          >
-            {/* Tape strip at top */}
-            <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 w-10 h-4 bg-[#b8952b]/50 backdrop-blur-[1px] rotate-1 border border-[#F2D16D]/60 shadow-sm z-10" />
-            <span className="text-[10px] font-black tracking-widest uppercase text-[#b8952b] text-center leading-snug px-2">
-              EXPLORE<br />
-              <span className="text-2xl font-black leading-none">{sports.length}</span><br />
-              EVENTS
-            </span>
-          </div>
 
           <div className="block">
             <span className="text-xs font-bold tracking-widest uppercase text-[#0a2112]">

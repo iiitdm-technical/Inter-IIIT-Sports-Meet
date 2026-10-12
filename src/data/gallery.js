@@ -1,5 +1,5 @@
 export const gallery = [
-  "/assets/gallery/gallery-01.jpg",
+  "/assets/campus/sports-team.webp",
   "/assets/gallery/gallery-02.jpg",
   "/assets/gallery/gallery-03.jpg",
   "/assets/gallery/gallery-04.jpg",

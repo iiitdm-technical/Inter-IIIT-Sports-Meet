@@ -73,7 +73,7 @@ export default function About() {
           </h1>
           <div className="page-rule mt-3 w-12 h-1 rounded-full" />
           <p className="mt-4 text-base sm:text-lg max-w-2xl leading-relaxed" style={{ color: 'rgba(10,33,18,0.78)' }}>
-            The flagship national sports gathering uniting 25+ Indian Institutes of Information Technology, hosted at IIITDM Kancheepuram.
+            The flagship national sports gathering uniting 20+ Indian Institutes of Information Technology, hosted at IIITDM Kancheepuram.
           </p>
         </div>
       </section>
@@ -111,10 +111,10 @@ export default function About() {
           {/* Editorial Photography (Natural, no green filter) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="info-card relative h-64 sm:h-80 rounded-2xl overflow-hidden shadow-md">
-              <Image src="/assets/gallery/gallery-04.jpg" alt="Athletic Relay" fill className="object-cover transition-transform duration-500 hover:scale-105" />
+              <Image src="/assets/campus/indoor-court.webp" alt="Basketball at the indoor sports complex" fill className="object-cover transition-transform duration-500 hover:scale-105" />
             </div>
             <div className="info-card relative h-64 sm:h-80 rounded-2xl overflow-hidden shadow-md mt-6">
-              <Image src="/assets/gallery/gallery-05.jpg" alt="Opening Ceremony" fill className="object-cover transition-transform duration-500 hover:scale-105" />
+              <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill className="object-cover transition-transform duration-500 hover:scale-105" />
             </div>
           </div>
         </div>
@@ -135,7 +135,6 @@ export default function About() {
               </h2>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold mb-5"
                 style={{ background: 'rgba(10,33,18,0.06)', color: '#0a2112' }}>
-                <span>🏛️</span>
                 <span>{hostInstitute.status} &bull; Estd. {hostInstitute.established}</span>
               </div>
               <p className="text-base leading-relaxed mb-4" style={{ color: '#3a3a3a' }}>
@@ -199,28 +198,33 @@ export default function About() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sportsFacilities.map((facility, idx) => (
-              <div
-                key={idx}
-                className="facility-card rounded-2xl p-7 border transition-all duration-300 hover:shadow-md flex flex-col justify-between"
-                style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.14)' }}
+              <article
+                key={facility.name}
+                className="facility-card group overflow-hidden rounded-2xl border flex flex-col"
+                style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}
               >
-                <div>
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-5" style={{ background: '#0a2112' }}>
-                    <span className="text-lg">
-                      {idx === 0 ? '🏟️' : idx === 1 ? '🏀' : idx === 2 ? '🎾' : idx === 3 ? '🏊' : '🏏'}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-base mb-2" style={{ color: '#0a2112' }}>
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-stone-100">
+                  <Image
+                    src={facility.image}
+                    alt={facility.name}
+                    fill
+                    sizes="(max-width: 768px) calc(100vw - 32px), (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-[1.03]"
+                    style={{ objectPosition: facility.name === 'Swimming Pool' ? 'center 75%' : 'center' }}
+                  />
+                </div>
+                <div className="flex flex-1 flex-col p-6">
+                  <h3 className="font-bold text-lg leading-snug mb-3" style={{ color: '#0a2112' }}>
                     {facility.name}
                   </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: '#555' }}>
+                  <p className="text-sm leading-relaxed flex-1" style={{ color: '#555' }}>
                     {facility.desc}
                   </p>
+                  <div className="mt-5 pt-4 border-t text-xs font-semibold" style={{ borderColor: 'rgba(27,94,32,0.08)', color: '#1b5e20' }}>
+                    IIITDM Kancheepuram
+                  </div>
                 </div>
-                <div className="mt-6 pt-3 border-t text-[11px] font-semibold" style={{ borderColor: 'rgba(0,0,0,0.06)', color: '#1b5e20' }}>
-                  Sanctioned Championship Venue
-                </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
@@ -244,7 +248,7 @@ export default function About() {
             </div>
 
             <div className="relative min-h-[300px] md:min-h-0">
-              <Image src="/assets/gallery/gallery-06.jpg" alt="Athletic spirit" fill className="object-cover opacity-60" />
+              <Image src="/assets/campus/badminton.webp" alt="Badminton at IIITDM Kancheepuram" fill className="object-cover opacity-60" />
             </div>
           </div>
         </div>
@@ -259,7 +263,7 @@ export default function About() {
               Contingent Accommodation &amp; Care
             </h3>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: '#444' }}>
-              Visiting teams from all 25+ IIITs are accommodated in on-campus student hostels with dedicated dining arrangements serving regional dietary preferences. A 24/7 campus health center, first-aid teams, and local transport assistance marshals ensure a secure and organized tournament experience.
+              Visiting teams from 20+ IIITs are accommodated in on-campus student hostels with dedicated dining arrangements serving regional dietary preferences. A 24/7 campus health center, first-aid teams, and local transport assistance marshals ensure a secure and organized tournament experience.
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
               <Link

@@ -19,7 +19,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              Celebrating unity, sportsmanship and excellence across 25 Indian Institutes of Information Technology.
+              Celebrating unity, sportsmanship and excellence across 20+ Indian Institutes of Information Technology.
             </p>
             <div className="mt-5 text-sm font-semibold" style={{ color: '#f5c518' }}>
               {eventInfo.dates}

@@ -33,7 +33,7 @@ const eventStructuredData = {
 };
 
 const homeGallery = [
-  { src: '/assets/gallery/gallery-01.jpg', alt: 'Athletes competing on the track' },
+  { src: '/assets/campus/sports-team.webp', alt: 'IIITDM athletes with their championship trophies' },
   { src: '/assets/gallery/gallery-02.jpg', alt: 'Students celebrating together' },
   { src: '/assets/gallery/gallery-03.jpg', alt: 'Team sports in action' },
   { src: '/assets/gallery/gallery-04.jpg', alt: 'Relay competition' },
@@ -167,7 +167,7 @@ export default function Home() {
         <div className="dark-surface absolute right-0 top-0 h-full w-[45%] hidden md:block"
           style={{ background: '#0d3b1a', clipPath: 'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)' }}>
           <div className="absolute inset-0 opacity-30">
-            <Image src="/assets/hero/hero-placeholder.png" alt="" fill className="object-cover" />
+            <Image src="/assets/campus/sports-complex.webp" alt="" fill className="object-cover" />
           </div>
           {/* Hero logo centered in green panel */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -195,6 +195,7 @@ export default function Home() {
             {/* Main Title */}
             <h1 className="animate-fadeUp animation-delay-100 font-black leading-[1.0] tracking-tight mb-5"
               style={{ fontSize: 'clamp(2.8rem, 7vw, 5.5rem)', color: '#0a2112' }}>
+              <span className="block text-[0.5em] tracking-[0.08em] mb-2">ALL INDIA</span>
               INTER-IIIT<br />
               <span style={{ color: '#1b5e20' }}>SPORTS</span><br />
               <span style={{ color: '#1b5e20' }}>MEET</span>
@@ -264,7 +265,7 @@ export default function Home() {
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
                 9th Inter-IIIT Sports Meet
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
-                25 Participating Institutes
+                20+ Participating Institutes
                 <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
               </span>
             ))}
@@ -309,7 +310,7 @@ export default function Home() {
                 National Scale
               </div>
               <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                25 IIITs Nationwide
+                20+ IIITs Nationwide
               </div>
               <div className="text-xs text-gray-600">
                 Over 2,000 student-athletes and staff delegations participating.
@@ -379,7 +380,7 @@ export default function Home() {
               <div className="absolute -bottom-4 -right-4 w-full h-full rounded-2xl"
                 style={{ background: '#f5c518', opacity: 0.25 }} />
               <div className="relative w-full h-[260px] sm:h-[380px] rounded-2xl overflow-hidden shadow-lg">
-                <Image src="/assets/gallery/gallery-01.jpg" alt="Athletic championship meet" fill className="object-cover" />
+                <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill className="object-cover" />
               </div>
             </div>
           </div>
@@ -392,7 +393,6 @@ export default function Home() {
           style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
           <div className="max-w-2xl">
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#c9972f' }}>
-              <span>🏛️</span>
               <span>Host Institute Spotlight</span>
             </div>
             <h3 className="font-black text-2xl sm:text-3xl mb-3" style={{ color: '#0a2112' }}>
@@ -402,9 +402,9 @@ export default function Home() {
               An Institute of National Importance under the Ministry of Education, Government of India. Set across a 51-acre green campus in Melakottaiyur, Chennai, the institute features an athletic stadium, indoor sports complex, competition swimming pool, and floodlit courts ready to host visiting delegations.
             </p>
             <div className="flex flex-wrap gap-4 text-xs font-semibold text-emerald-900">
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">✓ 51-Acre Eco Campus</span>
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">✓ Comprehensive Sports Arenas</span>
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">✓ 21 km from Chennai Airport</span>
+              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">51-Acre Eco Campus</span>
+              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">Comprehensive Sports Arenas</span>
+              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">21 km from Chennai Airport</span>
             </div>
           </div>
 
@@ -432,15 +432,21 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>Participating Institutes</span>
-            <h2 className="mt-3 font-black text-3xl sm:text-4xl" style={{ color: '#0a2112' }}>25 IIITs &bull; 1 Champion</h2>
+            <h2 className="mt-3 font-black text-3xl sm:text-4xl" style={{ color: '#0a2112' }}>20+ IIITs &bull; 1 Champion</h2>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {iiits.map((iiit, idx) => (
               <div key={idx}
                 className="group flex flex-col items-center text-center p-3 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md cursor-default"
                 style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
                 <div className="relative w-12 h-12 mb-2">
-                  <Image src={iiit.logo} alt={iiit.name} fill className="object-contain" />
+                  <Image
+                    src={iiit.logo}
+                    alt={iiit.name}
+                    fill
+                    sizes="48px"
+                    className="object-contain"
+                  />
                 </div>
                 <span className="text-[10px] font-semibold leading-tight text-gray-700">
                   {iiit.name}
@@ -466,7 +472,7 @@ export default function Home() {
             </div> */}
             <h2 className="font-black text-white text-3xl md:text-4xl leading-tight mb-3">Students&apos; <br />Sports Meet</h2>
             <p className="text-sm leading-relaxed max-w-sm text-white/75">
-              2,000+ student-athletes from 25 IIITs competing across 15+ disciplines over 5 championship days.
+              2,000+ student-athletes from 20+ IIITs competing across 15+ disciplines over 5 championship days.
             </p>
           </div>
         </div>

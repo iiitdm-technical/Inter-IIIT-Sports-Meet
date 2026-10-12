@@ -29,11 +29,6 @@ export default function Contact() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Email */}
           <div className="rounded-2xl p-8 border" style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.15)' }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-5" style={{ background: '#0a2112' }}>
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
             <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2" style={{ color: '#c9972f' }}>Email</div>
             <h3 className="font-bold text-base mb-3" style={{ color: '#0a2112' }}>Drop us a message</h3>
             <a href="mailto:sports@iiitdm.ac.in"
@@ -46,12 +41,6 @@ export default function Contact() {
 
           {/* Address */}
           <div className="rounded-2xl p-8 border" style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.15)' }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-5" style={{ background: '#0a2112' }}>
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
             <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2" style={{ color: '#c9972f' }}>Venue</div>
             <h3 className="font-bold text-base mb-3" style={{ color: '#0a2112' }}>Host Institute</h3>
             <p className="text-sm font-semibold" style={{ color: '#333' }}>
@@ -65,11 +54,6 @@ export default function Contact() {
 
           {/* Dates */}
           <div className="rounded-2xl p-8 border" style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.15)' }}>
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-5" style={{ background: '#0a2112' }}>
-              <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
             <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2" style={{ color: '#c9972f' }}>Dates</div>
             <h3 className="font-bold text-base mb-3" style={{ color: '#0a2112' }}>Event Schedule</h3>
             <p className="text-sm font-bold" style={{ color: '#1b5e20' }}>
