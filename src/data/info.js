@@ -1,15 +1,15 @@
 export const eventInfo = {
   name: "9th All India Inter-IIIT Sports Meet",
-  shortName: "Inter-IIIT Sports Meet 2026",
+  shortName: "All India Inter-IIIT Sports Meet 2026",
   host: "IIITDM Kancheepuram",
   dates: "19 December to 23 December 2026",
   stats: [
     { label: "Student-Athletes", value: "2,000+" },
-    { label: "Participating IIITs", value: "25+" },
+    { label: "Participating IIITs", value: "20+" },
     { label: "Sporting Disciplines", value: "15+" },
     { label: "Expected Footfall", value: "5,000+" }
   ],
-  description: "Inter IIIT, hosted once every four years, serves as a paramount display of unity and competition among the 25 government-funded IIITs spread across the nation. This year marks the exciting transition to the 9th edition hosted by IIITDM Kancheepuram.",
+  description: "The All India Inter-IIIT Sports Meet, hosted once every four years, serves as a paramount display of unity and competition among 20+ government-funded IIITs spread across the nation. This year marks the exciting transition to the 9th edition hosted by IIITDM Kancheepuram.",
   location: {
     institute: "Indian Institute of Information Technology, Design and Manufacturing (IIITDM) Kancheepuram",
     address: "Melakottaiyur, Off Vandalur-Kelambakkam Road, Chennai 600127, Tamil Nadu, India",
@@ -54,11 +54,11 @@ export const eventInfo = {
     description: "An Institute of National Importance established by the Government of India, IIITDM Kancheepuram is dedicated to design and manufacturing education and research. Alongside academic excellence, the campus supports an active sporting culture with modern outdoor grounds and indoor sports arenas."
   },
   sportsFacilities: [
-    { name: "Athletic Ground & Football Field", desc: "Standard running track and multi-purpose sports ground for field events and football matches." },
-    { name: "Indoor Sports Complex", desc: "Multi-court facility equipped for badminton, table tennis, and basketball." },
-    { name: "Outdoor Floodlit Courts", desc: "Hard courts for tennis and volleyball supporting day and evening fixtures." },
-    { name: "Swimming Pool", desc: "Campus aquatics facility hosting competitive swimming events." },
-    { name: "Cricket Arena & Practice Nets", desc: "Turf pitch for cricket matches alongside dedicated net practice bays." }
+    { name: "Athletic Ground & Football Field", image: "/assets/campus/football.webp", desc: "Standard running track and multi-purpose sports ground for field events and football matches." },
+    { name: "Indoor Sports Complex", image: "/assets/campus/indoor-court.webp", desc: "Multi-court facility equipped for badminton, table tennis, and basketball." },
+    { name: "Outdoor Floodlit Courts", image: "/assets/campus/volleyball.webp", desc: "Hard courts for tennis and volleyball supporting day and evening fixtures." },
+    { name: "Swimming Pool", image: "/assets/events/aquatics.jpeg", desc: "Campus aquatics facility hosting competitive swimming events." },
+    { name: "Cricket Arena & Practice Nets", image: "/assets/events/cricket.jpg", desc: "Turf pitch for cricket matches alongside dedicated net practice bays." }
   ]
 };
 

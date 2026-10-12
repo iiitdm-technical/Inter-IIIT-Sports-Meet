@@ -287,7 +287,19 @@ export default function CircularGallery({
         ctx.clip();
 
         if (img && img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, dX, dY, dW, dH);
+          // Fill the card without stretching the original photograph.
+          const imageRatio = img.naturalWidth / img.naturalHeight;
+          const cardRatio = dW / dH;
+          const sourceWidth = imageRatio > cardRatio ? img.naturalHeight * cardRatio : img.naturalWidth;
+          const sourceHeight = imageRatio > cardRatio ? img.naturalHeight : img.naturalWidth / cardRatio;
+          ctx.drawImage(
+            img,
+            (img.naturalWidth - sourceWidth) / 2,
+            (img.naturalHeight - sourceHeight) / 2,
+            sourceWidth,
+            sourceHeight,
+            dX, dY, dW, dH
+          );
         } else {
           // Placeholder gradient
           const pg = ctx.createLinearGradient(dX, dY, dX, dY + dH);
@@ -298,28 +310,18 @@ export default function CircularGallery({
         }
 
         // Bottom gradient overlay for readability
-        const scrim = ctx.createLinearGradient(dX, dY + dH * 0.45, dX, dY + dH);
+        const scrim = ctx.createLinearGradient(dX, dY + dH * 0.58, dX, dY + dH);
         scrim.addColorStop(0, 'rgba(0,0,0,0)');
-        scrim.addColorStop(1, 'rgba(10,25,18,0.92)');
+        scrim.addColorStop(1, 'rgba(10,25,18,0.86)');
         ctx.fillStyle = scrim;
         ctx.fillRect(dX, dY, dW, dH);
 
         ctx.restore();
 
-        // Gold accent bottom underline
-        if (finalScale > 0.45) {
-          const lineAlpha = Math.min(1, (finalScale - 0.45) / 0.3);
-          ctx.save();
-          ctx.globalAlpha = lineAlpha * 0.9;
-          ctx.fillStyle = '#f5c518';
-          ctx.fillRect(dX + dW * 0.08, dY + dH - 4 * finalScale, dW * 0.32 * finalScale, 2 * finalScale);
-          ctx.restore();
-        }
-
         // Card sport title (fades as focus transfers up to Top Title Display)
         if (finalScale > 0.28) {
           const baseAlpha = Math.min(1, (finalScale - 0.28) / 0.22);
-          const cardLabelAlpha = baseAlpha * Math.max(0.18, 1 - easeCenter * 0.82);
+          const cardLabelAlpha = baseAlpha;
           const scaledSize = Math.max(9, Math.round(baseFontSize * finalScale * 0.82));
           const fontName = font.includes('Cinzel') ? "'Cinzel Decorative', 'Cinzel', serif" : font;
 
@@ -331,7 +333,7 @@ export default function CircularGallery({
           ctx.textBaseline = 'bottom';
           ctx.shadowColor = 'rgba(0,0,0,0.95)';
           ctx.shadowBlur = 8 * finalScale;
-          ctx.fillText(item.text.toUpperCase(), screenCX, dY + dH - 10 * finalScale);
+          ctx.fillText(item.text.toUpperCase(), screenCX, dY + dH - 20 * finalScale);
           ctx.restore();
         }
       }
@@ -565,7 +567,7 @@ export default function CircularGallery({
           onClick={handlePrev}
           type="button"
           aria-label="Previous sport"
-          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
+          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -577,7 +579,7 @@ export default function CircularGallery({
           onClick={handleNext}
           type="button"
           aria-label="Next sport"
-          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
+          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -641,7 +643,7 @@ export default function CircularGallery({
             {/* Content info */}
             <div className="p-6 pt-2 bg-[#1C2E24]">
               <span className="text-[10px] font-bold tracking-[0.25em] text-[#f5c518] uppercase">
-                Inter-IIIT 2026 Event
+                All India Inter-IIIT Sports Meet 2026
               </span>
               <h3
                 className="text-2xl sm:text-3xl font-black uppercase tracking-wide mt-1"
@@ -650,7 +652,7 @@ export default function CircularGallery({
                 {zoomedItem.text}
               </h3>
               <p className="mt-3 text-xs sm:text-sm text-white/75 leading-relaxed font-light">
-                Official competitive event of the 9th Inter-IIIT Sports Meet at IIITDM Kancheepuram. Click outside or press Esc to return.
+                Official competitive event of the 9th All India Inter-IIIT Sports Meet at IIITDM Kancheepuram. Click outside or press Esc to return.
               </p>
             </div>
           </div>
