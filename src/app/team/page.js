@@ -69,36 +69,6 @@ const teamSections = [
         image: "/assets/team/Sports Affairs Joint Secretary(Girls)_Parinitha S.jpeg"
       }
     ]
-  },
-
-  {
-    title: "CS Club",
-    members: [
-      {
-        name: "Dhanya Venkatesh",
-        role: "Head Core",
-        initial: "D",
-        image: "/assets/team/Dhanya Venkatesh_CS Club Head Core.jpeg"
-      },
-      {
-        name: "Path Pandey",
-        role: "Tech Lead",
-        initial: "P",
-        image: "/assets/team/Parth Pandey_CS Club Tech Lead.jpeg"
-      },
-      {
-        name: "Lankalapalli Guna",
-        role: "Core",
-        initial: "L",
-        image: "/assets/team/Lankalapalli Guna_CS Club Software Wing Core.jpeg"
-      },
-      {
-        name: "Ambadas Rautrao",
-        role: "Core",
-        initial: "A",
-        image: "/assets/team/Ambadas Rautrao_CS Club Software Wing Core.jpeg"
-      }
-    ]
   }
 ];
 
