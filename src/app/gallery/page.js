@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import Image from 'next/image';
 import { gallery } from '@/data/gallery';
 import Link from 'next/link';
@@ -9,17 +10,7 @@ export default function Gallery() {
   return (
     <div style={{ background: '#faf6ee', minHeight: '100vh' }}>
       {/* Page header */}
-      <div className="py-16 px-4" style={{ background: '#f0d574' }}>
-        <div className="max-w-7xl mx-auto">
-          <span className="text-xs font-black tracking-[0.25em] uppercase" style={{ color: '#000000' }}>
-            Glimpses of Glory
-          </span>
-          <h1 className="mt-3 font-black" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', color: '#0a2112' }}>
-            Gallery
-          </h1>
-          <div className="mt-3 w-12 h-1 rounded-full" style={{ background: '#070706' }} />
-        </div>
-      </div>
+      <PageHeader title="Gallery" label="Relive" badgeLabel="The Moments" description="Glimpses of the competition, celebrations, and sportsmanship that bring our institutes together." />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         {/* Featured image */}

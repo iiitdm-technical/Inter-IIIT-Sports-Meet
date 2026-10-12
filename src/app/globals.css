@@ -67,27 +67,32 @@ body {
   color: var(--color-brand-dark) !important;
 }
 
-.green-page-header {
-  background: var(--color-brand-dark);
-  color: #fff;
+.page-header {
+  position: relative;
+  padding: 40px 0;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(24, 91, 29, 0.2);
+  background: linear-gradient(120deg, #f2d16d 0%, #f5d879 50%, #f2d16d 100%);
+  background-size: 200% 200%;
+  color: #122819;
+  transform-origin: 50% 0%;
+  will-change: transform, opacity;
+  animation: headerGradient 12s ease-in-out infinite;
 }
-
-.green-page-header .page-eyebrow {
-  color: var(--color-brand-highlight) !important;
-}
-
-.green-page-header h1 {
-  color: #fff !important;
-}
-
-.green-page-header p,
-.green-page-header strong {
-  color: rgba(255, 255, 255, 0.82) !important;
-}
-
-.green-page-header .page-rule {
-  background: var(--color-brand-highlight) !important;
-}
+.page-header__particles { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.page-header__content { position: relative; max-width: 1280px; margin: auto; padding: 0 32px; animation: fadeUp 0.7s ease both; }
+.page-header__badge { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 96px; min-height: 96px; padding: 12px 8px; margin-bottom: 24px; background: #3d5a06; color: #e6c453; transform: rotate(-3deg); box-shadow: 4px 4px 14px rgba(0,0,0,0.35); font-size: 10px; font-weight: 900; text-align: center; text-transform: uppercase; letter-spacing: 0.1em; transition: transform 0.3s ease; }
+.page-header__badge:hover { transform: rotate(0deg); }
+.page-header__badge strong { font-size: 24px; line-height: 1.1; }
+.page-header__tape { position: absolute; top: -10px; left: 50%; width: 40px; height: 16px; transform: translateX(-50%) rotate(1deg); background: rgba(184,149,43,0.5); border: 1px solid rgba(242,209,109,0.6); }
+.page-header__eyebrow { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; }
+.page-header__title { margin-top: 20px; font-family: 'Montserrat', var(--font-sans); font-size: clamp(2.25rem, 5.5vw, 4.5rem); font-weight: 800; line-height: 1.08; letter-spacing: -0.04em; text-transform: uppercase; text-shadow: 0 2px 8px rgba(255,179,0,0.75); overflow-wrap: anywhere; }
+.page-header__rule { margin-top: 20px; width: 56px; height: 4px; border-radius: 999px; background: #185b1d; }
+.page-header__description { margin-top: 20px; max-width: 720px; color: #093d0c; font-size: clamp(0.95rem, 1.6vw, 1.125rem); line-height: 1.65; }
+.page-header__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 24px; }
+@keyframes headerGradient { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@media (max-width: 640px) { .page-header { padding: 32px 0; } .page-header__content { padding: 0 20px; } }
+@media (prefers-reduced-motion: reduce) { .page-header, .page-header__content { animation: none; } .page-header { transform: none !important; opacity: 1 !important; } }
 
 button,
 input,

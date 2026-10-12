@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { eventInfo } from '@/data/info';
 import Link from 'next/link';
 
@@ -5,20 +6,7 @@ export default function Contact() {
   return (
     <div style={{ background: '#faf6ee', minHeight: '100vh' }}>
       {/* Page header */}
-      <div className="green-page-header py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <span className="page-eyebrow text-xs font-black tracking-[0.25em] uppercase">
-            Get In Touch
-          </span>
-          <h1 className="mt-3 font-black" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', color: '#0a2112' }}>
-            Contact Us
-          </h1>
-          <div className="page-rule mt-3 w-12 h-1 rounded-full" />
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/80">
-            Reach the organising team for event enquiries, travel support, registration assistance, and sponsorship opportunities.
-          </p>
-        </div>
-      </div>
+      <PageHeader title="Contact Us" label="Connect" badgeLabel="With Us" description="Reach the organising team for event enquiries, travel support, registration assistance, and sponsorship opportunities." />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Quote */}

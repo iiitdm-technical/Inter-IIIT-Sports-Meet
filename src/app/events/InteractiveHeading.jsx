@@ -22,7 +22,7 @@ const InteractiveHeading = ({ text = 'SPORTING EVENTS', className = '' }) => {
           {word.split('').map((char, cIdx) => (
             <span
               key={cIdx}
-              className="inline-block transition-all duration-100 ease-out text-[#122819] hover:text-[#185B1D] hover:scale-150 hover:-translate-y-0.9 cursor-default"
+              className="inline-block transition-colors duration-100 ease-out text-[#122819] hover:text-[#185B1D] cursor-default"
               style={{
                 textShadow: '0 2px 8px rgba(255, 179, 0, 1)',
               }}

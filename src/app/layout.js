@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import AccountPageHeader from "@/components/AccountPageHeader";
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://interiiitsportsmeet.vercel.app"),
@@ -47,9 +48,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
       <head>
         <meta name="google-site-verification" content="bU1L_ZRG-giabNdHlC6ktOparSgIZQAmGhm0qPHF7XE" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap"
+          rel="stylesheet"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
           rel="stylesheet"
@@ -58,6 +63,7 @@ export default function RootLayout({ children }) {
       <body className="antialiased min-h-screen flex flex-col" style={{ background: '#faf6ee' }}>
         <Navbar />
         <main className="flex-grow">
+          <AccountPageHeader />
           {children}
         </main>
         <Footer />

@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 const teamSections = [
   {
     title: "Our Patron",
@@ -77,50 +78,16 @@ export default function Team() {
     <div style={{ background: "#faf6ee", minHeight: "100vh" }}>
 
       {/* Page header */}
-      <div
-        className="py-16 px-4"
-        style={{ background: "#f0d574" }}
-      >
-        <div className="max-w-7xl mx-auto">
-
-          <span
-            className="text-xs font-black tracking-[0.25em] uppercase"
-            style={{ color: "#040404" }}
-          >
-            The People Behind It
-          </span>
-
-          <h1
-            className="mt-3 font-black text-white"
-            style={{ fontSize: "clamp(2.2rem, 5vw, 3.5rem)" }}
-          >
-            Meet the Team
-          </h1>
-
-          <div
-            className="mt-3 w-12 h-1 rounded-full"
-            style={{ background: "#000000" }}
-          />
-
-          <p
-            className="mt-4 text-sm max-w-xl"
-            style={{ color: "rgba(6, 6, 6, 0.6)" }}
-          >
-            Dedicated individuals working tirelessly to make the 9th Inter-IIIT
-            Sports Meet a reality.
-          </p>
-
-        </div>
-      </div>
+      <PageHeader title="Meet the Team" label="Meet" badgeLabel="Our Team" description="Dedicated individuals working tirelessly to make the 9th Inter-IIIT Sports Meet a reality." />
 
       {/* Team sections */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-20">
+      <div className="max-w-[1440px] mx-auto px-5 sm:px-[30px] lg:px-10 py-20 space-y-[100px]">
 
         {teamSections.map((section, sIdx) => (
           <div key={sIdx}>
 
             {/* Section heading */}
-            <div className="flex items-center gap-4 mb-10">
+            <div className="flex items-center gap-5 mb-[50px]">
 
               <div
                 className="h-px flex-1"
@@ -128,7 +95,7 @@ export default function Team() {
               />
 
               <h3
-                className="text-xs font-black uppercase tracking-[0.25em] px-4"
+                className="text-[15px] text-center font-black uppercase tracking-[0.25em] px-5"
                 style={{ color: "#c9972f" }}
               >
                 {section.title}
@@ -142,18 +109,18 @@ export default function Team() {
             </div>
 
             {/* Members */}
-            <div className="flex flex-wrap justify-center gap-6">
+            <div className="flex flex-wrap justify-center gap-[30px]">
 
               {section.members.map((member, mIdx) => (
                 <div
                   key={mIdx}
                   className="text-center group"
-                  style={{ width: "180px" }}
+                  style={{ width: "225px", maxWidth: "100%" }}
                 >
 
                   {/* Avatar */}
                   <div
-                    className="w-24 h-24 mx-auto rounded-2xl overflow-hidden mb-4 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg"
+                    className="w-[120px] h-[120px] mx-auto rounded-[20px] overflow-hidden mb-5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg"
                     style={{
                       background: "#1b5e20",
                       border: "2px solid rgba(201,151,47,0.3)"
@@ -168,7 +135,7 @@ export default function Team() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <span
-                          className="font-black text-2xl"
+                          className="font-black text-[30px]"
                           style={{ color: "#f5c518" }}
                         >
                           {member.initial}
@@ -179,7 +146,7 @@ export default function Team() {
 
                   {/* Name */}
                   <h4
-                    className="font-bold text-sm"
+                    className="font-bold text-[17.5px]"
                     style={{ color: "#0a2112" }}
                   >
                     {member.name}
@@ -187,7 +154,7 @@ export default function Team() {
 
                   {/* Role */}
                   <p
-                    className="text-xs mt-0.5"
+                    className="text-[15px] mt-[2.5px]"
                     style={{ color: "#888" }}
                   >
                     {member.role}

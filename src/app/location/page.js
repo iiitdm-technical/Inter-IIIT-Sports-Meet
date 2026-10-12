@@ -1,5 +1,7 @@
 'use client';
 
+import PageHeader from '@/components/PageHeader';
+
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { eventInfo } from '@/data/info';
@@ -65,22 +67,7 @@ export default function Location() {
       
       {/* ─── 1. PAGE HERO & HEADER ──────────────────────────────────────── */}
       {/* Gold header band with dark, high-contrast event information */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8" style={{ background: '#f0d574' }}>
-        <div className="max-w-7xl mx-auto">
-          <span className="text-xs font-black tracking-[0.25em] uppercase" style={{ color: '#0a2112' }}>
-            Venue &amp; Travel Guide
-          </span>
-          <h1 className="mt-3 font-black" style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)', color: '#0a2112' }}>
-            Location &amp; How to Reach
-          </h1>
-          <div className="mt-3 w-12 h-1 rounded-full" style={{ background: '#c9972f' }} />
-          
-          <p className="mt-6 text-base sm:text-lg max-w-3xl leading-relaxed" style={{ color: 'rgba(10,33,18,0.8)' }}>
-            The 9th All India Inter-IIIT Sports Meet is held at the {hostInstitute.campusArea} of{' '}
-            <strong className="font-bold" style={{ color: '#0a2112' }}>{hostInstitute.name}</strong>, situated in Melakottaiyur, Chennai.
-          </p>
-
-          {/* Quick Actions & Coordinates Bar */}
+      <PageHeader title="Location & How to Reach" label="Visit" badgeLabel="Our Campus" description={`The 9th All India Inter-IIIT Sports Meet is held at the ${hostInstitute.campusArea} of ${hostInstitute.name}, situated in Melakottaiyur, Chennai.`}>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             {/* Primary "Get Directions" Button */}
             <a
@@ -112,8 +99,7 @@ export default function Location() {
               {location.address}
             </span>
           </div>
-        </div>
-      </section>
+      </PageHeader>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
 
