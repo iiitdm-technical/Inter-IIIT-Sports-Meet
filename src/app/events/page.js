@@ -144,52 +144,6 @@ export default function Events() {
 
       {/* Events content */}
       <div
-<<<<<<< HEAD
-=======
-        ref={headerBannerRef}
-        onMouseMove={handleHeaderMouseMove}
-        onTouchMove={handleHeaderTouchMove}
-        onMouseLeave={handleHeaderLeave}
-        onTouchEnd={handleHeaderLeave}
-        className="relative py-6 md:py-10 px-4 overflow-hidden border-b border-[#185B1D]/20"
-        style={{
-          background: '#F2D16D',
-          willChange: 'transform, opacity',
-          transformOrigin: '50% 0%',
-          zIndex: 1,
-        }}
-      >
-        {/* Falling & repelling header particles canvas */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none z-10"
-        />
-
-        <div className="relative max-w-10xl mx-auto z-20 px-4 sm:px-6 lg:px-8">
-
-          <div className="block">
-            <span className="text-xs font-bold tracking-widest uppercase text-[#0a2112]">
-              9th All India Inter-IIIT Sports Meet · 2026
-            </span>
-          </div>
-
-          {/* Interactive Heading with character hover & yellow cursor effect */}
-          <div className="mt-4 max-w-4xl">
-            <InteractiveHeading text="SPORTING  EVENTS" />
-          </div>
-
-          <div className="mt-4 w-14 h-1 rounded-full" style={{ background: '#185B1D' }} />
-
-          <p className="mt-4 text-sm sm:text-base max-w-xl font-normal leading-relaxed" style={{ color: 'rgba(9, 61, 12, 0.97)' }}>
-            {sports.length} competitive events testing speed, skill, strength, and strategy.
-          </p>
-        </div>
-      </div>
-
-      {/* Events content – slides up over the receding header */}
-      <div
-        ref={contentSectionRef}
->>>>>>> a357e37b1b59c27516fd12db183be01847b5cc7f
         style={{ willChange: 'transform', position: 'relative', zIndex: 2 }}
       >
         {/* Circular Gallery Section */}

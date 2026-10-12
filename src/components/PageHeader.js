@@ -87,7 +87,7 @@ export default function PageHeader({ title, description, label = 'Explore', badg
           <span className="page-header__tape" />
           <span>{label}</span><strong>{badge}</strong><span>{badgeLabel}</span>
         </div>
-        <p className="page-header__eyebrow">9th Inter-IIIT Sports Meet · 2026</p>
+        <p className="page-header__eyebrow">9th All India Inter-IIIT Sports Meet · 2026</p>
         <Heading className="page-header__title">{title}</Heading>
         <div className="page-header__rule" />
         {description && <p className="page-header__description">{description}</p>}
