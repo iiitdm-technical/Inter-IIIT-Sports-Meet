@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
 
@@ -24,6 +24,7 @@ export default function AdminDashboardPage() {
     name: "",
   });
   const [entriesLoading, setEntriesLoading] = useState(false);
+  const entriesRequest = useRef(0);
 
   const sportsList = getAllSportsList();
 
@@ -42,28 +43,26 @@ export default function AdminDashboardPage() {
   })();
 
 
-  const loadEntries = useCallback(async (page = 1) => {
+  const loadEntries = useCallback(async (page = 1, searchFilters = filters) => {
+    const requestId = ++entriesRequest.current;
     setEntriesLoading(true);
     try {
       const params = new URLSearchParams();
       params.set("page", page.toString());
       params.set("limit", "25");
-      if (filters.iiit) params.set("iiit", filters.iiit);
-      if (filters.sport) params.set("sport", filters.sport);
-      if (filters.event) params.set("event", filters.event);
-      if (filters.gender) params.set("gender", filters.gender);
-      if (filters.rollNumber) params.set("rollNumber", filters.rollNumber);
-      if (filters.name) params.set("name", filters.name);
+      for (const [key, value] of Object.entries(searchFilters)) {
+        if (value) params.set(key, value);
+      }
 
       const res = await fetch(`/api/admin/entries?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setEntriesData(data.data);
+        if (requestId === entriesRequest.current) setEntriesData(data.data);
       }
     } catch (err) {
       console.error("Failed to filter entries:", err);
     } finally {
-      setEntriesLoading(false);
+      if (requestId === entriesRequest.current) setEntriesLoading(false);
     }
   }, [filters]);
 
@@ -100,7 +99,6 @@ export default function AdminDashboardPage() {
           setRegistrationsOverview(regData.data || []);
         }
 
-        loadEntries(1);
       } catch (err) {
         console.error("Failed to load admin data:", err);
       } finally {
@@ -109,7 +107,13 @@ export default function AdminDashboardPage() {
     }
 
     checkAuthAndLoadData();
-  }, [router, loadEntries]);
+  }, [router]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const timer = setTimeout(() => loadEntries(1), 300);
+    return () => clearTimeout(timer);
+  }, [currentUser, loadEntries]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -123,6 +127,8 @@ export default function AdminDashboardPage() {
       if (filters.sport) params.set("sport", filters.sport);
       if (filters.event) params.set("event", filters.event);
       if (filters.gender) params.set("gender", filters.gender);
+      if (filters.rollNumber) params.set("rollNumber", filters.rollNumber);
+      if (filters.name) params.set("name", filters.name);
     }
     const downloadUrl = `/api/admin/csv?${params.toString()}`;
     const a = document.createElement("a");
@@ -337,7 +343,7 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => {
                   setFilters({ iiit: "", sport: "", event: "", gender: "", rollNumber: "", name: "" });
-                  loadEntries(1);
+                  loadEntries(1, {});
                 }}
                 className="px-4 py-2 rounded-lg text-xs font-bold border border-gray-300 text-gray-600 hover:bg-gray-50"
               >

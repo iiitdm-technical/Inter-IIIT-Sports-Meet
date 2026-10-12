@@ -11,12 +11,16 @@ export async function GET(request) {
     const sport = searchParams.get("sport") || undefined;
     const event = searchParams.get("event") || undefined;
     const gender = searchParams.get("gender") || undefined;
+    const rollNumber = searchParams.get("rollNumber") || undefined;
+    const name = searchParams.get("name") || undefined;
 
     const csvContent = await generateAdminMasterCSV({
       iiit,
       sport,
       event,
       gender,
+      rollNumber,
+      name,
     });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");

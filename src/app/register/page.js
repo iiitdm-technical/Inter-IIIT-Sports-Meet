@@ -17,6 +17,7 @@ export default function RegisterPage() {
   // Auth & API state
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [initializationError, setInitializationError] = useState("");
   const [lockedRegistrationData, setLockedRegistrationData] = useState(null);
   
   // Form State
@@ -42,8 +43,11 @@ export default function RegisterPage() {
       try {
         const authRes = await fetch("/api/auth/me");
         if (!authRes.ok) {
-          router.push("/login");
-          return;
+          if (authRes.status === 401) {
+            router.push("/login");
+            return;
+          }
+          throw new Error("Unable to check your session. Please try again.");
         }
         const authData = await authRes.json();
         if (!authData || !authData.user) {
@@ -57,6 +61,9 @@ export default function RegisterPage() {
         setUser(authData.user);
 
         const regRes = await fetch("/api/registration");
+        if (!regRes.ok) {
+          throw new Error("Unable to check your registration status. Please try again.");
+        }
         if (regRes.ok) {
           const regData = await regRes.json();
           if (regData.data && regData.data.submitted) {
@@ -68,7 +75,12 @@ export default function RegisterPage() {
         
         // Not submitted → load draft from localStorage
         const draftKey = `inter_iiit_registration_${authData.user.username}`;
-        const saved = localStorage.getItem(draftKey);
+        let saved = null;
+        try {
+          saved = localStorage.getItem(draftKey);
+        } catch {
+          setSubmitError("Browser storage is unavailable. Your draft cannot be saved on this device.");
+        }
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -81,7 +93,8 @@ export default function RegisterPage() {
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
-        router.push("/login");
+        setInitializationError(err.message || "Unable to load registration. Please try again.");
+        setLoading(false);
       }
     };
     init();
@@ -93,8 +106,12 @@ export default function RegisterPage() {
     
     const draftKey = `inter_iiit_registration_${user.username}`;
     const timer = setTimeout(() => {
-      localStorage.setItem(draftKey, JSON.stringify({ contactDetails, slotsMap }));
-      setLastSaved(new Date());
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ contactDetails, slotsMap }));
+        setLastSaved(new Date());
+      } catch {
+        setSubmitError("Your draft could not be saved in this browser. Keep this page open until you submit.");
+      }
     }, 1000);
     
     return () => clearTimeout(timer);
@@ -145,7 +162,11 @@ export default function RegisterPage() {
       }
       
       // Success — clear local draft and reload to show locked state
-      localStorage.removeItem(`inter_iiit_registration_${user.username}`);
+      try {
+        localStorage.removeItem(`inter_iiit_registration_${user.username}`);
+      } catch {
+        // The server has saved the registration; still show its locked state.
+      }
       window.location.reload();
       
     } catch (err) {
@@ -153,6 +174,15 @@ export default function RegisterPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (initializationError) {
+    return (
+      <div className="min-h-screen bg-[#faf6ee] flex flex-col items-center justify-center gap-4 px-4">
+        <p role="alert" className="text-red-700">{initializationError}</p>
+        <button onClick={() => window.location.reload()} className="rounded-lg bg-green-800 px-5 py-3 font-bold text-white">Try again</button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

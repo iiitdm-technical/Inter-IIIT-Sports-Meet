@@ -467,6 +467,7 @@ async function runTests() {
   });
 
   // Database Integration Tests
+  if (!process.argv.includes("--unit-only")) {
   await testAsync("DATABASE TESTS: Submit Registration and Payment", async () => {
     process.env.NODE_ENV = "test";
 
@@ -544,6 +545,8 @@ async function runTests() {
     await db.delete(registrations).where(eq(registrations.iiitCode, "test-payment-iiit"));
     process.env.NODE_ENV = "development";
   });
+
+  }
 
   console.log("\n=========================================");
   console.log(`ðŸ TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`);

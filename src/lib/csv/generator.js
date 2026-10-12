@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, ilike, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
@@ -51,7 +51,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
     .where(
       and(
         eq(registrations.iiitCode, iiitCode),
-        eq(registrations.status, "submitted")
+        inArray(registrations.status, ["payment_pending", "submitted"])
       )
     )
     .orderBy(students.rollNumber, studentEventParticipations.sportId);
@@ -121,6 +121,12 @@ export async function generateAdminMasterCSV(filters = {}) {
   }
   if (filters.gender) {
     conditions.push(eq(students.gender, filters.gender.toUpperCase()));
+  }
+  if (filters.rollNumber) {
+    conditions.push(ilike(students.rollNumber, `%${filters.rollNumber.trim()}%`));
+  }
+  if (filters.name) {
+    conditions.push(ilike(students.name, `%${filters.name.trim()}%`));
   }
 
   const entries = await db
