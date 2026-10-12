@@ -283,7 +283,7 @@ export default function Home() {
                 Tournament Dates
               </div>
               <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                19 – 23 Dec 2026
+                19 – 23 December 2026
               </div>
               <div className="text-xs text-gray-600">
                 5 Championship Days of track, court, and field competition.
