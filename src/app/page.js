@@ -429,26 +429,26 @@ export default function Home() {
 
       {/* ─── 6. PARTICIPATING IIITs ──────────────────────────────────────── */}
       <section className="section-pad" style={{ background: '#faf6ee' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-[1600px] mx-auto px-5 sm:px-[30px] lg:px-10">
           <div className="text-center mb-12">
             <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>Participating Institutes</span>
             <h2 className="mt-3 font-black text-3xl sm:text-4xl" style={{ color: '#0a2112' }}>20+ IIITs &bull; 1 Champion</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5">
             {iiits.map((iiit, idx) => (
               <div key={idx}
-                className="group flex flex-col items-center text-center p-3 rounded-xl border transition-all hover:-translate-y-0.5 hover:shadow-md cursor-default"
+                className="group flex flex-col items-center text-center p-[15px] rounded-[15px] border transition-all hover:-translate-y-0.5 hover:shadow-md cursor-default"
                 style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-                <div className="relative w-12 h-12 mb-2">
+                <div className="relative w-[60px] h-[60px] mb-2.5">
                   <Image
                     src={iiit.logo}
                     alt={iiit.name}
                     fill
-                    sizes="48px"
+                    sizes="60px"
                     className="object-contain"
                   />
                 </div>
-                <span className="text-[10px] font-semibold leading-tight text-gray-700">
+                <span className="text-[12.5px] font-semibold leading-tight text-gray-700">
                   {iiit.name}
                 </span>
               </div>
