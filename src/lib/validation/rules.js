@@ -1,4 +1,4 @@
-import { GLOBAL_RULES, SPORTS_CONFIG, getSportConfig } from "../sports/config.js";
+import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
 
 /**
  * Business Rule Validator for Inter-IIIT Sports Meet Registrations.
@@ -83,6 +83,31 @@ export function validateRegistrationRules({ students, entries }) {
     if (!sportConfig) {
       errors.push(`Unrecognized sport ID: ${sportId}`);
       continue;
+    }
+
+    if (!sportConfig.genders.includes(eventGender)) {
+      errors.push(`Unsupported category for ${sportConfig.name}: ${eventGender}`);
+      continue;
+    }
+    if (sportConfig.type === "team" || sportConfig.type === "combined_team") {
+      if (eventId !== "team") {
+        errors.push(`Unrecognized event for ${sportConfig.name}: ${eventId}`);
+        continue;
+      }
+      if (isReserve) {
+        errors.push(`${sportConfig.name} does not allow reserve slots`);
+        continue;
+      }
+    } else {
+      const event = sportConfig.events?.[eventGender]?.find((item) => item.id === eventId);
+      if (!event) {
+        errors.push(`Unrecognized event for ${sportConfig.name} (${eventGender}): ${eventId}`);
+        continue;
+      }
+      if (isReserve && !event.maxReserves) {
+        errors.push(`${sportConfig.name} ${event.name} does not allow reserve slots`);
+        continue;
+      }
     }
 
     // Initialize student tracking
@@ -198,11 +223,11 @@ export function validateRegistrationRules({ students, entries }) {
       const categories = sportConfig.events?.[gender] || [];
       const cat = categories.find((c) => c.id === eventId);
       const limit = cat?.maxParticipants || 2;
-      if (mains.length > limit) {
+      if (totalCount > limit) {
         errors.push(
           `Participant limit exceeded for ${sportConfig.name} (${gender} - ${
             cat?.name || eventId
-          }): ${mains.length} registered (Maximum limit is ${limit}).`
+          }): ${totalCount} registered (Maximum limit is ${limit}).`
         );
       }
     } else if (sportConfig.type === "event_based") {

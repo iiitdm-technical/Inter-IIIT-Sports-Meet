@@ -5,10 +5,11 @@ export const SESSION_COOKIE_NAME = "inter_iiit_session";
 export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 function getSecret() {
-  return (
-    process.env.SESSION_SECRET ||
-    "inter_iiit_default_development_secret_key_32_characters_long"
-  );
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error("SESSION_SECRET must be set to at least 32 characters");
+  }
+  return secret;
 }
 
 /**
@@ -54,9 +55,9 @@ export function verifySessionToken(token) {
 
   try {
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf-8"));
-    if (payload.exp && Date.now() > payload.exp) {
-      return null; // Expired
-    }
+    if (!Number.isFinite(payload.exp) || Date.now() >= payload.exp) return null;
+    if (!Number.isInteger(payload.userId) || !payload.username || !["iiit", "admin"].includes(payload.role)) return null;
+    if (payload.role === "iiit" && !payload.iiitCode) return null;
     return payload;
   } catch {
     return null;

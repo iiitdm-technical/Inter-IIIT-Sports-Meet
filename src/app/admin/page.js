@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
     rollNumber: "",
     name: "",
   });
+  const [appliedFilters, setAppliedFilters] = useState({});
   const [entriesLoading, setEntriesLoading] = useState(false);
 
   const sportsList = getAllSportsList();
@@ -42,18 +43,15 @@ export default function AdminDashboardPage() {
   })();
 
 
-  const loadEntries = useCallback(async (page = 1) => {
+  const loadEntries = useCallback(async (page = 1, activeFilters = {}) => {
     setEntriesLoading(true);
     try {
       const params = new URLSearchParams();
       params.set("page", page.toString());
       params.set("limit", "25");
-      if (filters.iiit) params.set("iiit", filters.iiit);
-      if (filters.sport) params.set("sport", filters.sport);
-      if (filters.event) params.set("event", filters.event);
-      if (filters.gender) params.set("gender", filters.gender);
-      if (filters.rollNumber) params.set("rollNumber", filters.rollNumber);
-      if (filters.name) params.set("name", filters.name);
+      for (const [key, value] of Object.entries(activeFilters)) {
+        if (value) params.set(key, value);
+      }
 
       const res = await fetch(`/api/admin/entries?${params.toString()}`);
       if (res.ok) {
@@ -65,7 +63,7 @@ export default function AdminDashboardPage() {
     } finally {
       setEntriesLoading(false);
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     async function checkAuthAndLoadData() {
@@ -100,7 +98,7 @@ export default function AdminDashboardPage() {
           setRegistrationsOverview(regData.data || []);
         }
 
-        loadEntries(1);
+        loadEntries(1, {});
       } catch (err) {
         console.error("Failed to load admin data:", err);
       } finally {
@@ -113,7 +111,9 @@ export default function AdminDashboardPage() {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    loadEntries(1);
+    const nextFilters = { ...filters };
+    setAppliedFilters(nextFilters);
+    loadEntries(1, nextFilters);
   };
 
   const downloadMasterCsv = (useFilters = false) => {
@@ -123,6 +123,8 @@ export default function AdminDashboardPage() {
       if (filters.sport) params.set("sport", filters.sport);
       if (filters.event) params.set("event", filters.event);
       if (filters.gender) params.set("gender", filters.gender);
+      if (filters.name) params.set("name", filters.name);
+      if (filters.rollNumber) params.set("rollNumber", filters.rollNumber);
     }
     const downloadUrl = `/api/admin/csv?${params.toString()}`;
     const a = document.createElement("a");
@@ -337,7 +339,8 @@ export default function AdminDashboardPage() {
                 type="button"
                 onClick={() => {
                   setFilters({ iiit: "", sport: "", event: "", gender: "", rollNumber: "", name: "" });
-                  loadEntries(1);
+                  setAppliedFilters({});
+                  loadEntries(1, {});
                 }}
                 className="px-4 py-2 rounded-lg text-xs font-bold border border-gray-300 text-gray-600 hover:bg-gray-50"
               >
@@ -386,7 +389,7 @@ export default function AdminDashboardPage() {
                           <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <p>No submitted entries found matching your criteria.</p>
+                          <p>No locked entries found matching your criteria.</p>
                         </div>
                       )}
                     </td>
@@ -416,7 +419,7 @@ export default function AdminDashboardPage() {
             <div className="p-4 border-t border-gray-200 flex justify-between items-center text-xs bg-gray-50">
               <button
                 disabled={entriesData.page <= 1}
-                onClick={() => loadEntries(entriesData.page - 1)}
+                onClick={() => loadEntries(entriesData.page - 1, appliedFilters)}
                 className="px-4 py-2 rounded-lg font-medium border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 &larr; Previous
@@ -424,7 +427,7 @@ export default function AdminDashboardPage() {
               <span className="font-medium text-gray-600">Page {entriesData.page} of {entriesData.totalPages}</span>
               <button
                 disabled={entriesData.page >= entriesData.totalPages}
-                onClick={() => loadEntries(entriesData.page + 1)}
+                onClick={() => loadEntries(entriesData.page + 1, appliedFilters)}
                 className="px-4 py-2 rounded-lg font-medium border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 Next &rarr;
@@ -515,7 +518,7 @@ export default function AdminDashboardPage() {
                   ))}
                   {registrationsOverview.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="text-center py-10 text-gray-400">No IIITs found.</td>
+                      <td colSpan={10} className="text-center py-10 text-gray-400">No IIITs found.</td>
                     </tr>
                   )}
                 </tbody>

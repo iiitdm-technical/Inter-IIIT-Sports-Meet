@@ -1,5 +1,7 @@
 "use client";
 
+import { getSportConfig } from "@/lib/sports/config";
+
 /**
  * Cleans up Zod validation error strings into readable labels.
  */
@@ -29,6 +31,7 @@ export default function ReviewModal({
 
   const hasRegistrationErrors = errors && errors.length > 0;
   const canProceed = !hasRegistrationErrors && !isSubmitting;
+  const studentsByRoll = new Map((payload?.students || []).map((student) => [student.rollNumber, student]));
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -111,6 +114,22 @@ export default function ReviewModal({
                         <p className="text-sm text-gray-700"><strong>Name:</strong> {payload?.contactDetails?.contactName || "N/A"}</p>
                         <p className="text-sm text-gray-700"><strong>Email:</strong> {payload?.contactDetails?.contactEmail || "N/A"}</p>
                         <p className="text-sm text-gray-700"><strong>Phone:</strong> {payload?.contactDetails?.contactPhone || "N/A"}</p>
+                      </div>
+                      <div className="mt-4 rounded-lg border border-gray-200 overflow-hidden">
+                        <h4 className="px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50 border-b border-gray-200">Student roster and event entries</h4>
+                        <div className="max-h-64 overflow-auto divide-y divide-gray-100">
+                          {payload?.entries?.map((entry, index) => {
+                            const student = studentsByRoll.get(entry.rollNumber);
+                            const sport = getSportConfig(entry.sportId);
+                            const event = sport?.events?.[entry.gender]?.find((item) => item.id === entry.eventId);
+                            return (
+                              <div key={`${entry.rollNumber}-${entry.sportId}-${entry.eventId}-${index}`} className="px-4 py-3 text-xs sm:flex sm:justify-between gap-4">
+                                <div className="font-semibold text-gray-900">{student?.name || entry.rollNumber} <span className="font-mono font-normal text-gray-500">({entry.rollNumber})</span></div>
+                                <div className="text-gray-600">{sport?.name || entry.sportId} · {event?.name || entry.eventId} · {entry.gender === "mixed" ? "Mixed" : entry.gender === "M" ? "Men" : "Women"}{entry.isReserve ? " · Reserve" : ""}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </>
                   )}

@@ -15,14 +15,13 @@ export function getPool() {
   }
 
   if (!pool) {
-    const isLocalhost =
-      process.env.DATABASE_URL.includes("localhost") ||
-      process.env.DATABASE_URL.includes("127.0.0.1");
+    const hostname = new URL(process.env.DATABASE_URL).hostname;
+    const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
 
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: isLocalhost ? false : { rejectUnauthorized: false },
-      max: 10,
+      ssl: isLocalhost ? false : { rejectUnauthorized: true },
+      max: 2,
     });
   }
 

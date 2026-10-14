@@ -17,12 +17,12 @@ async function runMigrations() {
     process.exit(1);
   }
 
-  const isLocalhost =
-    databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1");
+  const hostname = new URL(databaseUrl).hostname;
+  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
 
   const pool = new Pool({
     connectionString: databaseUrl,
-    ssl: isLocalhost ? false : { rejectUnauthorized: false },
+    ssl: isLocalhost ? false : { rejectUnauthorized: true },
   });
 
   const db = drizzle(pool);

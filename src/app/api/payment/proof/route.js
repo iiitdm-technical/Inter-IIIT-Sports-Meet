@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/session';
-import { head } from '@vercel/blob';
+import { getProof } from '@/lib/storage/neon';
 import { getDb } from '@/db/index';
 import { registrations, paymentTransactions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -52,27 +52,14 @@ export async function GET(request) {
 
     const pathname = paymentList[0].proofPathname;
 
-    // 5. Fetch blob details
-    const blobDetails = await head(pathname);
-    
-    // 6. Proxy the private blob stream
-    // Since the Vercel Blob is private, we must stream it through the server 
-    // using our server-side BLOB_READ_WRITE_TOKEN.
-    const response = await fetch(blobDetails.url, {
+    // 5. Stream the private object only after the ownership check.
+    const proof = await getProof(pathname);
+    return new NextResponse(proof.Body.transformToWebStream(), {
       headers: {
-        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch blob from storage: ${response.statusText}`);
-    }
-
-    // 7. Return the proxied stream to the client
-    return new NextResponse(response.body, {
-      headers: {
-        'Content-Type': blobDetails.contentType,
-        'Content-Disposition': `inline; filename="${blobDetails.pathname.split('/').pop()}"`,
+        'Content-Type': proof.ContentType || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${pathname.split('/').pop()}"`,
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
 

@@ -1,4 +1,4 @@
-import { eq, and, ilike, sql, desc, count } from "drizzle-orm";
+import { eq, and, ilike, sql, desc, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 
@@ -56,7 +56,7 @@ export async function getAdminFilteredEntries({
 } = {}) {
   const db = getDb();
 
-  const conditions = [eq(registrations.status, "submitted")];
+  const conditions = [inArray(registrations.status, ["payment_pending", "submitted"])];
 
   if (iiit) {
     conditions.push(
@@ -84,6 +84,8 @@ export async function getAdminFilteredEntries({
     conditions.push(ilike(students.name, `%${name.trim()}%`));
   }
 
+  page = Number.isSafeInteger(page) ? Math.max(1, page) : 1;
+  limit = Number.isSafeInteger(limit) ? Math.min(100, Math.max(1, limit)) : 50;
   const offset = Math.max(0, (page - 1) * limit);
 
   // Total count query

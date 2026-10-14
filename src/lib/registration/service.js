@@ -1,7 +1,7 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
-import { head } from "@vercel/blob";
+import { headProof } from "../storage/neon.js";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/schemas.js";
 import { validateRegistrationRules } from "../validation/rules.js";
 
@@ -238,44 +238,34 @@ export async function submitPayment(iiitCode, rawPayload, username) {
     throw error;
   }
 
-  // 3. Verify Vercel Blob Payment Proof
-  let blobDetails;
-  if (process.env.NODE_ENV === "test") {
-    // Bypass Vercel Blob API during backend unit tests
-    blobDetails = {
-      pathname: payload.paymentDetails.proofPathname,
-      contentType: payload.paymentDetails.proofPathname.includes("invalid-type") ? "text/plain" : "application/pdf",
-      size: payload.paymentDetails.proofPathname.includes("too-large") ? 10 * 1024 * 1024 : 1024,
-    };
-  } else {
-    try {
-      blobDetails = await head(payload.paymentDetails.proofPathname);
-    } catch (err) {
-      const error = new Error("Payment proof not found or inaccessible");
-      error.statusCode = 400;
-      throw error;
-    }
+  // 3. Verify the private Neon Object Storage proof
+  let proofDetails;
+  try {
+    proofDetails = await headProof(payload.paymentDetails.proofPathname);
+  } catch {
+    const error = new Error("Payment proof not found or inaccessible");
+    error.statusCode = 400;
+    throw error;
   }
 
   // Enforce isolation: Pathname must belong to this IIIT's secure folder
   const expectedPrefix = `payment-proofs/${iiitCode}/`;
-  if (!blobDetails.pathname.startsWith(expectedPrefix)) {
+  if (!proofDetails.pathname.startsWith(expectedPrefix)) {
     const error = new Error("Payment proof does not belong to your IIIT");
     error.statusCode = 403;
     throw error;
   }
 
-  // Enforce types (safety net against direct Blob API uploads)
+  // Enforce content type on the stored object.
   const allowedContentTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-  if (!allowedContentTypes.includes(blobDetails.contentType)) {
+  if (!allowedContentTypes.includes(proofDetails.contentType)) {
     const error = new Error("Payment proof must be a PDF, JPG, or PNG");
     error.statusCode = 400;
     throw error;
   }
 
-  // Enforce size <= 5MB
-  if (blobDetails.size > 5 * 1024 * 1024) {
-    const error = new Error("Payment proof file size exceeds 5MB limit");
+  if (proofDetails.size > 4 * 1024 * 1024) {
+    const error = new Error("Payment proof file size exceeds 4MB limit");
     error.statusCode = 400;
     throw error;
   }
@@ -307,10 +297,10 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       bankName: payload.paymentDetails.bankName || null,
       paymentMode: payload.paymentDetails.paymentMode,
       otherPaymentMode: payload.paymentDetails.paymentMode === "OTHER" ? payload.paymentDetails.otherPaymentMode : null,
-      proofPathname: blobDetails.pathname,
-      proofFileName: blobDetails.pathname.split('/').pop(),
-      proofContentType: blobDetails.contentType,
-      proofSize: blobDetails.size,
+      proofPathname: proofDetails.pathname,
+      proofFileName: proofDetails.pathname.split('/').pop(),
+      proofContentType: proofDetails.contentType,
+      proofSize: proofDetails.size,
     });
 
     // Update registration status to submitted (permanently locked)

@@ -5,18 +5,20 @@ import { z } from "zod";
  */
 export const rollNumberSchema = z
   .string()
+  .trim()
   .min(1, "Roll number is required")
   .max(64, "Roll number is too long")
-  .transform((val) => val.trim().toUpperCase());
+  .transform((val) => val.toUpperCase());
 
 /**
  * Normalizes name to uppercase trimmed string
  */
 export const studentNameSchema = z
   .string()
+  .trim()
   .min(1, "Student name is required")
   .max(128, "Student name is too long")
-  .transform((val) => val.trim().toUpperCase());
+  .transform((val) => val.toUpperCase());
 
 /**
  * Gender validation ('M' or 'F' only)
@@ -59,9 +61,9 @@ export const eventEntrySchema = z.object({
  * Contact Details Schema
  */
 export const contactDetailsSchema = z.object({
-  contactName: z.string().min(1, "Contact person name is required").trim(),
-  contactEmail: z.string().email("Invalid contact email address").trim(),
-  contactPhone: z.string().min(6, "Valid contact phone is required").trim(),
+  contactName: z.string().trim().min(1, "Contact person name is required").max(128),
+  contactEmail: z.email("Invalid contact email address").max(128),
+  contactPhone: z.string().trim().regex(/^\+?[0-9()\-\s]{6,32}$/, "Valid contact phone is required"),
   notes: z.string().max(1000).optional().default(""),
 });
 
@@ -71,7 +73,7 @@ export const contactDetailsSchema = z.object({
 export const paymentDetailsSchema = z.object({
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Transaction date must be in YYYY-MM-DD format").refine((val) => {
     const date = new Date(val);
-    if (isNaN(date.getTime())) return false; // Not a valid calendar date
+    if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== val) return false;
     const today = new Date();
     // Allow dates up to the end of today
     today.setHours(23, 59, 59, 999);
@@ -99,8 +101,8 @@ export const paymentDetailsSchema = z.object({
  */
 export const registrationSubmitSchema = z.object({
   contactDetails: contactDetailsSchema,
-  students: z.array(studentRecordSchema).min(1, "At least one student must be registered"),
-  entries: z.array(eventEntrySchema).min(1, "At least one event entry must be submitted"),
+  students: z.array(studentRecordSchema).min(1, "At least one student must be registered").max(150),
+  entries: z.array(eventEntrySchema).min(1, "At least one event entry must be submitted").max(1200),
 });
 
 /**

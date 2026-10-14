@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, ilike, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
@@ -8,7 +8,8 @@ import { getSportConfig } from "../sports/config.js";
  */
 export function escapeCsvField(val) {
   if (val === null || val === undefined) return "";
-  const str = String(val);
+  const raw = String(val);
+  const str = /^[\s]*[=+\-@]/.test(raw) ? `'${raw}` : raw;
   if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -41,6 +42,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
       eventGender: studentEventParticipations.gender,
       isReserve: studentEventParticipations.isReserve,
       submittedAt: registrations.submittedAt,
+      status: registrations.status,
       paymentMode: paymentTransactions.paymentMode,
       otherPaymentMode: paymentTransactions.otherPaymentMode,
     })
@@ -48,12 +50,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
     .innerJoin(students, eq(studentEventParticipations.studentId, students.id))
     .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
     .leftJoin(paymentTransactions, eq(registrations.id, paymentTransactions.registrationId))
-    .where(
-      and(
-        eq(registrations.iiitCode, iiitCode),
-        eq(registrations.status, "submitted")
-      )
-    )
+    .where(eq(registrations.iiitCode, iiitCode))
     .orderBy(students.rollNumber, studentEventParticipations.sportId);
 
   const headers = [
@@ -66,6 +63,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
     "Event Category",
     "Slot Type",
     "Submission Date",
+    "Registration Status",
     "Payment Mode",
     "Other Payment Mode",
   ];
@@ -92,6 +90,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
       entry.eventGender === "M" ? "Men" : entry.eventGender === "F" ? "Women" : "Mixed/Open",
       entry.isReserve ? "Reserve" : "Main",
       entry.submittedAt ? new Date(entry.submittedAt).toISOString() : "",
+      entry.status,
       entry.paymentMode || "",
       entry.otherPaymentMode || "",
     ];
@@ -106,7 +105,7 @@ export async function generateIIITRegistrationCSV(iiitCode) {
 export async function generateAdminMasterCSV(filters = {}) {
   const db = getDb();
 
-  const conditions = [eq(registrations.status, "submitted")];
+  const conditions = [inArray(registrations.status, ["payment_pending", "submitted"])];
 
   if (filters.iiit) {
     conditions.push(
@@ -121,6 +120,12 @@ export async function generateAdminMasterCSV(filters = {}) {
   }
   if (filters.gender) {
     conditions.push(eq(students.gender, filters.gender.toUpperCase()));
+  }
+  if (filters.name) {
+    conditions.push(ilike(students.name, `%${filters.name.trim()}%`));
+  }
+  if (filters.rollNumber) {
+    conditions.push(ilike(students.rollNumber, `%${filters.rollNumber.trim()}%`));
   }
 
   const entries = await db

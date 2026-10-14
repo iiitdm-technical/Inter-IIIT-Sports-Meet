@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { upload } from "@vercel/blob/client";
 
 const RATE_PER_STUDENT = 2500;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 
 function formatFileSize(bytes) {
@@ -19,17 +18,16 @@ function formatCurrency(amount) {
 
 /**
  * PaymentSection — Embeds inside ReviewModal.
- * Manages blob upload, transaction form fields, and communicates state upward.
+ * Manages private proof upload, transaction form fields, and communicates state upward.
  *
  * Props:
  *  uniqueStudentsCount  — number
- *  iiitCode             — string (scopes the upload path)
  *  paymentDetails       — { transactionDate, transactionId, bankName, proofPathname, proofFileName }
  *  onChange             — fn(details) called on any change
  *  errors               — { transactionDate?, transactionId?, proof? }
  *  onUploadBusy         — fn(bool) so parent can gate submit button
  */
-export default function PaymentSection({ uniqueStudentsCount, iiitCode, paymentDetails, onChange, errors = {}, onUploadBusy }) {
+export default function PaymentSection({ uniqueStudentsCount, paymentDetails, onChange, errors = {}, onUploadBusy }) {
   const amount = uniqueStudentsCount * RATE_PER_STUDENT;
   const fileInputRef = useRef(null);
 
@@ -41,7 +39,7 @@ export default function PaymentSection({ uniqueStudentsCount, iiitCode, paymentD
   const [localFile, setLocalFile] = useState(null);
 
   const handleFieldChange = (field, value) => {
-    onChange({ ...paymentDetails, [field]: value });
+    onChange((current) => ({ ...current, [field]: value }));
   };
 
   const handleFileSelect = async (e) => {
@@ -53,38 +51,34 @@ export default function PaymentSection({ uniqueStudentsCount, iiitCode, paymentD
     if (!ALLOWED_TYPES.includes(file.type)) {
       setUploadStatus("error");
       setUploadError(`Invalid file type. Accepted: PDF, JPG, JPEG, PNG.`);
-      onChange({ ...paymentDetails, proofPathname: "", proofFileName: "" });
+      onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
       setUploadStatus("error");
-      setUploadError(`File is ${formatFileSize(file.size)}, exceeding the 5 MB maximum.`);
-      onChange({ ...paymentDetails, proofPathname: "", proofFileName: "" });
+      setUploadError(`File is ${formatFileSize(file.size)}, exceeding the 4 MB maximum.`);
+      onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
       return;
     }
 
     setLocalFile(file);
     setUploadStatus("uploading");
     if (onUploadBusy) onUploadBusy(true);
-    onChange({ ...paymentDetails, proofPathname: "", proofFileName: "" });
+    onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
 
     try {
-      const ext = file.name.split(".").pop().toLowerCase();
-      const requestedPathname = `payment-proofs/${iiitCode}/proof-${Date.now()}.${ext}`;
-
-      // @vercel/blob/client handles token negotiation with /api/upload automatically
-      const blobResult = await upload(requestedPathname, file, {
-        access: "private",
-        handleUploadUrl: "/api/upload",
-      });
-
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/upload", { method: "POST", body: form });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Upload failed");
       setUploadStatus("success");
-      onChange({ ...paymentDetails, proofPathname: blobResult.pathname, proofFileName: file.name });
+      onChange((current) => ({ ...current, proofPathname: result.pathname, proofFileName: file.name }));
     } catch (err) {
       setUploadStatus("error");
       setUploadError(err.message || "Upload failed. Please try again.");
-      onChange({ ...paymentDetails, proofPathname: "", proofFileName: "" });
+      onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
     } finally {
       if (onUploadBusy) onUploadBusy(false);
     }
@@ -94,7 +88,7 @@ export default function PaymentSection({ uniqueStudentsCount, iiitCode, paymentD
     setUploadStatus("idle");
     setUploadError("");
     setLocalFile(null);
-    onChange({ ...paymentDetails, proofPathname: "", proofFileName: "" });
+    onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -275,7 +269,7 @@ export default function PaymentSection({ uniqueStudentsCount, iiitCode, paymentD
                     </svg>
                     <div>
                       <p className="text-sm font-bold text-gray-700">Choose File / Upload Proof</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 5 MB</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
                     </div>
                   </div>
                 )}

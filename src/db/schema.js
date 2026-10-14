@@ -90,7 +90,7 @@ export const paymentTransactions = pgTable("payment_transactions", {
   bankName: varchar("bank_name", { length: 128 }),
   paymentMode: varchar("payment_mode", { length: 20 }), // NEFT, RTGS, IMPS, UPI, OTHER
   otherPaymentMode: varchar("other_payment_mode", { length: 128 }),
-  proofPathname: varchar("proof_pathname", { length: 255 }).notNull(), // Vercel Blob pathname or key
+  proofPathname: varchar("proof_pathname", { length: 255 }).notNull(), // Private Neon Object Storage key
   proofFileName: varchar("proof_file_name", { length: 255 }).notNull(),
   proofContentType: varchar("proof_content_type", { length: 64 }).notNull(),
   proofSize: integer("proof_size").notNull(),
