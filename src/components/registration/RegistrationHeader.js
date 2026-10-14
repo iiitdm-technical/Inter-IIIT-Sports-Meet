@@ -22,7 +22,7 @@ export default function RegistrationHeader({ iiitName, uniqueStudentsCount, last
               <svg className="w-3.5 h-3.5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              Saved locally at {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              Saved to cloud at {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           )}
           

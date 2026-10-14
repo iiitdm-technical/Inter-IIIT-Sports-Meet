@@ -40,7 +40,7 @@ npm run dev
 
 The seed creates one admin and 25 IIIT accounts with **different random passwords**. It writes them to `.private/seed-credentials.json` with restricted permissions. This file is ignored by Git. Keep a secure copy and distribute each account password only to its coordinator. Re-running the seed does not overwrite existing accounts or their passwords.
 
-Open `http://localhost:3000/login`. Draft registrations are saved in that browser until the coordinator locks the roster; locked students and entries are stored in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
+Open `http://localhost:3000/login`. Draft registrations are saved to Neon for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
 
 ## Verification
 
@@ -57,7 +57,7 @@ To exercise every API route, create a **temporary Neon branch with data and sche
 node scratch/smoke-api.mjs
 ```
 
-The test submits one roster and proof on the temporary branch. Use a fresh branch for another run.
+The test submits one roster and proof on the temporary branch. Use a fresh branch for another run, or set `API_TEST_IIIT_INDEX` to an unused IIIT account index on the same branch.
 
 ## Deployment
 

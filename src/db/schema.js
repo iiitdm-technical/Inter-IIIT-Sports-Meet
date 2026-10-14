@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, integer, boolean, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, varchar, integer, boolean, timestamp, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 /**
  * 1. USERS TABLE
@@ -18,7 +18,7 @@ export const users = pgTable("users", {
 /**
  * 2. REGISTRATIONS TABLE
  * Represents an immutable submitted registration for an IIIT.
- * Unsubmitted drafts exist only in client browser localStorage.
+ * Unsubmitted drafts are stored separately and can be resumed on another device.
  */
 export const registrations = pgTable("registrations", {
   id: serial("id").primaryKey(),
@@ -33,6 +33,14 @@ export const registrations = pgTable("registrations", {
   totalStudentsCount: integer("total_students_count").default(0).notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const registrationDrafts = pgTable("registration_drafts", {
+  iiitCode: varchar("iiit_code", { length: 64 }).primaryKey().references(() => users.iiitCode, { onDelete: "cascade" }),
+  contactDetails: jsonb("contact_details").notNull(),
+  slotsMap: jsonb("slots_map").notNull(),
+  revision: integer("revision").default(1).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

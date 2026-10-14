@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import RegistrationHeader from "@/components/registration/RegistrationHeader";
 import ContactForm from "@/components/registration/ContactForm";
@@ -31,6 +31,11 @@ export default function RegisterPage() {
   const [slotsMap, setSlotsMap] = useState({});
   const [lastSaved, setLastSaved] = useState(null);
   const [saveError, setSaveError] = useState("");
+  const [conflictDraft, setConflictDraft] = useState(null);
+  const [saveRetryCount, setSaveRetryCount] = useState(0);
+  const draftRevisionRef = useRef(0);
+  const saveQueueRef = useRef(Promise.resolve());
+  const conflictRef = useRef(false);
   
   // UI State
   const [activeTab, setActiveTab] = useState("M");
@@ -74,23 +79,27 @@ export default function RegisterPage() {
           return;
         }
         
-        // Not submitted → load draft from localStorage
+        // Not submitted → load the cloud draft, preserving newer local edits.
+        const draftRes = await fetch("/api/registration/draft");
+        if (!draftRes.ok) {
+          throw new Error("Could not load your saved draft. Please try again before editing.");
+        }
+        const cloudDraft = (await draftRes.json()).data;
+        draftRevisionRef.current = cloudDraft?.revision || 0;
         const draftKey = `inter_iiit_registration_${authData.user.username}`;
-        let saved = null;
+        let localDraft = null;
         try {
-          saved = localStorage.getItem(draftKey);
+          const saved = localStorage.getItem(draftKey);
+          if (saved) localDraft = JSON.parse(saved);
         } catch {
           setSaveError("This browser cannot access your local draft. Changes may not be saved.");
         }
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed.contactDetails) setContactDetails(parsed.contactDetails);
-            if (parsed.slotsMap) setSlotsMap(parsed.slotsMap);
-          } catch (e) {
-            console.error("Failed to parse local draft", e);
-          }
-        }
+        const localIsNewer = localDraft?.updatedAt &&
+          (!cloudDraft || Date.parse(localDraft.updatedAt) > Date.parse(cloudDraft.updatedAt));
+        const draft = localIsNewer ? localDraft : cloudDraft || localDraft;
+        if (draft?.contactDetails) setContactDetails(draft.contactDetails);
+        if (draft?.slotsMap) setSlotsMap(draft.slotsMap);
+        if (cloudDraft && !localIsNewer) setLastSaved(new Date(cloudDraft.updatedAt));
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
@@ -101,24 +110,70 @@ export default function RegisterPage() {
     init();
   }, [router, retryCount]);
 
-  // Auto-save to localStorage
+  // Save immediately in this browser, then sync each change to Neon in order.
   useEffect(() => {
     if (loading || loadError || lockedRegistrationData || !user) return;
     
     const draftKey = `inter_iiit_registration_${user.username}`;
-    const timer = setTimeout(() => {
+    const snapshot = { contactDetails, slotsMap, updatedAt: new Date().toISOString() };
+    const localTimer = setTimeout(() => {
+      setLastSaved(null);
       try {
-        localStorage.setItem(draftKey, JSON.stringify({ contactDetails, slotsMap }));
-        setLastSaved(new Date());
-        setSaveError("");
+        localStorage.setItem(draftKey, JSON.stringify(snapshot));
       } catch {
-        setLastSaved(null);
-        setSaveError("Draft could not be saved in this browser. Keep this page open and submit soon.");
+        setSaveError("This browser cannot save a local copy. Keep this page open until cloud save succeeds.");
       }
+    }, 0);
+    const timer = setTimeout(() => {
+      saveQueueRef.current = saveQueueRef.current.then(async () => {
+        if (conflictRef.current) return;
+        try {
+          const response = await fetch("/api/registration/draft", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ revision: draftRevisionRef.current, contactDetails, slotsMap }),
+          });
+          const result = await response.json().catch(() => null);
+          if (response.status === 409 && result?.data) {
+            conflictRef.current = true;
+            setConflictDraft(result.data);
+            setSaveError("A newer draft was saved in another session. Choose which version to keep below.");
+            return;
+          }
+          if (!response.ok) throw new Error(result?.error || "Cloud save failed");
+          draftRevisionRef.current = result.data.revision;
+          setLastSaved(new Date(result.data.updatedAt));
+          setSaveError("");
+        } catch {
+          setSaveError("Cloud save failed. Your draft remains in this browser; retry when connected.");
+        }
+      });
     }, 1000);
     
-    return () => clearTimeout(timer);
-  }, [contactDetails, slotsMap, loading, loadError, lockedRegistrationData, user]);
+    return () => {
+      clearTimeout(localTimer);
+      clearTimeout(timer);
+    };
+  }, [contactDetails, slotsMap, loading, loadError, lockedRegistrationData, user, saveRetryCount]);
+
+  const handleLoadCloudDraft = () => {
+    if (!conflictDraft) return;
+    draftRevisionRef.current = conflictDraft.revision;
+    setContactDetails(conflictDraft.contactDetails);
+    setSlotsMap(conflictDraft.slotsMap);
+    conflictRef.current = false;
+    setConflictDraft(null);
+    setSaveError("");
+  };
+
+  const handleKeepLocalDraft = () => {
+    if (!conflictDraft) return;
+    draftRevisionRef.current = conflictDraft.revision;
+    conflictRef.current = false;
+    setConflictDraft(null);
+    setSaveError("");
+    setSaveRetryCount((count) => count + 1);
+  };
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -238,7 +293,17 @@ export default function RegisterPage() {
 
       {saveError && (
         <div role="alert" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">{saveError}</p>
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+            <p>{saveError}</p>
+            {conflictDraft ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={handleLoadCloudDraft} className="rounded-lg border border-amber-700 px-3 py-2">Load cloud version</button>
+                <button type="button" onClick={handleKeepLocalDraft} className="rounded-lg bg-[#1b5e20] px-3 py-2 text-white">Keep this version</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setSaveRetryCount((count) => count + 1)} className="mt-2 underline underline-offset-2">Retry cloud save</button>
+            )}
+          </div>
         </div>
       )}
       

@@ -18,7 +18,10 @@ if (new URL(testDatabaseUrl).hostname === new URL(process.env.DATABASE_URL).host
 const credentialsPath = process.env.API_TEST_CREDENTIALS_PATH || ".private/seed-credentials.json";
 const accounts = JSON.parse(readFileSync(credentialsPath, "utf8"));
 const admin = accounts.find((account) => account.role === "admin");
-const iiits = accounts.filter((account) => account.role === "iiit");
+const allIIITs = accounts.filter((account) => account.role === "iiit");
+const targetIndex = Number(process.env.API_TEST_IIIT_INDEX || 0);
+assert(Number.isInteger(targetIndex) && targetIndex >= 0 && targetIndex < allIIITs.length, "Invalid API_TEST_IIIT_INDEX");
+const iiits = [allIIITs[targetIndex], ...allIIITs.filter((_, index) => index !== targetIndex)];
 assert(admin && iiits.length >= 2, "Admin and two IIIT credentials are required");
 
 const port = Number(process.env.API_TEST_PORT || 3107);
@@ -95,6 +98,29 @@ try {
   const before = await request("/api/registration", { cookie: iiitCookie });
   expectStatus(before, 200, "empty registration lookup");
   assert.equal(before.body.data.submitted, false, "Test branch account already has a registration");
+  const emptyDraft = await request("/api/registration/draft", { cookie: iiitCookie });
+  expectStatus(emptyDraft, 200, "empty cloud draft lookup");
+  assert.equal(emptyDraft.body.data, null);
+  const draft = {
+    revision: 0,
+    contactDetails: { contactName: "Draft Coordinator", contactEmail: "", contactPhone: "", notes: "" },
+    slotsMap: { "athletics|100m|M|main|0": { rollNumber: "API-TEST-001", name: "API TEST STUDENT", gender: "M" } },
+  };
+  const draftRequest = { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) };
+  expectStatus(await request("/api/registration/draft", draftRequest), 401, "draft save requires login");
+  expectStatus(await request("/api/registration/draft", { cookie: adminCookie, ...draftRequest }), 403, "admin cannot save IIIT draft");
+  const savedDraft = await request("/api/registration/draft", { cookie: iiitCookie, ...draftRequest });
+  expectStatus(savedDraft, 200, "cloud draft saved");
+  assert.equal(savedDraft.body.data.revision, 1);
+  const otherDraft = await request("/api/registration/draft", { cookie: otherCookie });
+  expectStatus(otherDraft, 200, "other IIIT draft lookup");
+  assert.equal(otherDraft.body.data, null);
+  const updatedDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 1 }) });
+  expectStatus(updatedDraft, 200, "cloud draft updated");
+  assert.equal(updatedDraft.body.data.revision, 2);
+  const staleDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 1 }) });
+  expectStatus(staleDraft, 409, "stale cloud draft rejected");
+  assert.equal(staleDraft.body.data.revision, 2);
   expectStatus(await request("/api/registration/csv", { cookie: iiitCookie }), 400, "CSV unavailable before registration");
   expectStatus(await request("/api/upload", { cookie: iiitCookie, method: "POST", body: new FormData() }), 403, "proof unavailable before roster lock");
 
@@ -107,6 +133,10 @@ try {
   invalid.entries[0].eventId = "invalid-event";
   expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(invalid) }), 422, "invalid event rejected");
   expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 200, "registration submitted");
+  const clearedDraft = await request("/api/registration/draft", { cookie: iiitCookie });
+  expectStatus(clearedDraft, 200, "cloud draft lookup after lock");
+  assert.equal(clearedDraft.body.data, null);
+  expectStatus(await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 0 }) }), 409, "draft save blocked after lock");
   expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 403, "duplicate registration rejected");
 
   const registration = await request("/api/registration", { cookie: iiitCookie });
@@ -149,7 +179,7 @@ try {
   const adminOverview = await request("/api/admin/registrations", { cookie: adminCookie });
   expectStatus(adminOverview, 200, "admin registrations overview");
   assert(adminOverview.body.data.some((row) => row.iiitCode === iiits[0].iiitCode && row.status === "submitted"));
-  const entries = await request("/api/admin/entries?name=API%20TEST&page=1&limit=25", { cookie: adminCookie });
+  const entries = await request(`/api/admin/entries?iiit=${encodeURIComponent(iiits[0].iiitCode)}&name=API%20TEST&page=1&limit=25`, { cookie: adminCookie });
   expectStatus(entries, 200, "admin filtered entries");
   assert.equal(entries.body.data.total, 1);
   const masterCsv = await request("/api/admin/csv?rollNumber=API-TEST-001", { cookie: adminCookie });

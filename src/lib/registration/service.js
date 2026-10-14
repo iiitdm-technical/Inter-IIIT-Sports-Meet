@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
+import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { headProof } from "../storage/neon.js";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/schemas.js";
 import { validateRegistrationRules } from "../validation/rules.js";
@@ -177,6 +177,8 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
     });
 
     await tx.insert(studentEventParticipations).values(participationRows);
+
+    await tx.delete(registrationDrafts).where(eq(registrationDrafts.iiitCode, iiitCode));
 
     return {
       registrationId: regId,
