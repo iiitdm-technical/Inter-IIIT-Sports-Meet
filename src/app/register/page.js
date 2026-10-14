@@ -18,6 +18,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [lockedRegistrationData, setLockedRegistrationData] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   
   // Form State
   const [contactDetails, setContactDetails] = useState({
@@ -28,6 +30,7 @@ export default function RegisterPage() {
   });
   const [slotsMap, setSlotsMap] = useState({});
   const [lastSaved, setLastSaved] = useState(null);
+  const [saveError, setSaveError] = useState("");
   
   // UI State
   const [activeTab, setActiveTab] = useState("M");
@@ -39,11 +42,12 @@ export default function RegisterPage() {
   // Initialize and check auth/registration status
   useEffect(() => {
     const init = async () => {
+      setLoading(true);
+      setLoadError("");
       try {
         const authRes = await fetch("/api/auth/me");
         if (!authRes.ok) {
-          router.push("/login");
-          return;
+          throw new Error("Could not verify your session. Please try again.");
         }
         const authData = await authRes.json();
         if (!authData || !authData.user) {
@@ -57,18 +61,27 @@ export default function RegisterPage() {
         setUser(authData.user);
 
         const regRes = await fetch("/api/registration");
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          if (regData.data && regData.data.submitted) {
-            setLockedRegistrationData(regData.data);
-            setLoading(false);
-            return;
-          }
+        if (!regRes.ok) {
+          throw new Error("Could not load your registration. Please try again before editing.");
+        }
+        const regData = await regRes.json();
+        if (!regData?.data || typeof regData.data.submitted !== "boolean") {
+          throw new Error("Registration response was incomplete. Please try again.");
+        }
+        if (regData.data?.submitted) {
+          setLockedRegistrationData(regData.data);
+          setLoading(false);
+          return;
         }
         
         // Not submitted → load draft from localStorage
         const draftKey = `inter_iiit_registration_${authData.user.username}`;
-        const saved = localStorage.getItem(draftKey);
+        let saved = null;
+        try {
+          saved = localStorage.getItem(draftKey);
+        } catch {
+          setSaveError("This browser cannot access your local draft. Changes may not be saved.");
+        }
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
@@ -81,24 +94,31 @@ export default function RegisterPage() {
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
-        router.push("/login");
+        setLoadError(err.message || "Could not load your registration. Please try again.");
+        setLoading(false);
       }
     };
     init();
-  }, [router]);
+  }, [router, retryCount]);
 
   // Auto-save to localStorage
   useEffect(() => {
-    if (loading || lockedRegistrationData || !user) return;
+    if (loading || loadError || lockedRegistrationData || !user) return;
     
     const draftKey = `inter_iiit_registration_${user.username}`;
     const timer = setTimeout(() => {
-      localStorage.setItem(draftKey, JSON.stringify({ contactDetails, slotsMap }));
-      setLastSaved(new Date());
+      try {
+        localStorage.setItem(draftKey, JSON.stringify({ contactDetails, slotsMap }));
+        setLastSaved(new Date());
+        setSaveError("");
+      } catch {
+        setLastSaved(null);
+        setSaveError("Draft could not be saved in this browser. Keep this page open and submit soon.");
+      }
     }, 1000);
     
     return () => clearTimeout(timer);
-  }, [contactDetails, slotsMap, loading, lockedRegistrationData, user]);
+  }, [contactDetails, slotsMap, loading, loadError, lockedRegistrationData, user]);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -145,7 +165,11 @@ export default function RegisterPage() {
       }
       
       // Success — clear local draft and reload to show locked state
-      localStorage.removeItem(`inter_iiit_registration_${user.username}`);
+      try {
+        localStorage.removeItem(`inter_iiit_registration_${user.username}`);
+      } catch {
+        // The server has accepted and locked the registration; reload its authoritative state.
+      }
       window.location.reload();
       
     } catch (err) {
@@ -158,6 +182,20 @@ export default function RegisterPage() {
     return (
       <div className="min-h-screen bg-[#faf6ee] flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-800"></div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-[#faf6ee] px-4 py-16 flex items-start justify-center">
+        <div role="alert" className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
+          <h1 className="text-xl font-black text-[#0a2112]">Registration unavailable</h1>
+          <p className="mt-3 text-sm text-gray-700">{loadError}</p>
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-6 rounded-lg bg-[#1b5e20] px-5 py-3 text-sm font-bold text-white hover:bg-green-800">
+            Try again
+          </button>
+        </div>
       </div>
     );
   }
@@ -197,6 +235,12 @@ export default function RegisterPage() {
         onLogout={handleLogout}
         isLoggingOut={isLoggingOut}
       />
+
+      {saveError && (
+        <div role="alert" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">{saveError}</p>
+        </div>
+      )}
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <ContactForm 

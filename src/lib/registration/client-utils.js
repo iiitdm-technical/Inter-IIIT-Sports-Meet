@@ -95,6 +95,21 @@ export function getStudentRegistry(slotsMap) {
   return registry;
 }
 
+function describeSchemaIssue(issue, payload) {
+  const [section, index] = issue.path;
+  if (section === "contactDetails") return issue.message;
+  if (section === "students") {
+    if (typeof index !== "number") return issue.message;
+    const roll = payload.students[index]?.rollNumber;
+    return `Student ${index + 1}${roll ? ` (${roll})` : ""}: ${issue.message}`;
+  }
+  if (section === "entries") {
+    if (typeof index !== "number") return issue.message;
+    return `Event entry ${index + 1}: ${issue.message}`;
+  }
+  return issue.message;
+}
+
 /**
  * Analyzes form state and returns live validation errors
  */
@@ -133,7 +148,7 @@ export function getLiveValidationErrors(contactDetails, slotsMap) {
   const parsed = registrationSubmitSchema.safeParse(payload);
   if (!parsed.success) {
     parsed.error.issues.forEach(issue => {
-      errors.push(`${issue.path.join(".")}: ${issue.message}`);
+      errors.push(describeSchemaIssue(issue, payload));
     });
   }
 
