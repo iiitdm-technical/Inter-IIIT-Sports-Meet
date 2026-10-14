@@ -12,6 +12,12 @@ export default function AdminDashboardPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState("entries");
   const [registrationsOverview, setRegistrationsOverview] = useState([]);
+  const [verificationTarget, setVerificationTarget] = useState(null);
+  const [verificationUtr, setVerificationUtr] = useState("");
+  const [verificationAmount, setVerificationAmount] = useState("");
+  const [bankConfirmed, setBankConfirmed] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [verificationBusy, setVerificationBusy] = useState(false);
 
   // Entries search filters & data
   const [entriesData, setEntriesData] = useState({ rows: [], total: 0, page: 1, totalPages: 1 });
@@ -144,6 +150,43 @@ export default function AdminDashboardPage() {
       console.error("Logout error:", err);
     }
     router.push("/login");
+  };
+
+  const openVerification = (row) => {
+    setVerificationTarget(row);
+    setVerificationUtr("");
+    setVerificationAmount("");
+    setBankConfirmed(false);
+    setVerificationError("");
+  };
+
+  const submitVerification = async (event) => {
+    event.preventDefault();
+    if (!verificationTarget || verificationBusy) return;
+    setVerificationBusy(true);
+    setVerificationError("");
+    try {
+      const response = await fetch("/api/admin/payments/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          iiitCode: verificationTarget.iiitCode,
+          transactionId: verificationUtr,
+          amount: Number(verificationAmount),
+          bankConfirmed,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Could not verify payment");
+      setRegistrationsOverview((current) => current.map((row) => row.iiitCode === verificationTarget.iiitCode
+        ? { ...row, paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy }
+        : row));
+      setVerificationTarget(null);
+    } catch (error) {
+      setVerificationError(error.message || "Could not verify payment");
+    } finally {
+      setVerificationBusy(false);
+    }
   };
 
   if (loading) {
@@ -484,7 +527,16 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {row.status === "submitted"
-                          ? <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-black">Proof Submitted</span>
+                          ? <div className="flex flex-col items-center gap-2">
+                              <span className={`px-2 py-1 rounded-full text-[10px] font-black ${row.paymentVerificationStatus === "verified" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                                {row.paymentVerificationStatus === "verified" ? "Bank Verified" : "Proof Submitted"}
+                              </span>
+                              {row.paymentVerificationStatus !== "verified" && row.paymentProofPathname && (
+                                <button type="button" onClick={() => openVerification(row)} className="rounded-lg border border-[#1b5e20] px-2.5 py-1 text-[10px] font-bold text-[#1b5e20] hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-700">
+                                  Verify payment
+                                </button>
+                              )}
+                            </div>
                           : row.status === "payment_pending"
                           ? <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">Awaiting Proof</span>
                           : <span className="text-gray-400 text-[10px]">—</span>}
@@ -524,6 +576,33 @@ export default function AdminDashboardPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+        {verificationTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a2112]/70 p-4" role="dialog" aria-modal="true" aria-labelledby="verify-payment-title">
+            <form onSubmit={submitVerification} className="w-full max-w-lg rounded-2xl bg-[#faf6ee] p-6 shadow-2xl">
+              <h2 id="verify-payment-title" className="text-xl font-black text-[#0a2112]">Verify bank transfer</h2>
+              <p className="mt-2 text-sm text-gray-700">{verificationTarget.iiitName} submitted a proof for ₹{Number(verificationTarget.paymentAmount).toLocaleString("en-IN")}. Check the bank statement before confirming receipt.</p>
+              <div className="mt-5 space-y-4">
+                <div>
+                  <label htmlFor="verify-utr" className="block text-xs font-bold uppercase tracking-wide text-gray-700">UTR shown on bank statement</label>
+                  <input id="verify-utr" value={verificationUtr} onChange={(event) => setVerificationUtr(event.target.value)} required className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-mono focus:border-green-700 focus:outline-none" />
+                </div>
+                <div>
+                  <label htmlFor="verify-amount" className="block text-xs font-bold uppercase tracking-wide text-gray-700">Amount received (₹)</label>
+                  <input id="verify-amount" type="number" min="1" step="1" value={verificationAmount} onChange={(event) => setVerificationAmount(event.target.value)} required className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none" />
+                </div>
+                <label className="flex items-start gap-3 text-sm font-medium text-gray-800">
+                  <input type="checkbox" checked={bankConfirmed} onChange={(event) => setBankConfirmed(event.target.checked)} required className="mt-1 size-4 accent-[#1b5e20]" />
+                  I matched the UTR and amount to an actual credit in the organizer&apos;s bank account.
+                </label>
+              </div>
+              {verificationError && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{verificationError}</p>}
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setVerificationTarget(null)} disabled={verificationBusy} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={verificationBusy || !bankConfirmed} className="rounded-lg bg-[#1b5e20] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{verificationBusy ? "Verifying…" : "Mark verified"}</button>
+              </div>
+            </form>
           </div>
         )}
       </main>

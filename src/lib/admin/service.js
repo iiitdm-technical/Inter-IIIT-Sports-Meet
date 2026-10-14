@@ -31,6 +31,9 @@ export async function getAdminRegistrationsOverview() {
       otherPaymentMode: paymentTransactions.otherPaymentMode,
       paymentProofPathname: paymentTransactions.proofPathname,
       paymentProofFileName: paymentTransactions.proofFileName,
+      paymentVerificationStatus: paymentTransactions.verificationStatus,
+      paymentVerifiedAt: paymentTransactions.verifiedAt,
+      paymentVerifiedBy: paymentTransactions.verifiedBy,
     })
     .from(users)
     .leftJoin(registrations, eq(users.iiitCode, registrations.iiitCode))
@@ -39,6 +42,46 @@ export async function getAdminRegistrationsOverview() {
     .orderBy(users.iiitName);
 
   return results;
+}
+
+export async function verifyPayment(iiitCode, transactionId, amount, adminUsername) {
+  const db = getDb();
+  const [registration] = await db.select({ id: registrations.id, status: registrations.status })
+    .from(registrations).where(eq(registrations.iiitCode, iiitCode)).limit(1);
+  if (!registration || registration.status !== "submitted") {
+    const error = new Error("Payment proof has not been submitted for this IIIT");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const [payment] = await db.select().from(paymentTransactions)
+    .where(eq(paymentTransactions.registrationId, registration.id)).limit(1);
+  if (!payment) {
+    const error = new Error("Payment record not found");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (payment.verificationStatus === "verified") {
+    const error = new Error("Payment is already verified");
+    error.statusCode = 409;
+    throw error;
+  }
+  if (payment.transactionId.trim() !== transactionId.trim() || payment.amount !== amount) {
+    const error = new Error("Entered UTR or amount does not match the submitted payment");
+    error.statusCode = 422;
+    throw error;
+  }
+
+  const [verified] = await db.update(paymentTransactions)
+    .set({ verificationStatus: "verified", verifiedAt: new Date(), verifiedBy: adminUsername })
+    .where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.verificationStatus, "pending")))
+    .returning({ verificationStatus: paymentTransactions.verificationStatus, verifiedAt: paymentTransactions.verifiedAt, verifiedBy: paymentTransactions.verifiedBy });
+  if (!verified) {
+    const error = new Error("Payment verification changed; refresh and try again");
+    error.statusCode = 409;
+    throw error;
+  }
+  return verified;
 }
 
 /**

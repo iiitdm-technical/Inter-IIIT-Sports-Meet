@@ -102,5 +102,8 @@ export const paymentTransactions = pgTable("payment_transactions", {
   proofFileName: varchar("proof_file_name", { length: 255 }).notNull(),
   proofContentType: varchar("proof_content_type", { length: 64 }).notNull(),
   proofSize: integer("proof_size").notNull(),
+  verificationStatus: varchar("verification_status", { length: 20 }).default("pending").notNull(), // 'pending' | 'verified'
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: varchar("verified_by", { length: 64 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });

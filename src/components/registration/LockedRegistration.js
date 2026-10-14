@@ -16,6 +16,7 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
   };
 
   const { registration, students, entries, payment } = registrationData;
+  const isPaymentVerified = payment?.verificationStatus === "verified";
 
   const downloadCsv = () => {
     const a = document.createElement("a");
@@ -50,8 +51,8 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">Registration & Payment Proof Submitted</h1>
-            <p className="text-green-800 font-medium">Your registration and payment details are locked. The organizers will verify the bank transfer separately.</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">{isPaymentVerified ? "Registration & Payment Verified" : "Registration & Payment Proof Submitted"}</h1>
+            <p className="text-green-800 font-medium">{isPaymentVerified ? "The organizer has confirmed your bank transfer. Your registration is complete and locked." : "Your registration and payment details are locked. The organizers will verify the bank transfer separately."}</p>
           </div>
 
           <div className="p-8">
@@ -146,8 +147,11 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                         <span className="block text-xs font-bold text-gray-500 uppercase">Payment Status</span>
                         <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-xs font-black">
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                          Proof Submitted
+                          {isPaymentVerified ? "Bank Verified" : "Awaiting Bank Verification"}
                         </span>
+                        {isPaymentVerified && payment.verifiedAt && (
+                          <span className="block mt-1 text-xs text-gray-500">Verified {new Date(payment.verifiedAt).toLocaleDateString("en-IN")}</span>
+                        )}
                       </div>
                       {payment.proofPathname && (
                         <a
