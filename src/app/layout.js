@@ -1,7 +1,6 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import AccountPageHeader from "@/components/AccountPageHeader";
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://interiiitsportsmeet.vercel.app"),
@@ -63,7 +62,6 @@ export default function RootLayout({ children }) {
       <body className="antialiased min-h-screen flex flex-col" style={{ background: '#faf6ee' }}>
         <Navbar />
         <main className="flex-grow">
-          <AccountPageHeader />
           {children}
         </main>
         <Footer />

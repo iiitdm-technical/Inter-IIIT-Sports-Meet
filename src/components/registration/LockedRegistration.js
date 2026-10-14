@@ -50,8 +50,8 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">Registration & Payment Submitted</h1>
-            <p className="text-green-800 font-medium">Your registration and payment details have been successfully submitted and are now permanently locked.</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">Registration & Payment Proof Submitted</h1>
+            <p className="text-green-800 font-medium">Your registration and payment details are locked. The organizers will verify the bank transfer separately.</p>
           </div>
 
           <div className="p-8">

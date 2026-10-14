@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 
 const RATE_PER_STUDENT = 2500;
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -92,7 +92,9 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const localToday = new Date();
+  localToday.setMinutes(localToday.getMinutes() - localToday.getTimezoneOffset());
+  const todayStr = localToday.toISOString().slice(0, 10);
   const uploadedFileName = paymentDetails?.proofFileName || localFile?.name || "";
 
   return (

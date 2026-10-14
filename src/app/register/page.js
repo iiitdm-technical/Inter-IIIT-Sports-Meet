@@ -246,15 +246,15 @@ export default function RegisterPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex-1 min-w-0">
             {submitError && (
-              <div className="text-red-600 text-sm font-bold bg-red-50 px-3 py-1.5 rounded inline-flex items-center gap-1.5">
+              <div className="text-red-600 text-sm font-bold bg-red-50 px-3 py-1.5 rounded flex items-center gap-1.5 break-words">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                 {submitError}
               </div>
             )}
             {!isValid && !submitError && (
-              <div className="text-red-600 text-sm bg-red-50 border border-red-200 px-3 py-1.5 rounded inline-flex items-center gap-1.5 max-w-full">
+              <div className="text-red-600 text-sm bg-red-50 border border-red-200 px-3 py-1.5 rounded flex items-center gap-1.5 w-full min-w-0">
                 <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
-                <span><span className="font-black">{errors.length} issue{errors.length !== 1 ? 's' : ''}</span> — <span className="font-medium truncate">{errors[0]}</span>{errors.length > 1 ? <span className="font-bold"> (+{errors.length - 1} more — open Review)</span> : <span className="font-bold"> — open Review to fix</span>}</span>
+                <span className="min-w-0"><span className="font-black">{errors.length} issue{errors.length !== 1 ? 's' : ''}</span><span className="sm:hidden"> — open Review to fix</span><span className="hidden sm:inline"> — <span className="font-medium break-words">{errors[0]}</span>{errors.length > 1 ? <span className="font-bold"> (+{errors.length - 1} more — open Review)</span> : <span className="font-bold"> — open Review to fix</span>}</span></span>
               </div>
             )}
             {isValid && !submitError && (

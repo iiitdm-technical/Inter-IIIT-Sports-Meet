@@ -167,6 +167,7 @@ export default function LoginPage() {
             {/* Username */}
             <div>
               <label
+                htmlFor="login-username"
                 className="block text-xs font-black uppercase tracking-wider mb-1.5"
                 style={{ color: "#444" }}
               >
@@ -174,7 +175,9 @@ export default function LoginPage() {
               </label>
 
               <input
+                id="login-username"
                 type="text"
+                autoComplete="username"
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -198,6 +201,7 @@ export default function LoginPage() {
             {/* Password */}
             <div>
               <label
+                htmlFor="login-password"
                 className="block text-xs font-black uppercase tracking-wider mb-1.5"
                 style={{ color: "#444" }}
               >
@@ -206,7 +210,9 @@ export default function LoginPage() {
 
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

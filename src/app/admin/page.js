@@ -165,18 +165,18 @@ export default function AdminDashboardPage() {
             <span className="px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider" style={{ background: "#f5c518", color: "#0a2112" }}>
               Admin
             </span>
-            <h1 className="text-white text-base font-black tracking-wide">
+            <h1 className="hidden sm:block text-white text-base font-black tracking-wide">
               Admin Dashboard
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs font-medium text-gray-300">
+            <span className="hidden sm:block text-xs font-medium text-gray-300">
               Logged in as <strong className="text-white">{currentUser?.username}</strong>
             </span>
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              className="whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50"
             >
               {isLoggingOut ? "Logging out..." : "Sign Out"}
             </button>
