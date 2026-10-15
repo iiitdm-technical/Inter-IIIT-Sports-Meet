@@ -7,6 +7,8 @@ import { pgTable, serial, text, varchar, integer, boolean, timestamp, jsonb, uni
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: varchar("username", { length: 64 }).notNull().unique(),
+  email: varchar("email", { length: 254 }).unique(),
+  displayName: varchar("display_name", { length: 128 }),
   passwordHash: text("password_hash").notNull(),
   role: varchar("role", { length: 20 }).notNull(), // 'iiit' | 'admin'
   iiitName: varchar("iiit_name", { length: 128 }),

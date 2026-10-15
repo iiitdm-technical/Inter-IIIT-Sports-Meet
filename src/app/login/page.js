@@ -171,7 +171,7 @@ export default function LoginPage() {
                 className="block text-xs font-black uppercase tracking-wider mb-1.5"
                 style={{ color: "#444" }}
               >
-                Username (IIIT Code)
+                IIIT code or admin email
               </label>
 
               <input
@@ -182,7 +182,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-5 py-3 rounded-xl text-sm outline-none transition-all"
-                placeholder="e.g. iiitdm-kancheepuram or admin"
+                placeholder="e.g. iiitdm-kancheepuram or admin@example.org"
                 style={{
                   border: "1.5px solid rgba(27,94,32,0.2)",
                   background: "#fff",

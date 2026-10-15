@@ -72,6 +72,8 @@ export async function createSessionCookie(user) {
   const payload = {
     userId: user.id,
     username: user.username,
+    email: user.email || null,
+    displayName: user.displayName || null,
     role: user.role, // 'iiit' | 'admin'
     iiitName: user.iiitName || null,
     iiitCode: user.iiitCode || null,

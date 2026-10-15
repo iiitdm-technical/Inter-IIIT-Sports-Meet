@@ -12,6 +12,7 @@ export default function AdminDashboardPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [activeTab, setActiveTab] = useState("entries");
   const [registrationsOverview, setRegistrationsOverview] = useState([]);
+  const [adminAccounts, setAdminAccounts] = useState([]);
   const [verificationTarget, setVerificationTarget] = useState(null);
   const [verificationUtr, setVerificationUtr] = useState("");
   const [verificationAmount, setVerificationAmount] = useState("");
@@ -102,6 +103,12 @@ export default function AdminDashboardPage() {
         if (regRes.ok) {
           const regData = await regRes.json();
           setRegistrationsOverview(regData.data || []);
+        }
+
+        const accountsRes = await fetch("/api/admin/accounts");
+        if (accountsRes.ok) {
+          const accountsData = await accountsRes.json();
+          setAdminAccounts(accountsData.data || []);
         }
 
         loadEntries(1, {});
@@ -214,7 +221,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="hidden sm:block text-xs font-medium text-gray-300">
-              Logged in as <strong className="text-white">{currentUser?.username}</strong>
+              Logged in as <strong className="text-white">{currentUser?.displayName || currentUser?.email || currentUser?.username}</strong>
             </span>
             <button
               onClick={handleLogout}
@@ -254,7 +261,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Tab Nav */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200">
+        <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
           <button
             onClick={() => setActiveTab("entries")}
             className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
@@ -274,6 +281,16 @@ export default function AdminDashboardPage() {
             }`}
           >
             IIITs &amp; Payments
+          </button>
+          <button
+            onClick={() => setActiveTab("admins")}
+            className={`whitespace-nowrap px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
+              activeTab === "admins"
+                ? "border-[#1b5e20] text-[#1b5e20]"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Admin Accounts
           </button>
         </div>
 
@@ -577,6 +594,31 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </div>
+        )}
+        {activeTab === "admins" && (
+          <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xs" aria-labelledby="admin-accounts-title">
+            <div className="border-b border-gray-200 px-5 py-4">
+              <h2 id="admin-accounts-title" className="text-lg font-black text-gray-900">Admin accounts</h2>
+              <p className="mt-1 text-sm text-gray-600">These accounts can view private proofs and verify bank payments. Accounts are added manually by an organizer.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[600px] text-left text-sm">
+                <thead className="bg-gray-50 text-xs font-black uppercase tracking-wider text-gray-500">
+                  <tr><th className="px-5 py-3">Name</th><th className="px-5 py-3">Email</th><th className="px-5 py-3">Username</th><th className="px-5 py-3">Added</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {adminAccounts.map((account) => (
+                    <tr key={account.id}>
+                      <td className="px-5 py-3 font-bold text-gray-900">{account.displayName || "—"}</td>
+                      <td className="px-5 py-3 text-gray-700">{account.email || "Legacy account — no email"}</td>
+                      <td className="px-5 py-3 font-mono text-gray-700">{account.username}</td>
+                      <td className="px-5 py-3 text-gray-600">{new Date(account.createdAt).toLocaleDateString("en-IN")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         )}
         {verificationTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a2112]/70 p-4" role="dialog" aria-modal="true" aria-labelledby="verify-payment-title">

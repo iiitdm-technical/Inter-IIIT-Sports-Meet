@@ -2,6 +2,16 @@ import { eq, and, ilike, sql, desc, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 
+export async function getAdminAccounts() {
+  return getDb().select({
+    id: users.id,
+    username: users.username,
+    email: users.email,
+    displayName: users.displayName,
+    createdAt: users.createdAt,
+  }).from(users).where(eq(users.role, "admin")).orderBy(users.username);
+}
+
 /**
  * Get list of all IIIT registrations with submission status, counts, and payment info
  */

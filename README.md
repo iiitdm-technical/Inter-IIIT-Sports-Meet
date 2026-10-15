@@ -42,6 +42,16 @@ npm run dev
 
 The seed creates one admin and 25 IIIT accounts with **different random passwords**. It writes them to `.private/seed-credentials.json` with restricted permissions. This file is ignored by Git. Keep a secure copy and distribute each account password only to its coordinator. Re-running the seed does not overwrite existing accounts or their passwords.
 
+To add a named admin manually, first apply migrations, then set `ADMIN_EMAIL`, `ADMIN_USERNAME`, and `ADMIN_NAME` for one command:
+
+```bash
+ADMIN_EMAIL=organizer@example.org ADMIN_USERNAME=organizer ADMIN_NAME="Organizer Name" npm run db:add-admin
+```
+
+The command generates a unique random password and saves it in `.private/admin-accounts/<username>.json` with restricted permissions. Give that credential only to its admin. Admins can sign in with their email or username. The faculty contact email entered by a coordinator is registration data and never grants admin access. Existing seeded `admin` access remains until it is explicitly retired.
+
+The admin dashboard's **Admin Accounts** tab lists names, emails, usernames, and creation dates. It never returns password hashes or generated passwords to the browser.
+
 Open `http://localhost:3000/login`. Draft registrations are saved to Neon for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
 
 When the sports cell supplies its verified UPI ID and payee name, set the two payment variables in the server environment and redeploy. The payment page then generates a UPI QR for the authoritative student count and ₹2,500 per student. Coordinators upload a proof and enter the UTR; an organizer must check the bank statement and mark the payment verified in the admin view.
