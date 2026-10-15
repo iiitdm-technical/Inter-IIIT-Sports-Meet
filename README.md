@@ -50,7 +50,7 @@ ADMIN_EMAIL=organizer@example.org ADMIN_USERNAME=organizer ADMIN_NAME="Organizer
 
 The command generates a unique random password and saves it in `.private/admin-accounts/<username>.json` with restricted permissions. Give that credential only to its admin. Admins can sign in with their email or username. The faculty contact email entered by a coordinator is registration data and never grants admin access. Existing seeded `admin` access remains until it is explicitly retired.
 
-The admin dashboard's **Admin Accounts** tab lists names, emails, usernames, and creation dates. It never returns password hashes or generated passwords to the browser.
+The admin dashboard's **Admin Accounts** tab lists names, emails, usernames, and creation dates. It never returns password hashes or generated passwords to the browser. Run `npm run env:check` after adding the first named admin.
 
 Open `http://localhost:3000/login`. Draft registrations are saved to Neon for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
 
@@ -61,9 +61,12 @@ After approval, the coordinator's locked registration page updates its payment s
 ## Verification
 
 ```bash
+npm run env:check
 npm run lint
 npm run build -- --webpack
 ```
+
+`env:check` validates the session secret and official UPI settings, connects to PostgreSQL, checks the current registration/payment schema and named admin account, and checks access to the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
 
 The webpack flag is a supported Next.js build option. It is useful where the default Turbopack build cannot start its local worker process.
 
@@ -77,4 +80,4 @@ The test submits one roster and proof on the temporary branch. Use a fresh branc
 
 ## Deployment
 
-Deploy the Next.js app on a Node.js compatible host and set the same server-side variables there. Run migrations before accepting registrations. The live Neon database and private bucket are separate from the hosting account; this project does not use Vercel Blob. Keep `SESSION_SECRET` consistent across instances. Payment confirmation still requires an organizer to reconcile the transfer with bank records.
+Deploy the Next.js app on a Node.js compatible host and set the same server-side variables there. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS website URL for canonical links, then run migrations and `npm run env:check` before accepting registrations. The live Neon database and private bucket are separate from the hosting account; this project does not use Vercel Blob. Keep `SESSION_SECRET` consistent across instances. Payment confirmation still requires an organizer to reconcile the transfer with bank records.

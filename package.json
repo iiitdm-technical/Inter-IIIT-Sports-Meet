@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node src/db/migrate.js",
     "db:seed": "node src/db/seed.js",
-    "db:add-admin": "node src/db/add-admin.js"
+    "db:add-admin": "node src/db/add-admin.js",
+    "env:check": "node src/db/check-env.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1151.0",
