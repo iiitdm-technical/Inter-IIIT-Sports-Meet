@@ -29,6 +29,8 @@ Set these server-side variables in `.env.local` and in the deployment environmen
 | `AWS_SECRET_ACCESS_KEY` | Neon storage credential secret |
 | `AWS_REGION` | Region of the Neon storage endpoint |
 | `NEON_STORAGE_BUCKET` | Private proof bucket, currently `payment-proofs` |
+| `PAYMENT_UPI_ID` | Official organizer UPI ID; enables the payment QR with `PAYMENT_PAYEE_NAME` |
+| `PAYMENT_PAYEE_NAME` | Payee name displayed beside and encoded in the QR |
 
 The storage credential needs access to the private bucket. Do not expose any of these values with a `NEXT_PUBLIC_` prefix or commit `.env.local`.
 
@@ -41,6 +43,8 @@ npm run dev
 The seed creates one admin and 25 IIIT accounts with **different random passwords**. It writes them to `.private/seed-credentials.json` with restricted permissions. This file is ignored by Git. Keep a secure copy and distribute each account password only to its coordinator. Re-running the seed does not overwrite existing accounts or their passwords.
 
 Open `http://localhost:3000/login`. Draft registrations are saved to Neon for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
+
+When the sports cell supplies its verified UPI ID and payee name, set the two payment variables in the server environment and redeploy. The payment page then generates a UPI QR for the authoritative student count and ₹2,500 per student. Coordinators upload a proof and enter the UTR; an organizer must check the bank statement and mark the payment verified in the admin view.
 
 ## Verification
 

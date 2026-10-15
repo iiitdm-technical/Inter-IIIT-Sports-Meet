@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 const RATE_PER_STUDENT = 2500;
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
@@ -37,6 +38,19 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
   );
   const [uploadError, setUploadError] = useState("");
   const [localFile, setLocalFile] = useState(null);
+  const [upiPayment, setUpiPayment] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/payment/upi", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load payment QR");
+        return response.json();
+      })
+      .then((data) => { if (active) setUpiPayment(data); })
+      .catch(() => { if (active) setUpiPayment({ configured: false }); });
+    return () => { active = false; };
+  }, []);
 
   const handleFieldChange = (field, value) => {
     onChange((current) => ({ ...current, [field]: value }));
@@ -123,6 +137,24 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-1">Amount Payable</p>
           <p className="text-xl font-black text-amber-800">{formatCurrency(amount)}</p>
         </div>
+      </div>
+
+      <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-5">
+        <h5 className="text-sm font-black uppercase tracking-wider text-green-950">Pay by UPI</h5>
+        {upiPayment?.configured ? (
+          <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-lg border border-green-200 bg-white p-2" />
+            <div className="text-sm text-green-950">
+              <p>Scan with your UPI app and confirm the payee and amount before paying.</p>
+              <p className="mt-3 font-bold">Payee: {upiPayment.payeeName}</p>
+              <p className="font-bold">UPI ID: {upiPayment.upiId}</p>
+              <p className="font-bold">Amount: {formatCurrency(upiPayment.amount)}</p>
+              <a href={upiPayment.paymentUri} className="mt-3 inline-block font-bold underline underline-offset-2">Open UPI app</a>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-green-900">The organizer will publish the official UPI QR here. You can submit a payment made through an approved alternate method.</p>
+        )}
       </div>
 
       {/* Form Fields */}
