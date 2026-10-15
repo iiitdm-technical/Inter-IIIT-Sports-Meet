@@ -6,7 +6,7 @@ export default function RegistrationHeader({ iiitName, uniqueStudentsCount, last
   const isOverLimit = uniqueStudentsCount > GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT;
   
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+    <div className="bg-white border-b border-gray-200 sticky top-[60px] sm:top-[68px] z-40 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div className="flex items-center gap-4 min-w-0">
           <span className="sm:hidden text-xs font-black uppercase tracking-wider text-[#1b5e20]">Register</span>

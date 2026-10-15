@@ -15,9 +15,11 @@ export default function ContactForm({ contactDetails, onChange }) {
       </div>
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Faculty In-Charge / Contact Name *</label>
+          <label htmlFor="contact-name" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Faculty In-Charge / Contact Name *</label>
           <input
+            id="contact-name"
             type="text"
+            autoComplete="name"
             required
             value={contactDetails.contactName}
             onChange={(e) => handleChange("contactName", e.target.value)}
@@ -26,9 +28,11 @@ export default function ContactForm({ contactDetails, onChange }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Official Email *</label>
+          <label htmlFor="contact-email" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Official Email *</label>
           <input
+            id="contact-email"
             type="email"
+            autoComplete="email"
             required
             value={contactDetails.contactEmail}
             onChange={(e) => handleChange("contactEmail", e.target.value)}
@@ -37,9 +41,11 @@ export default function ContactForm({ contactDetails, onChange }) {
           />
         </div>
         <div>
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Contact Phone *</label>
+          <label htmlFor="contact-phone" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Contact Phone *</label>
           <input
+            id="contact-phone"
             type="tel"
+            autoComplete="tel"
             required
             value={contactDetails.contactPhone}
             onChange={(e) => handleChange("contactPhone", e.target.value)}
@@ -48,8 +54,9 @@ export default function ContactForm({ contactDetails, onChange }) {
           />
         </div>
         <div className="md:col-span-2">
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Special Arrival Notes (Optional)</label>
+          <label htmlFor="contact-notes" className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Special Arrival Notes (Optional)</label>
           <textarea
+            id="contact-notes"
             value={contactDetails.notes}
             onChange={(e) => handleChange("notes", e.target.value)}
             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-green-700 focus:bg-white transition-colors min-h-[80px]"

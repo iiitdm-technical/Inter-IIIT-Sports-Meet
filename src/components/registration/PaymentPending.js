@@ -150,7 +150,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
               <p className="text-sm text-blue-900 font-black mb-4">Please verify your registration carefully before submitting payment.</p>
               
               <div className="pt-4 border-t border-blue-200">
-                <h3 className="text-sm font-bold text-blue-800 mb-1">Your registration contains {uniqueStudentsCount} unique students.</h3>
+                <h3 className="text-sm font-bold text-blue-800 mb-1">Your registration contains {uniqueStudentsCount} unique {uniqueStudentsCount === 1 ? "student" : "students"}.</h3>
                 <p className="text-sm text-blue-700">Amount payable: <strong>₹{(uniqueStudentsCount * 2500).toLocaleString('en-IN')}</strong></p>
               </div>
             </div>
