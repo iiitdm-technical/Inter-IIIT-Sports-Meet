@@ -86,6 +86,9 @@ try {
   assert.equal(unauthenticated.body.authenticated, false);
   expectStatus(await request("/api/registration"), 401, "registration requires login");
   expectStatus(await request("/api/admin/stats"), 401, "admin stats require login");
+  expectStatus(await request("/api/admin/accounts"), 401, "admin accounts require login");
+  expectStatus(await request("/api/payment/status"), 401, "payment status requires login");
+  expectStatus(await request("/api/payment/upi"), 401, "payment QR requires login");
 
   const iiitCookie = await login(iiits[0]);
   const otherCookie = await login(iiits[1]);
@@ -94,6 +97,8 @@ try {
   expectStatus(me, 200, "authenticated session lookup");
   assert.equal(me.body.user.iiitCode, iiits[0].iiitCode);
   expectStatus(await request("/api/admin/stats", { cookie: iiitCookie }), 403, "IIIT cannot read admin stats");
+  expectStatus(await request("/api/admin/accounts", { cookie: iiitCookie }), 403, "IIIT cannot read admin accounts");
+  expectStatus(await request("/api/payment/status", { cookie: iiitCookie }), 404, "payment status unavailable before submission");
 
   const before = await request("/api/registration", { cookie: iiitCookie });
   expectStatus(before, 200, "empty registration lookup");
@@ -144,6 +149,11 @@ try {
   assert.equal(registration.body.data.students.length, 1);
   assert.equal(registration.body.data.entries.length, 1);
   assert.equal(registration.body.data.registration.status, "payment_pending");
+  const upi = await request("/api/payment/upi", { cookie: iiitCookie });
+  expectStatus(upi, 200, "registration UPI QR");
+  assert.equal(upi.body.configured, true, "UPI settings must be configured in the test environment");
+  assert.equal(upi.body.amount, 2500);
+  assert(upi.body.qrDataUrl.startsWith("data:image/png;base64,"));
   const csv = await request("/api/registration/csv", { cookie: iiitCookie });
   expectStatus(csv, 200, "IIIT roster CSV");
   assert(csv.body.includes("API-TEST-001"));
@@ -168,6 +178,9 @@ try {
   };
   expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 200, "payment proof submitted");
   expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 403, "duplicate payment rejected");
+  const pendingStatus = await request("/api/payment/status", { cookie: iiitCookie });
+  expectStatus(pendingStatus, 200, "payment status after proof submission");
+  assert.equal(pendingStatus.body.data.verificationStatus, "pending");
   const returnedProof = await request("/api/payment/proof?iiitCode=" + iiits[0].iiitCode, { cookie: iiitCookie });
   expectStatus(returnedProof, 200, "private proof retrieval");
   assert(returnedProof.body.startsWith("%PDF-"));
@@ -179,6 +192,10 @@ try {
   const adminOverview = await request("/api/admin/registrations", { cookie: adminCookie });
   expectStatus(adminOverview, 200, "admin registrations overview");
   assert(adminOverview.body.data.some((row) => row.iiitCode === iiits[0].iiitCode && row.status === "submitted"));
+  const adminAccounts = await request("/api/admin/accounts", { cookie: adminCookie });
+  expectStatus(adminAccounts, 200, "admin accounts overview");
+  assert(adminAccounts.body.data.some((row) => row.username === admin.username));
+  assert(adminAccounts.body.data.every((row) => !("passwordHash" in row)));
   const entries = await request(`/api/admin/entries?iiit=${encodeURIComponent(iiits[0].iiitCode)}&name=API%20TEST&page=1&limit=25`, { cookie: adminCookie });
   expectStatus(entries, 200, "admin filtered entries");
   assert.equal(entries.body.data.total, 1);
@@ -187,6 +204,20 @@ try {
   assert(masterCsv.body.includes("API-TEST-001"));
   expectStatus(await request("/api/admin/stats", { cookie: adminCookie }), 200, "admin stats");
   expectStatus(await request("/api/payment/proof?iiitCode=" + iiits[0].iiitCode, { cookie: adminCookie }), 200, "admin proof retrieval");
+  const verifyPath = "/api/admin/payments/verify";
+  const verifyBody = (transactionId, bankConfirmed = true) => ({
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ iiitCode: iiits[0].iiitCode, transactionId, amount: 2500, bankConfirmed }),
+  });
+  expectStatus(await request(verifyPath, { cookie: iiitCookie, ...verifyBody(paymentDetails.transactionId) }), 403, "IIIT cannot verify payment");
+  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId, false) }), 400, "bank confirmation required");
+  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody("WRONG-UTR") }), 422, "wrong UTR rejected");
+  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 200, "admin payment approval");
+  const verifiedStatus = await request("/api/payment/status", { cookie: iiitCookie });
+  expectStatus(verifiedStatus, 200, "student sees verified payment");
+  assert.equal(verifiedStatus.body.data.verificationStatus, "verified");
+  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 409, "duplicate approval rejected");
   expectStatus(await request("/api/auth/logout", { cookie: iiitCookie, method: "POST" }), 200, "logout");
   console.log("All API route smoke checks passed on the isolated Neon branch.");
 } finally {
