@@ -66,7 +66,7 @@ npm run lint
 npm run build -- --webpack
 ```
 
-`env:check` validates the session secret and official UPI settings, connects to PostgreSQL, checks the current registration/payment schema and named admin account, and checks access to the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
+`env:check` validates the session secret and official UPI settings, connects to PostgreSQL, checks the registration, student, draft, and payment tables plus all 25 IIIT accounts and a named admin. It then writes, reads, and deletes a small temporary object in the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
 
 The webpack flag is a supported Next.js build option. It is useful where the default Turbopack build cannot start its local worker process.
 

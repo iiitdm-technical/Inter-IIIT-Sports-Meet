@@ -2,7 +2,9 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local", quiet: true });
 
 import pg from "pg";
-import { S3Client, HeadBucketCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "node:crypto";
+import { S3Client, HeadBucketCommand, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { iiits } from "../data/iiits.js";
 
 function requireValue(name) {
   const value = process.env[name]?.trim();
@@ -42,14 +44,18 @@ async function checkDatabase(databaseUrl) {
   try {
     const columns = await pool.query(`
       select table_name, column_name from information_schema.columns
-      where table_schema = 'public' and (
-        (table_name = 'users' and column_name in ('email', 'display_name')) or
-        (table_name = 'registrations' and column_name = 'status') or
-        (table_name = 'payment_transactions' and column_name = 'verification_status')
-      )
-    `);
+      where table_schema = 'public' and table_name = any($1)
+    `, [["users", "registration_drafts", "registrations", "students", "student_event_participations", "payment_transactions"]]);
     const found = new Set(columns.rows.map((row) => `${row.table_name}.${row.column_name}`));
-    for (const expected of ["users.email", "users.display_name", "registrations.status", "payment_transactions.verification_status"]) {
+    const requiredColumns = [
+      "users.username", "users.email", "users.display_name", "users.password_hash", "users.role", "users.iiit_code",
+      "registration_drafts.iiit_code", "registration_drafts.contact_details", "registration_drafts.slots_map", "registration_drafts.revision",
+      "registrations.id", "registrations.iiit_code", "registrations.status", "registrations.total_students_count",
+      "students.registration_id", "students.iiit_code", "students.roll_number", "students.gender",
+      "student_event_participations.registration_id", "student_event_participations.student_id", "student_event_participations.sport_id",
+      "payment_transactions.registration_id", "payment_transactions.proof_pathname", "payment_transactions.verification_status",
+    ];
+    for (const expected of requiredColumns) {
       if (!found.has(expected)) throw new Error(`Database migration missing: ${expected}`);
     }
     const accounts = await pool.query(`
@@ -57,7 +63,7 @@ async function checkDatabase(databaseUrl) {
              count(*) filter (where role = 'admin' and email is not null)::int as named_admins
       from users
     `);
-    if (accounts.rows[0].iiits < 1) throw new Error("Database has no IIIT accounts");
+    if (accounts.rows[0].iiits !== iiits.length) throw new Error(`Expected ${iiits.length} IIIT accounts, found ${accounts.rows[0].iiits}`);
     if (accounts.rows[0].named_admins < 1) throw new Error("Database has no named admin with an email");
     console.log(`PASS PostgreSQL schema and accounts (${accounts.rows[0].iiits} IIITs, ${accounts.rows[0].named_admins} named admin)`);
   } finally {
@@ -76,8 +82,18 @@ async function checkStorage() {
     },
   });
   try {
-    await client.send(new HeadBucketCommand({ Bucket: process.env.NEON_STORAGE_BUCKET }));
-    console.log("PASS private Neon Object Storage bucket reachable");
+    const bucket = process.env.NEON_STORAGE_BUCKET;
+    const key = `env-check/${randomUUID()}.txt`;
+    await client.send(new HeadBucketCommand({ Bucket: bucket }));
+    try {
+      await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: "storage-ready", ContentType: "text/plain" }));
+      const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      const content = await object.Body.transformToString();
+      if (content !== "storage-ready") throw new Error("Neon Object Storage returned unexpected content");
+      console.log("PASS private Neon Object Storage upload and retrieval");
+    } finally {
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+    }
   } finally {
     client.destroy();
   }
