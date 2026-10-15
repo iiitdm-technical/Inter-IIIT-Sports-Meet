@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, LockKeyhole } from "lucide-react";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -14,275 +14,91 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  async function handleLogin(event) {
+    event.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const res = await fetch("/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data.error || "Login failed. Please check your credentials."
-        );
-      }
-
-      if (data.user?.role === "admin") {
-        router.push("/admin");
-      } else {
-        router.push("/register");
-      }
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Login failed. Please check your credentials.");
+      router.push(data.user?.role === "admin" ? "/admin" : "/register");
     } catch (err) {
-      setError(
-        err.message || "An unexpected error occurred during login."
-      );
+      setError(err.message || "An unexpected error occurred during login.");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  const inputClass = "w-full rounded-xl border border-[#cbd2c4] bg-white px-4 py-3.5 text-[15px] text-[#0a2112] placeholder:text-[#768075] outline-none transition-colors focus:border-[#1b5e20] focus:ring-4 focus:ring-[#1b5e20]/10";
 
   return (
-    <div className="min-h-screen flex" style={{ background: "#faf6ee" }}>
-      {/* Left panel */}
-      <div
-        className="hidden md:flex flex-col w-[42%] p-12 relative overflow-hidden"
-        style={{ background: "#0a2112" }}
-      >
-        
-
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            background:
-              "linear-gradient(to bottom, rgba(64, 161, 57, 0.95) 0%, rgba(248, 255, 40, 0.84) 100%)",
-          }}
-        />
-
-        <div className="relative z-10">
-          <div className="w-20 h-20 relative bg-transparent rounded-full p-1">
-            <Image
-              src="/assets/brand/inter-iiit-logo.png"
-              alt="Logo"
-              fill
-              className="object-contain p-1"
-            />
+    <main className="min-h-[calc(100dvh-68px)] bg-[#faf6ee]">
+      <div className="mx-auto grid min-h-[calc(100dvh-68px)] max-w-[1600px] lg:grid-cols-[minmax(0,46%)_minmax(0,54%)]">
+        <section className="relative hidden min-h-[700px] overflow-hidden bg-[#102b1b] p-10 text-white lg:flex lg:flex-col xl:p-16" aria-label="About the sports meet">
+          <div className="pointer-events-none absolute -right-28 -top-24 h-[390px] w-[390px] rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute -right-6 top-8 h-[390px] w-[390px] rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-44 w-full bg-gradient-to-t from-[#244b2b]/60 to-transparent" />
+          <div className="relative flex items-center gap-4">
+            <div className="relative h-16 w-16 shrink-0">
+              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet" fill sizes="64px" className="object-contain" />
+            </div>
+            <span className="text-xs font-bold uppercase tracking-[0.22em] text-[#eacb81]">9th edition · 2026</span>
           </div>
-        </div>
-
-        <div style={{ flexGrow: 3 }} />
-
-        <div className="relative z-10">
-          <div
-            className="text-xs font-black tracking-[0.2em] uppercase mb-3"
-            style={{ color: "#0a2112" }}
-          >
-            9th Edition
-          </div>
-
-          <h2
-            className="font-bold text-3xl leading-tight mb-4"
-            style={{ color: "#ffffff" }}
-          >
-            All India
-            <br />
-            Inter-IIIT
-            <br />
-            Sports Meet
-            <br />
-            2026
-          </h2>
-
-          <div
-            className="w-10 h-0.5 rounded-full mb-6"
-            style={{ background: "#c9972f" }}
-          />
-
-          <p
-            className="text-sm leading-relaxed"
-            style={{ color: "rgba(10,33,18,0.76)" }}
-          >
-            19–23 December 2026
-            <br />
-            IIITDM Kancheepuram, India
-          </p>
-        </div>
-
-        <div style={{ flexGrow: 5 }} />
-
-        <div
-          className="relative z-10 text-xs"
-          style={{ color: "rgba(10,33,18,0.6)" }}
-        >
-          © 2026 All India Inter-IIIT Sports Meet
-        </div>
-
-        <div style={{ flexGrow: 2 }} />
-      </div>
-
-      {/* Right panel - form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm relative">
-
-          <div className="flex md:hidden absolute -top-24 left-0 w-20 h-20">
-            <Image
-              src="/assets/brand/inter-iiit-logo.png"
-              alt="Logo"
-              fill
-              className="object-contain"
-              style={{
-                filter:
-                  "brightness(0) saturate(100%) invert(9%) sepia(20%) saturate(1050%) hue-rotate(90deg) brightness(90%) contrast(95%)",
-              }}
-            />
-          </div>
-
-          {/* Main content */}
-          <div className="mb-8 mt-4">
-            <h1
-              className="font-black text-2xl"
-              style={{ color: "#0a2112" }}
-            >
-              Sign In
-            </h1>
-
-            <p className="text-sm mt-1.5 " style={{ color: "#777" }}>
-              Access the IIIT Registration Portal.
+          <div className="relative my-auto py-20">
+            <div className="mb-7 h-1 w-14 bg-[#e6b948]" />
+            <p className="mb-5 text-xs font-bold uppercase tracking-[0.24em] text-[#eacb81]">One nation. One sporting spirit.</p>
+            <h2 className="max-w-xl text-[clamp(2.8rem,4.3vw,5rem)] font-black leading-[1.04] tracking-[-0.045em]">
+              All India<br />Inter-IIIT<br />Sports Meet<span className="text-[#e6b948]">.</span>
+            </h2>
+            <p className="mt-7 max-w-md text-base leading-relaxed text-[#d1ded3]">
+              Represent your institute. Bring your team together. Be part of five days of sport and community in Kancheepuram.
             </p>
           </div>
-
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium leading-relaxed">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            {/* Username */}
-            <div>
-              <label
-                htmlFor="login-username"
-                className="block text-xs font-black uppercase tracking-wider mb-1.5"
-                style={{ color: "#444" }}
-              >
-                IIIT code or admin email
-              </label>
-
-              <input
-                id="login-username"
-                type="text"
-                autoComplete="username"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-5 py-3 rounded-xl text-sm outline-none transition-all"
-                placeholder="e.g. iiitdm-kancheepuram or admin@example.org"
-                style={{
-                  border: "1.5px solid rgba(27,94,32,0.2)",
-                  background: "#fff",
-                  color: "#0a2112",
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#1b5e20";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor =
-                    "rgba(27,94,32,0.2)";
-                }}
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label
-                htmlFor="login-password"
-                className="block text-xs font-black uppercase tracking-wider mb-1.5"
-                style={{ color: "#444" }}
-              >
-                Password
-              </label>
-
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-5 pr-11 py-3 rounded-xl text-sm outline-none transition-all"
-                  placeholder="Enter password"
-                  style={{
-                    border: "1.5px solid rgba(27,94,32,0.2)",
-                    background: "#fff",
-                    color: "#0a2112",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#1b5e20";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor =
-                      "rgba(27,94,32,0.2)";
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword((prev) => !prev)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 mr-1 focus:outline-none"
-                  style={{ color: "#1b5e20" }}
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-                  {showPassword ? (
-                    <EyeOff size={20} />
-                  ) : (
-                    <Eye size={20} />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 py-3.5 rounded-xl font-black text-sm tracking-wide transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
-              style={{
-                background: "#f5c518",
-                color: "#0a2112",
-              }}
-            >
-              {loading ? "Signing In..." : "Sign In →"}
-            </button>
-          </form>
-
-          <div
-            className="mt-7 text-center text-sm"
-            style={{ color: "#888" }}
-          >
-            <Link
-              href="/"
-              className="font-bold transition-colors"
-              style={{ color: "#1b5e20" }}
-            >
-              ← Return to Home
-            </Link>
+          <div className="relative grid grid-cols-2 gap-6 border-t border-white/20 pt-7 text-sm">
+            <div><span className="block text-xs uppercase tracking-[0.14em] text-[#aebfb0]">When</span><strong className="mt-1 block font-semibold text-white">19–23 December 2026</strong></div>
+            <div><span className="block text-xs uppercase tracking-[0.14em] text-[#aebfb0]">Where</span><strong className="mt-1 block font-semibold text-white">IIITDM Kancheepuram</strong></div>
           </div>
-        </div>
-      </div>
+        </section>
 
-    </div>
+        <section className="flex items-center justify-center px-5 py-12 sm:px-10 sm:py-16 lg:px-16" aria-labelledby="login-heading">
+          <div className="w-full max-w-[430px]">
+            <div className="mb-9">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d6dfd0] bg-[#eff4e9] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-[#245b2d]">
+                <LockKeyhole size={13} aria-hidden="true" /> Registration portal
+              </div>
+              <h1 id="login-heading" className="text-[clamp(2.25rem,4vw,3.2rem)] font-black leading-tight tracking-[-0.04em] text-[#0a2112]">Welcome back.</h1>
+              <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-[#546055]">Sign in to manage your institute’s contingent or review registrations.</p>
+            </div>
+            {error && <div role="alert" className="mb-6 rounded-xl border border-[#e8b7ae] bg-[#fff0ed] px-4 py-3 text-sm font-medium leading-relaxed text-[#8b2a21]">{error}</div>}
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div>
+                <label htmlFor="login-username" className="mb-2 block text-sm font-bold text-[#17351f]">IIIT code or admin email</label>
+                <input id="login-username" type="text" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} className={inputClass} placeholder="Enter your IIIT code or admin email" />
+              </div>
+              <div>
+                <label htmlFor="login-password" className="mb-2 block text-sm font-bold text-[#17351f]">Password</label>
+                <div className="relative">
+                  <input id="login-password" type={showPassword ? "text" : "password"} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass + " pr-14"} placeholder="Enter your password" />
+                  <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-[#426348] hover:bg-[#eff4e9] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20]" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>
+                    {showPassword ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" disabled={loading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-[#16562c] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#0e4321] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20] disabled:cursor-wait disabled:opacity-60">
+                {loading ? "Signing in…" : <>Sign in <ArrowRight size={18} aria-hidden="true" /></>}
+              </button>
+            </form>
+            <div className="mt-8 border-t border-[#dce2d5] pt-6">
+              <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#245b2d] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1b5e20]"><ArrowLeft size={16} aria-hidden="true" /> Return to home</Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }

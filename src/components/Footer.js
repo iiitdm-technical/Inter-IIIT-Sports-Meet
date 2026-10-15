@@ -11,14 +11,14 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-11 h-11 relative rounded-full p-1  border-amber-500/70 bg-white/5">
-                <Image src="/assets/brand/inter-iiit-logo.png" alt="Logo" fill className="object-contain p-1" />
+                <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill sizes="44px" className="object-contain p-1" />
               </div>
               <div>
                 <div className="font-black text-base text-white tracking-wide">ALL INDIA INTER-IIIT</div>
                 <div className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: '#c9972f' }}>Sports Meet 2026</div>
               </div>
             </div>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.72)' }}>
               Celebrating unity, sportsmanship and excellence across 20+ Indian Institutes of Information Technology.
             </p>
             <div className="mt-5 text-sm font-semibold" style={{ color: '#f5c518' }}>
@@ -39,8 +39,7 @@ export default function Footer() {
                 { href: '/contact', label: 'Contact' },
               ].map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm transition-colors hover:text-white"
-                    style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <Link href={href} prefetch={href === '/team' ? false : undefined} className="text-sm text-white/70 transition-colors hover:text-white">
                     {label}
                   </Link>
                 </li>
@@ -52,12 +51,12 @@ export default function Footer() {
           <div>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-5" style={{ color: '#c9972f' }}>Contact</h3>
             <div className="space-y-3 mb-6">
-              <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <div className="text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>
                 <span className="block font-semibold text-white mb-0.5">{eventInfo.host}</span>
                 Kancheepuram, Tamil Nadu
               </div>
               <a href="mailto:sports@iiitdm.ac.in" className="text-sm transition-colors hover:text-white"
-                style={{ color: 'rgba(255,255,255,0.5)' }}
+                style={{ color: 'rgba(255,255,255,0.72)' }}
                 aria-label="Email the All India Inter-IIIT Sports Meet organising team">
                 sports@iiitdm.ac.in
               </a>
@@ -73,10 +72,10 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-3"
           style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
             © 2026 All India Inter-IIIT Sports Meet. All rights reserved.
           </p>
-          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>
             Hosted by {eventInfo.host}
           </p>
         </div>
