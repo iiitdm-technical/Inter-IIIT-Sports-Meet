@@ -1,10 +1,42 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function LockedRegistration({ iiitCode, registrationData }) {
   const router = useRouter();
+  const [verification, setVerification] = useState({
+    status: registrationData.payment?.verificationStatus || "pending",
+    verifiedAt: registrationData.payment?.verifiedAt || null,
+  });
+
+  const refreshPaymentStatus = useCallback(async () => {
+    try {
+      const response = await fetch("/api/payment/status", { cache: "no-store" });
+      if (!response.ok) return;
+      const { data } = await response.json();
+      if (data?.verificationStatus === "verified") {
+        setVerification({ status: "verified", verifiedAt: data.verifiedAt });
+      }
+    } catch {
+      // Keep the last known status until the next check.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (verification.status === "verified") return;
+    const refresh = async () => {
+      if (document.visibilityState === "hidden") return;
+      await refreshPaymentStatus();
+    };
+    const interval = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [verification.status, refreshPaymentStatus]);
 
   const handleLogout = async () => {
     try {
@@ -16,7 +48,7 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
   };
 
   const { registration, students, entries, payment } = registrationData;
-  const isPaymentVerified = payment?.verificationStatus === "verified";
+  const isPaymentVerified = verification.status === "verified";
 
   const downloadCsv = () => {
     const a = document.createElement("a");
@@ -45,14 +77,14 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-green-50 border-b border-green-100 px-8 py-10 text-center">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className={`${isPaymentVerified ? "bg-green-50 border-green-100" : "bg-amber-50 border-amber-100"} border-b px-8 py-10 text-center`}>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isPaymentVerified ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-700"}`}>
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d={isPaymentVerified ? "M5 13l4 4L19 7" : "M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"} />
               </svg>
             </div>
             <h1 className="text-3xl font-black text-gray-900 mb-2">{isPaymentVerified ? "Registration & Payment Verified" : "Registration & Payment Proof Submitted"}</h1>
-            <p className="text-green-800 font-medium">{isPaymentVerified ? "The organizer has confirmed your bank transfer. Your registration is complete and locked." : "Your registration and payment details are locked. The organizers will verify the bank transfer separately."}</p>
+            <p className={`${isPaymentVerified ? "text-green-800" : "text-amber-900"} font-medium`}>{isPaymentVerified ? "The organizer has confirmed your bank transfer. Your registration is complete and locked." : "Your registration and payment details are locked. The organizers will verify the bank transfer separately."}</p>
           </div>
 
           <div className="p-8">
@@ -145,12 +177,15 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                     <div className="flex items-center justify-between pt-1">
                       <div>
                         <span className="block text-xs font-bold text-gray-500 uppercase">Payment Status</span>
-                        <span className="inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-full bg-green-100 text-green-800 text-xs font-black">
+                        <span role="status" aria-live="polite" className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-full text-xs font-black ${isPaymentVerified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"}`}>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                           {isPaymentVerified ? "Bank Verified" : "Awaiting Bank Verification"}
                         </span>
-                        {isPaymentVerified && payment.verifiedAt && (
-                          <span className="block mt-1 text-xs text-gray-500">Verified {new Date(payment.verifiedAt).toLocaleDateString("en-IN")}</span>
+                        {isPaymentVerified && verification.verifiedAt && (
+                          <span className="block mt-1 text-xs text-gray-500">Verified {new Date(verification.verifiedAt).toLocaleDateString("en-IN")}</span>
+                        )}
+                        {!isPaymentVerified && (
+                          <button type="button" onClick={refreshPaymentStatus} className="block mt-2 text-xs font-bold text-amber-800 underline underline-offset-2">Check status now</button>
                         )}
                       </div>
                       {payment.proofPathname && (

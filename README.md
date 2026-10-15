@@ -46,6 +46,8 @@ Open `http://localhost:3000/login`. Draft registrations are saved to Neon for th
 
 When the sports cell supplies its verified UPI ID and payee name, set the two payment variables in the server environment and redeploy. The payment page then generates a UPI QR for the authoritative student count and ₹2,500 per student. Coordinators upload a proof and enter the UTR; an organizer must check the bank statement and mark the payment verified in the admin view.
 
+After approval, the coordinator's locked registration page updates its payment status while open (within about 15 seconds, or immediately with **Check status now**). The approval endpoint requires an admin session, the submitted UTR and amount, and a confirmation that the bank credit was checked.
+
 ## Verification
 
 ```bash
