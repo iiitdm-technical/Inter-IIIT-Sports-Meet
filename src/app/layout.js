@@ -1,7 +1,22 @@
+import { Barlow_Condensed, Manrope } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import SiteChrome from '@/components/SiteChrome';
 import Footer from "@/components/Footer";
+
+// Display face for headings, numbers and labels; Manrope for reading text.
+const displayFont = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-barlow-condensed",
+  display: "swap",
+});
+
+const bodyFont = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://interiiitsportsmeet.vercel.app"),
@@ -48,19 +63,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth">
+    <html lang="en" className={`scroll-smooth ${displayFont.variable} ${bodyFont.variable}`} data-scroll-behavior="smooth">
       <head>
         <meta name="google-site-verification" content="bU1L_ZRG-giabNdHlC6ktOparSgIZQAmGhm0qPHF7XE" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="antialiased min-h-screen flex flex-col" style={{ background: '#faf6ee' }}>
+      <body className="antialiased min-h-screen flex flex-col bg-ivory font-sans text-ink">
         <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-[#0a2112] focus:shadow-lg">
           Skip to content
         </a>

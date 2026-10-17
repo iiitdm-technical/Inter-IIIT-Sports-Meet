@@ -15,49 +15,74 @@ const galleryItems = sports.map((sport) => ({
 
 
 const CATEGORY_LABELS = { M: 'Men', F: 'Women', mixed: 'Combined' };
+const TYPE_LABELS = {
+  team: 'Team sport',
+  combined_team: 'Mixed team',
+  event_based: 'Multi-event',
+  weight_category_based: 'Weight classes',
+};
 
 function describeLimits(sport, gender) {
   if (sport.type === 'team' || sport.type === 'combined_team') {
-    return `Squad of up to ${sport.teamLimits?.[gender]}`;
+    return { value: sport.teamLimits?.[gender], unit: 'players per squad' };
   }
   const events = sport.events?.[gender] || [];
-  const noun = sport.type === 'weight_category_based' ? 'weight categories' : 'events';
+  const noun = sport.type === 'weight_category_based' ? 'categories' : 'events';
   const perEvent = Math.max(...events.filter((e) => !e.isRelay).map((e) => e.maxParticipants));
   const reserves = Math.max(0, ...events.filter((e) => !e.isRelay).map((e) => e.maxReserves || 0));
-  return `${events.length} ${noun} · up to ${perEvent} per IIIT${reserves ? ` + ${reserves} reserve` : ''}`;
+  return {
+    value: events.length,
+    unit: `${noun} · ${perEvent} per IIIT${reserves ? ` + ${reserves} reserve` : ''}`,
+  };
 }
 
 function EventSummary() {
   const catalogue = getAllSportsList();
   return (
-    <section aria-labelledby="event-summary-title" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6">
-      <span className="text-[10px] font-black tracking-[0.25em] uppercase" style={{ color: '#86601a' }}>At a glance</span>
-      <h2 id="event-summary-title" className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
-        Entry limits per institute
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm text-gray-700">
-        Each student may enter at most two sports other than athletics and aquatics, plus up to three individual events each in athletics and aquatics (relays excluded). The rulebook is the final authority.
-      </p>
-      <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <section aria-labelledby="event-summary-title" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+      <div className="grid gap-6 border-t border-line pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-end">
+        <div>
+          <p className="eyebrow">At a glance</p>
+          <h2 id="event-summary-title" className="heading-section mt-3">
+            Entry limits per institute
+          </h2>
+        </div>
+        <p className="max-w-2xl text-[0.9375rem] leading-relaxed text-ink-soft">
+          Each student may enter at most two sports other than athletics and aquatics, plus up to three individual events each in athletics and aquatics (relays excluded). The rulebook is the final authority.
+        </p>
+      </div>
+      <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {catalogue.map((sport) => (
-          <li key={sport.id} className="rounded-2xl border bg-white p-4" style={{ borderColor: 'rgba(27,94,32,0.14)' }}>
-            <h3 className="font-bold text-base" style={{ color: '#0a2112' }}>{sport.name}</h3>
-            <dl className="mt-2 space-y-1 text-sm">
-              {sport.genders.map((gender) => (
-                <div key={gender} className="flex gap-2">
-                  <dt className="w-20 shrink-0 font-semibold text-gray-600">{CATEGORY_LABELS[gender]}</dt>
-                  <dd className="text-gray-800">{describeLimits(sport, gender)}</dd>
-                </div>
-              ))}
+          <li key={sport.id} className="card card-interactive flex flex-col p-5">
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="heading-card">{sport.name}</h3>
+              <span className="chip chip-gold shrink-0">{TYPE_LABELS[sport.type] || 'Sport'}</span>
+            </div>
+            <dl className="mt-4 divide-y divide-line border-y border-line">
+              {sport.genders.map((gender) => {
+                const limit = describeLimits(sport, gender);
+                return (
+                  <div key={gender} className="flex items-center gap-4 py-3">
+                    <dt className="w-20 shrink-0">
+                      <span className={`chip ${gender === 'F' ? 'chip-gold' : ''}`}>{CATEGORY_LABELS[gender]}</span>
+                    </dt>
+                    <dd className="flex items-baseline gap-2 text-ink">
+                      <span className="stat-number text-3xl text-brand-primary">{limit.value}</span>
+                      <span className="meta">{limit.unit}</span>
+                    </dd>
+                  </div>
+                );
+              })}
             </dl>
             {sport.events && (
-              <details className="mt-2 text-sm">
-                <summary className="cursor-pointer font-semibold" style={{ color: '#1b5e20' }}>
+              <details className="group mt-3 text-sm">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-control py-1 font-semibold text-brand-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary">
                   {sport.type === 'weight_category_based' ? 'Weight categories' : 'Event list'}
+                  <svg className="h-4 w-4 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </summary>
                 {sport.genders.map((gender) => (
-                  <p key={gender} className="mt-2 text-gray-700">
-                    <span className="font-semibold">{CATEGORY_LABELS[gender]}: </span>
+                  <p key={gender} className="mt-2 leading-relaxed text-ink-soft">
+                    <span className="font-semibold text-ink">{CATEGORY_LABELS[gender]}: </span>
                     {(sport.events[gender] || []).map((event) => event.name).join(', ')}
                   </p>
                 ))}
@@ -70,93 +95,90 @@ function EventSummary() {
   );
 }
 
-export default function Events() {
+/**
+ * Hides below-the-fold `[data-reveal]` blocks only after mount, animates them
+ * in on scroll, and reveals everything after a short fallback delay so content
+ * is never left invisible.
+ */
+function useReveal() {
   useEffect(() => {
-    const revealItems = document.querySelectorAll('[data-reveal]');
+    const items = Array.from(document.querySelectorAll('[data-reveal]'));
+    if (!items.length || !('IntersectionObserver' in window)) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
-    if (!revealItems.length) return undefined;
+    const show = (element) => element.classList.add('is-visible');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          show(entry.target);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
 
-    const activate = (element) => {
-      element.classList.add('is-visible');
-      element.dataset.visible = 'true';
-    };
-
-    if (!('IntersectionObserver' in window)) {
-      revealItems.forEach((item) => activate(item));
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            activate(entry.target);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.16 }
-    );
-
-    revealItems.forEach((item) => {
-      if (item.getBoundingClientRect().top < window.innerHeight + 120) {
-        activate(item);
-        return;
-      }
+    items.forEach((item) => {
+      if (item.getBoundingClientRect().top < window.innerHeight) return;
+      item.classList.add('reveal');
       observer.observe(item);
     });
-
-    return () => observer.disconnect();
+    const fallback = window.setTimeout(() => items.forEach(show), 2500);
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(fallback);
+    };
   }, []);
+}
+
+export default function Events() {
+  useReveal();
 
   return (
-    <div style={{ background: '#F4F5EB', minHeight: '100vh', perspective: '1200px' }}>
+    <div className="min-h-screen bg-ivory">
       <PageHeader title="Sporting Events" badge={sports.length} badgeLabel="Events" description={`${sports.length} competitive events testing speed, skill, strength, and strategy.`} />
 
-      {/* Events content */}
-      <div
-        style={{ willChange: 'transform', position: 'relative', zIndex: 2 }}
-      >
+      <div className="relative">
         {/* Circular Gallery Section */}
-        <div className="max-w-30xl mx-auto py-12 sm:py-20 md:py-28 px-4">
-          <div className="w-full">
-            <CircularGallery
-              items={galleryItems}
-              bend={3}
-              textColor="#ffffff"
-              borderRadius={0.05}
-              scrollEase={0.12}
-              fontUrl="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap"
-              font="800 24px 'Montserrat', sans-serif"
-              scrollSpeed={1.5}
-            />
-          </div>
+        <div className="mx-auto py-12 sm:py-16 md:py-20 px-4">
+          <CircularGallery
+            items={galleryItems}
+            bend={3}
+            textColor="#ffffff"
+            borderRadius={0.05}
+            scrollEase={0.12}
+            fontSize={26}
+            fontWeight={700}
+            scrollSpeed={1.5}
+          />
         </div>
-      <EventSummary />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-4">
-        <div data-reveal className="reveal rulebook-panel rounded-[28px] border p-6 sm:p-8 md:p-10 shadow-sm"
-          style={{ background: 'linear-gradient(135deg, rgba(245,197,24,0.12), rgba(255,255,255,0.9)), #fff', borderColor: 'rgba(27,94,32,0.14)' }}>
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-            <div className="max-w-2xl">
-              <span className="text-[10px] font-black tracking-[0.25em] uppercase" style={{ color: '#86601a' }}>
-                Rule Book
-              </span>
-              <h2 className="mt-3 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
-                Read the full rulebook: competition rules, eligibility, event regulations and participation limits.
-              </h2>
+
+        <EventSummary />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-20">
+          <section data-reveal aria-labelledby="rulebook-title" className="card-ink relative overflow-hidden rounded-card px-6 py-10 sm:px-10 md:px-14">
+            <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border-[28px] border-brand-highlight/15" aria-hidden="true" />
+            <div className="pointer-events-none absolute left-0 top-0 h-1.5 w-28 bg-brand-highlight" aria-hidden="true" />
+            <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="eyebrow text-brand-highlight">Rule book</p>
+                <h2 id="rulebook-title" className="heading-section mt-3 text-white">
+                  Read the full rulebook
+                </h2>
+                <p className="mt-4 text-[0.9375rem] leading-relaxed text-white/80">
+                  Competition rules, eligibility, event regulations and participation limits for every sport.
+                </p>
+              </div>
+              <Link
+                href="/assets/docs/rulebook.pdf"
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-accent shrink-0 px-7"
+              >
+                View rule book (PDF)
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
             </div>
-            <Link
-              href="/assets/docs/rulebook.pdf"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center px-7 py-3.5 rounded-full text-sm font-black transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
-              style={{ background: '#0a2112', color: '#f5c518', letterSpacing: '0.04em' }}
-            >
-              View Rule Book
-            </Link>
-          </div>
+          </section>
         </div>
-      </div>
       </div>
     </div>
   );

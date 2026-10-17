@@ -20,23 +20,23 @@ export default function RosterSummary({ entries = [] }) {
   );
 
   if (sorted.length === 0) {
-    return <p className="text-sm text-gray-600">No event entries were found for this registration.</p>;
+    return <p className="text-sm text-ink-soft">No event entries were found for this registration.</p>;
   }
 
   return (
-    <div className="divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white">
+    <div className="divide-y divide-line overflow-hidden rounded-control border border-line bg-white">
       {sorted.map((group) => (
         <section key={`${group.sportId}|${group.gender}|${group.eventId}`} className="px-4 py-3 sm:flex sm:gap-6">
-          <h3 className="text-sm font-bold text-gray-900 sm:w-56 sm:shrink-0">
+          <h3 className="text-sm font-bold text-ink sm:w-56 sm:shrink-0">
             {getSportName(group.sportId)} · {getEventName(group.sportId, group.eventId, group.gender)}
-            <span className="block text-xs font-medium text-gray-600">{getCategoryLabel(group.gender)}</span>
+            <span className="block text-xs font-medium text-ink-muted">{getCategoryLabel(group.gender)}</span>
           </h3>
-          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 sm:mt-0">
+          <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-soft sm:mt-0">
             {group.members.map((member) => (
               <li key={member.id ?? `${member.rollNumber}-${member.isReserve}`}>
                 {member.studentName}{" "}
-                <span className="font-mono text-xs text-gray-500">({member.rollNumber})</span>
-                {member.isReserve && <span className="ml-1 rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-orange-800">Reserve</span>}
+                <span className="font-mono text-xs text-ink-muted">({member.rollNumber})</span>
+                {member.isReserve && <span className="chip chip-gold ml-1.5 px-1.5 py-0.5 text-[11px]">Reserve</span>}
               </li>
             ))}
           </ul>

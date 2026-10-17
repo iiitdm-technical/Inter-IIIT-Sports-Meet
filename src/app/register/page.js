@@ -280,20 +280,21 @@ export default function RegisterPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#faf6ee] flex flex-col items-center justify-center gap-3" role="status">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-800" aria-hidden="true"></div>
-        <p className="text-sm font-bold text-[#0a2112]">Loading your registration…</p>
+      <div className="min-h-screen bg-ivory flex flex-col items-center justify-center gap-3" role="status">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-line border-t-brand-primary" aria-hidden="true"></div>
+        <p className="text-sm font-semibold text-ink-soft">Loading your registration…</p>
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#faf6ee] px-4 py-16 flex items-start justify-center">
-        <div role="alert" className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-          <h1 className="text-xl font-black text-[#0a2112]">Registration unavailable</h1>
-          <p className="mt-3 text-sm text-gray-700">{loadError}</p>
-          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="mt-6 rounded-lg bg-[#1b5e20] px-5 py-3 text-sm font-bold text-white hover:bg-green-800">
+      <div className="min-h-screen bg-ivory px-4 py-16 flex items-start justify-center">
+        <div role="alert" className="card w-full max-w-lg p-8">
+          <p className="eyebrow">Contingent registration</p>
+          <h1 className="heading-section mt-2 text-3xl">Registration unavailable</h1>
+          <p className="mt-3 text-sm text-ink-soft">{loadError}</p>
+          <button type="button" onClick={() => setRetryCount((count) => count + 1)} className="btn btn-primary mt-6">
             Try again
           </button>
         </div>
@@ -334,10 +335,10 @@ export default function RegisterPage() {
   const studentRegistry = getStudentRegistry(slotsMap);
 
   return (
-    <div className="min-h-screen bg-[#faf6ee] font-sans pb-48 sm:pb-32">
-      <RegistrationHeader 
-        iiitName={user.iiitName || user.username} 
-        uniqueStudentsCount={totalUniqueStudents} 
+    <div className="min-h-screen bg-ivory pb-48 sm:pb-32">
+      <RegistrationHeader
+        iiitName={user.iiitName || user.username}
+        uniqueStudentsCount={totalUniqueStudents}
         lastSaved={lastSaved}
         saveFailed={Boolean(saveError)}
         onLogout={handleLogout}
@@ -346,28 +347,36 @@ export default function RegisterPage() {
 
       {saveError && (
         <div role="alert" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+          <div className="rounded-card border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
             <p>{saveError}</p>
             {conflictDraft ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={handleLoadCloudDraft} className="rounded-lg border border-amber-700 px-3 py-2">Load cloud version</button>
-                <button type="button" onClick={handleKeepLocalDraft} className="rounded-lg bg-[#1b5e20] px-3 py-2 text-white">Keep this version</button>
+                <button type="button" onClick={handleLoadCloudDraft} className="btn btn-outline btn-sm">Load cloud version</button>
+                <button type="button" onClick={handleKeepLocalDraft} className="btn btn-primary btn-sm">Keep this version</button>
               </div>
             ) : (
-              <button type="button" onClick={() => setSaveRetryCount((count) => count + 1)} className="mt-2 underline underline-offset-2">Retry cloud save</button>
+              <button type="button" onClick={() => setSaveRetryCount((count) => count + 1)} className="mt-2 font-bold underline underline-offset-2">Retry cloud save</button>
             )}
           </div>
         </div>
       )}
-      
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        <ContactForm 
-          contactDetails={contactDetails} 
-          onChange={setContactDetails} 
+        <div className="mb-6">
+          <p className="eyebrow">Step 1 of 3 · Build your roster</p>
+          <h2 className="heading-section mt-2">Contingent roster</h2>
+          <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+            Add the contact person, then enter students in each event. Your draft saves automatically; fix any flagged issues, then review and lock the roster.
+          </p>
+        </div>
+
+        <ContactForm
+          contactDetails={contactDetails}
+          onChange={setContactDetails}
         />
-        
+
         {/* Navigation Tabs for Gender Sections */}
-        <div role="tablist" aria-label="Event categories" className="bg-white rounded-xl shadow-sm border border-gray-100 p-2 mb-6 grid grid-cols-1 sm:flex sm:flex-nowrap gap-2">
+        <div role="tablist" aria-label="Event categories" className="mb-5 grid grid-cols-3 gap-1 rounded-card border border-line bg-paper p-1">
           {[["M", "Men's Events"], ["F", "Women's Events"], ["mixed", "Combined Events"]].map(([tab, tabLabel]) => (
             <button
               key={tab}
@@ -377,15 +386,15 @@ export default function RegisterPage() {
               aria-selected={activeTab === tab}
               aria-controls="category-panel"
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 ${activeTab === tab ? "bg-[#1b5e20] text-white" : "bg-gray-50 text-gray-600 hover:bg-gray-100"}`}
+              className={`rounded-control px-2 py-2.5 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary sm:px-4 ${activeTab === tab ? "bg-brand-primary text-white" : "text-ink-soft hover:bg-ivory"}`}
             >
               {tabLabel}
             </button>
           ))}
         </div>
-        
+
         {/* Render sports for the active tab */}
-        <div id="category-panel" role="tabpanel" aria-labelledby={`category-tab-${activeTab}`} className="space-y-4">
+        <div id="category-panel" role="tabpanel" aria-labelledby={`category-tab-${activeTab}`} className="space-y-3">
           {getAllSportsList().map(sport => (
             <SportSection
               key={sport.id}
@@ -403,24 +412,24 @@ export default function RegisterPage() {
       </div>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-40">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-line bg-paper/95 px-4 py-3 shadow-[0_-8px_24px_-16px_rgb(10_33_18/0.35)] backdrop-blur sm:py-4">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             {submitError && (
-              <div className="text-red-700 text-sm font-bold bg-red-50 px-3 py-1.5 rounded flex items-center gap-1.5 break-words">
-                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+              <div className="flex items-center gap-2 break-words rounded-control bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
                 {submitError}
               </div>
             )}
             {!isValid && !submitError && (
-              <div className="text-red-700 text-sm bg-red-50 border border-red-200 px-3 py-1.5 rounded flex items-center gap-1.5 w-full min-w-0">
-                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
-                <span className="min-w-0 flex-1"><span className="font-black">{errors.length} issue{errors.length !== 1 ? 's' : ''}</span><span className="hidden sm:inline"> — <span className="font-medium break-words">{errors[0]}</span>{errors.length > 1 && <span className="font-bold"> (+{errors.length - 1} more in Review)</span>}</span></span>
+              <div className="flex w-full min-w-0 items-center gap-2 rounded-control border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/></svg>
+                <span className="min-w-0 flex-1 truncate"><span className="font-bold">{errors.length} issue{errors.length !== 1 ? 's' : ''}</span><span className="hidden sm:inline"> — {errors[0]}{errors.length > 1 && <span className="font-semibold"> (+{errors.length - 1} more in Review)</span>}</span></span>
                 {canShowFirstIssue && (
                   <button
                     type="button"
                     onClick={() => handleGoToIssue(firstIssue)}
-                    className="shrink-0 rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-bold text-red-800 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
+                    className="shrink-0 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-bold text-red-800 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700"
                   >
                     Show<span className="sr-only"> first issue</span>
                   </button>
@@ -428,21 +437,20 @@ export default function RegisterPage() {
               </div>
             )}
             {isValid && !submitError && (
-              <div className="text-green-700 text-sm font-bold bg-green-50 px-3 py-1.5 rounded inline-flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+              <div className="inline-flex items-center gap-2 rounded-control bg-green-wash px-3 py-2 text-sm font-semibold text-brand-primary">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
                 All validation rules passed
               </div>
             )}
           </div>
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <button 
-              type="button"
-              onClick={() => setIsReviewOpen(true)}
-              className="w-full sm:w-auto px-8 py-3.5 bg-[#f5c518] text-[#0a2112] font-black rounded-xl shadow hover:-translate-y-0.5 transition-all text-sm uppercase tracking-wide"
-            >
-              Review &amp; Submit
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsReviewOpen(true)}
+            className="btn btn-accent w-full px-7 sm:w-auto"
+          >
+            Review &amp; Submit
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
       </div>
 

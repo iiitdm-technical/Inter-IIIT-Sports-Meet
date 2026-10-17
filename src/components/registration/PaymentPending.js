@@ -113,72 +113,77 @@ export default function PaymentPending({ iiitCode, registrationData }) {
   const amount = getRegistrationFee(uniqueStudentsCount);
 
   return (
-    <div className="min-h-screen bg-[#faf6ee] font-sans pb-20">
+    <div className="min-h-screen bg-ivory pb-20">
       <LockedHeader iiitName={registration.iiitName} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-10">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="border-b border-amber-100 bg-amber-50 px-5 py-8 sm:px-8">
-            <h1 className="text-center text-2xl sm:text-3xl font-black text-gray-900">Roster locked — payment pending</h1>
-            <p className="mt-2 text-center text-sm text-amber-900">
-              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. Pay {formatRupees(amount)} and submit the proof below.
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-10 space-y-5">
+        <section className="card card-accent overflow-hidden">
+          <div className="px-5 pt-6 pb-5 sm:px-8 sm:pt-8">
+            <p className="eyebrow">Step 2 of 3 · Payment</p>
+            <h1 className="heading-section mt-2">Roster locked — payment pending</h1>
+            <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
+              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. Pay <strong className="text-ink">{formatRupees(amount)}</strong> and submit the proof below.
             </p>
-            <div className="mx-auto mt-6 max-w-md">
+          </div>
+          <div className="border-t border-line bg-ivory/70 px-5 py-5 sm:px-8">
+            <div className="mx-auto max-w-lg">
               <RegistrationSteps current={1} />
             </div>
           </div>
+        </section>
 
-          <div className="p-5 sm:p-8">
-            <details className="group mb-8 rounded-xl border border-gray-200 bg-gray-50">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20]">
-                <h2 className="text-sm font-bold">Check your locked roster ({entries?.length || 0} event entries)</h2>
-                <svg className="h-4 w-4 shrink-0 text-gray-500 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-              </summary>
-              <div className="space-y-3 px-4 pb-4">
-                <RosterSummary entries={entries} />
-                <a href="/api/registration/csv" download className="inline-flex items-center gap-2 text-sm font-bold text-[#1b5e20] underline underline-offset-2">
-                  Download roster as CSV
-                </a>
-                <p className="text-xs text-gray-600">
-                  Found a mistake? Email <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-bold underline">{SPORTS_CELL_EMAIL}</a> before paying.
-                </p>
-              </div>
-            </details>
-
-            {submitError && (
-              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <h2 className="text-red-800 font-bold text-sm">Payment could not be submitted</h2>
-                <p className="text-sm text-red-700 mt-0.5">{submitError}</p>
-              </div>
-            )}
-
-            <PaymentSection
-              uniqueStudentsCount={uniqueStudentsCount}
-              paymentDetails={paymentDetails}
-              onChange={setPaymentDetails}
-              errors={paymentErrors}
-              onUploadBusy={setUploadBusy}
-            />
-
-            <div className="mt-8 flex flex-col gap-4 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-gray-700 sm:max-w-md">
-                Submitting locks your payment details and proof. The organizers then check the transfer against their bank statement.
+        <details className="group card overflow-hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 hover:bg-ivory/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-primary sm:px-6">
+            <h2 className="heading-card">Check your locked roster <span className="font-medium text-ink-muted">({entries?.length || 0} event entries)</span></h2>
+            <svg className="h-5 w-5 shrink-0 text-ink-muted transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </summary>
+          <div className="space-y-3 border-t border-line bg-ivory/60 px-5 py-4 sm:px-6">
+            <RosterSummary entries={entries} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <a href="/api/registration/csv" download className="btn btn-outline btn-sm">
+                Download roster as CSV
+              </a>
+              <p className="meta">
+                Found a mistake? Email <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-semibold text-brand-primary underline underline-offset-2">{SPORTS_CELL_EMAIL}</a> before paying.
               </p>
-              <button
-                type="button"
-                disabled={!canFinalSubmit}
-                className="w-full sm:w-auto shrink-0 inline-flex justify-center rounded-lg px-6 py-3 bg-[#1b5e20] text-base font-black text-white hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                onClick={handleFinalSubmit}
-              >
-                {isSubmitting
-                  ? "Submitting…"
-                  : uploadBusy
-                  ? "Upload in progress…"
-                  : "Submit payment"}
-              </button>
             </div>
           </div>
-        </div>
+        </details>
+
+        {submitError && (
+          <div role="alert" className="rounded-card border border-red-200 bg-red-50 p-4">
+            <h2 className="text-sm font-bold text-red-800">Payment could not be submitted</h2>
+            <p className="mt-0.5 text-sm text-red-700">{submitError}</p>
+          </div>
+        )}
+
+        <section className="card p-5 sm:p-8">
+          <PaymentSection
+            uniqueStudentsCount={uniqueStudentsCount}
+            paymentDetails={paymentDetails}
+            onChange={setPaymentDetails}
+            errors={paymentErrors}
+            onUploadBusy={setUploadBusy}
+          />
+
+          <div className="mt-8 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ink-soft sm:max-w-md">
+              Submitting locks your payment details and proof. The organizers then check the transfer against their bank statement.
+            </p>
+            <button
+              type="button"
+              disabled={!canFinalSubmit}
+              className="btn btn-primary w-full shrink-0 px-7 sm:w-auto"
+              onClick={handleFinalSubmit}
+            >
+              {isSubmitting
+                ? "Submitting…"
+                : uploadBusy
+                ? "Upload in progress…"
+                : "Submit payment"}
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

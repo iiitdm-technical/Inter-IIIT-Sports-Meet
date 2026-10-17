@@ -2,8 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-const CINZEL_FONT_URL =
-  'https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Cinzel+Decorative:wght@700;900&display=swap';
+// Canvas text can't use CSS variables, so read the family next/font defined
+// for the site's display face and fall back to a condensed system font.
+function getDisplayFontFamily() {
+  if (typeof window === 'undefined') return "'Arial Narrow', sans-serif";
+  const family = getComputedStyle(document.documentElement).getPropertyValue('--font-barlow-condensed').trim();
+  return family || "'Barlow Condensed', 'Arial Narrow', sans-serif";
+}
 
 /**
  * Text scrambler hook
@@ -55,8 +60,9 @@ function useTextScramble(targetText, duration = 450) {
  * CircularGallery
  *
  * A canvas-rendered infinite horizontal gallery with cylindrical projection,
- * active center card scaling (1.18x), prominent border outline (#1C2E24),
- * and an animated Top Title display with inline word-scramble effect.
+ * active center card scaling (1.18x), prominent border outline, and an
+ * animated Top Title display with inline word-scramble effect. Card labels
+ * use the site's display font (Barlow Condensed).
  */
 export default function CircularGallery({
   items = [],
@@ -64,8 +70,8 @@ export default function CircularGallery({
   textColor = '#ffffff',
   borderRadius = 0.05,
   scrollEase = 0.1,
-  font = "bold 26px 'Cinzel', serif",
-  fontUrl = CINZEL_FONT_URL,
+  fontSize = 26,
+  fontWeight = 700,
   scrollSpeed = 2,
   onActiveChange,
 }) {
@@ -126,14 +132,10 @@ export default function CircularGallery({
       img.src = item.image;
     });
 
-    // Font preloading
-    const activeFontUrl = fontUrl || CINZEL_FONT_URL;
-    if (activeFontUrl && !document.querySelector(`link[href="${activeFontUrl}"]`)) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = activeFontUrl;
-      document.head.appendChild(link);
-    }
+    // The display font is self-hosted by next/font; make sure the weight the
+    // canvas draws with is loaded. The draw loop picks it up once ready.
+    const fontFamily = getDisplayFontFamily();
+    document.fonts?.load(`${fontWeight} ${fontSize}px ${fontFamily}`).catch(() => {});
 
     // HiDPI-aware resize
     const resize = () => {
@@ -190,8 +192,7 @@ export default function CircularGallery({
       const clampedBend = Math.max(0.01, bend);
       const cylinderR = TOTAL / (2 * Math.PI * clampedBend * 0.55);
 
-      const fontSizeMatch = font.match(/(\d+(?:\.\d+)?)px/);
-      const baseFontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 24;
+      const baseFontSize = fontSize;
 
       // Build draw list with depth for proper z-ordering
       const drawList = items.map((item, i) => {
@@ -323,11 +324,10 @@ export default function CircularGallery({
           const baseAlpha = Math.min(1, (finalScale - 0.28) / 0.22);
           const cardLabelAlpha = baseAlpha;
           const scaledSize = Math.max(9, Math.round(baseFontSize * finalScale * 0.82));
-          const fontName = font.includes('Cinzel') ? "'Cinzel Decorative', 'Cinzel', serif" : font;
 
           ctx.save();
           ctx.globalAlpha = cardLabelAlpha;
-          ctx.font = `bold ${scaledSize}px ${fontName}`;
+          ctx.font = `${fontWeight} ${scaledSize}px ${fontFamily}`;
           ctx.fillStyle = textColor;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
@@ -503,7 +503,7 @@ export default function CircularGallery({
       canvas.removeEventListener('touchmove', onTouchMove);
       canvas.removeEventListener('touchend', onTouchEnd);
     };
-  }, [items, bend, textColor, borderRadius, scrollEase, font, fontUrl, scrollSpeed, onActiveChange]);
+  }, [items, bend, textColor, borderRadius, scrollEase, fontSize, fontWeight, scrollSpeed, onActiveChange]);
 
   const handlePrev = () => {
     shiftStepRef.current?.(-1);
@@ -521,29 +521,24 @@ export default function CircularGallery({
         transition: 'transform 0.4s ease, border 0.3s ease',
       }}
     >
-      {/* Google Fonts Link */}
-      <link rel="stylesheet" href={fontUrl || CINZEL_FONT_URL} />
-
       {/* Top Title Display Area */}
       <div className="w-full flex flex-col items-center justify-center pt-1 pb-4 text-center">
         {/* Eyebrow / Counter */}
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="h-px w-6 bg-[#1C2E24]/30" />
-          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-[#1C2E24]/75">
-            EVENT {String(activeIdx + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
+          <span className="h-px w-8 bg-brand-accent" aria-hidden="true" />
+          <span className="eyebrow">
+            Event {String(activeIdx + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
           </span>
-          <span className="h-px w-6 bg-[#1C2E24]/30" />
+          <span className="h-px w-8 bg-brand-accent" aria-hidden="true" />
         </div>
 
         {/* Word Shuffle Title with smooth position shift upward */}
         <div className="relative overflow-hidden min-h-[46px] flex items-center justify-center px-4">
           <h2
             key={activeIdx}
-            className="text-2xl sm:text-3xl md:text-4xl font-black tracking-wider uppercase text-[#1C2E24]"
+            className="heading-display text-4xl sm:text-5xl md:text-6xl text-ink"
             style={{
-              fontFamily: "'Montserrat', var(--font-sans)",
               animation: 'sportTitleShift 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              textShadow: '0 2px 10px rgba(28, 46, 36, 0.12)',
             }}
           >
             {scrambledTitle}
@@ -552,9 +547,9 @@ export default function CircularGallery({
 
         {/* Triple accent indicator */}
         <div className="mt-2 flex items-center gap-1.5">
-          <div className="h-1 w-1.5 rounded-full bg-[#1C2E24]" />
-          <div className="h-0.5 w-12 rounded-full bg-[#f5c518]" />
-          <div className="h-1 w-1.5 rounded-full bg-[#1C2E24]" />
+          <div className="h-1 w-1.5 rounded-full bg-brand-primary" />
+          <div className="h-1 w-12 rounded-full bg-brand-highlight" />
+          <div className="h-1 w-1.5 rounded-full bg-brand-primary" />
         </div>
       </div>
 
@@ -567,7 +562,7 @@ export default function CircularGallery({
           onClick={handlePrev}
           type="button"
           aria-label="Previous sport"
-          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
+          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-brand-dark/90 hover:bg-brand-primary text-white flex items-center justify-center shadow-lift transition-colors duration-200 z-20 border border-brand-highlight/60 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
@@ -579,7 +574,7 @@ export default function CircularGallery({
           onClick={handleNext}
           type="button"
           aria-label="Next sport"
-          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-[#1C2E24]/85 hover:bg-[#1C2E24] text-[#F4F5EB] flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-110 active:scale-95 z-20 backdrop-blur-sm border border-[#f5c518]/50 cursor-pointer"
+          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-brand-dark/90 hover:bg-brand-primary text-white flex items-center justify-center shadow-lift transition-colors duration-200 z-20 border border-brand-highlight/60 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -588,20 +583,7 @@ export default function CircularGallery({
       </div>
 
       {/* Exploration hint */}
-      <p
-        style={{
-          marginTop: '12px',
-          color: '#1C2E24',
-          opacity: 0.6,
-          fontSize: '11px',
-          fontFamily: "'Montserrat', var(--font-sans)",
-          letterSpacing: '0.18em',
-          pointerEvents: 'none',
-          userSelect: 'none',
-          whiteSpace: 'nowrap',
-          textTransform: 'uppercase',
-        }}
-      >
+      <p className="meta mt-3 select-none text-center px-4">
         Click center card to zoom · drag or click sides to rotate
       </p>
 
@@ -615,7 +597,7 @@ export default function CircularGallery({
           onClick={() => setZoomedItem(null)} // Dismiss / shrink on outside click
         >
           <div
-            className="relative max-w-xl w-full bg-[#1C2E24] border-2 border-[#f5c518] rounded-2xl overflow-hidden shadow-2xl transition-transform duration-300"
+            className="relative max-w-xl w-full bg-brand-dark border border-brand-highlight/70 rounded-card overflow-hidden shadow-lift transition-transform duration-300"
             style={{
               animation: 'lightboxZoom 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
@@ -623,9 +605,10 @@ export default function CircularGallery({
           >
             {/* Close button */}
             <button
+              type="button"
               onClick={() => setZoomedItem(null)}
               aria-label="Close zoomed view"
-              className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 text-[#F4F5EB] flex items-center justify-center border border-white/20 transition-all duration-200 hover:scale-110 cursor-pointer shadow-lg"
+              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center border border-white/25 transition-colors duration-200 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-highlight"
             >
               ✕
             </button>
@@ -637,21 +620,18 @@ export default function CircularGallery({
                 alt={zoomedItem.text}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1C2E24] via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent" />
             </div>
 
             {/* Content info */}
-            <div className="p-6 pt-2 bg-[#1C2E24]">
-              <span className="text-[10px] font-bold tracking-[0.25em] text-[#f5c518] uppercase">
+            <div className="p-6 pt-2 bg-brand-dark">
+              <span className="eyebrow text-brand-highlight">
                 All India Inter-IIIT Sports Meet 2026
               </span>
-              <h3
-                className="text-2xl sm:text-3xl font-black uppercase tracking-wide mt-1"
-                style={{ fontFamily: "'Montserrat', var(--font-sans)", color: '#ffffff', opacity: 1 }}
-              >
+              <h3 className="heading-display text-4xl sm:text-5xl mt-1 text-white">
                 {zoomedItem.text}
               </h3>
-              <p className="mt-3 text-xs sm:text-sm text-white/75 leading-relaxed font-light">
+              <p className="mt-3 text-sm text-white/80 leading-relaxed">
                 Official competitive event of the 9th All India Inter-IIIT Sports Meet at IIITDM Kancheepuram. Click outside or press Esc to return.
               </p>
             </div>

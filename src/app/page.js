@@ -56,15 +56,15 @@ function HomeGalleryScroller() {
     <div className="relative">
       <div
         ref={scrollerRef}
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-primary"
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 scrollbar-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-primary"
         role="region"
         aria-label="Event gallery photos"
         tabIndex={0}
       >
         {homeGallery.map((photo, index) => (
-          <div
+          <figure
             key={photo.src}
-            className={`group relative h-56 shrink-0 snap-start overflow-hidden rounded-2xl ${
+            className={`group relative h-60 shrink-0 snap-start overflow-hidden rounded-card bg-ivory-dark ${
               index === 0 ? 'w-[78vw] sm:w-[48vw] md:w-[40vw]' : 'w-[70vw] sm:w-[34vw] md:w-[27vw]'
             }`}
           >
@@ -73,22 +73,22 @@ function HomeGalleryScroller() {
               alt={photo.alt}
               fill
               sizes={index === 0 ? '(max-width: 640px) 78vw, (max-width: 768px) 48vw, 40vw' : '(max-width: 640px) 70vw, (max-width: 768px) 34vw, 27vw'}
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/65 via-transparent to-transparent" />
-            <span className="absolute bottom-4 left-4 text-[10px] font-black uppercase tracking-[0.2em] text-white">
-              0{index + 1} / Meet moments
-            </span>
-          </div>
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/60 to-transparent" aria-hidden="true" />
+            <figcaption className="absolute bottom-3 left-4 font-display text-sm font-bold uppercase tracking-[0.1em] text-white">
+              <span className="text-brand-highlight">{String(index + 1).padStart(2, '0')}</span> · Meet moments
+            </figcaption>
+          </figure>
         ))}
       </div>
-      <div className="mt-2 flex items-center justify-between">
-        <p className="text-xs font-semibold text-brand-dark/75">Swipe or drag to explore the meet</p>
+      <div className="mt-3 flex items-center justify-between">
+        <p className="meta">Swipe or drag to explore the meet</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => scrollByAmount(-1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-brand-primary/20 text-brand-primary transition-colors hover:bg-brand-primary hover:text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-primary/30 bg-paper text-brand-primary transition-colors hover:bg-brand-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
             aria-label="Previous gallery photos"
           >
             &larr;
@@ -96,7 +96,7 @@ function HomeGalleryScroller() {
           <button
             type="button"
             onClick={() => scrollByAmount(1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-brand-primary/20 text-brand-primary transition-colors hover:bg-brand-primary hover:text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-brand-primary/30 bg-paper text-brand-primary transition-colors hover:bg-brand-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary"
             aria-label="Next gallery photos"
           >
             &rarr;
@@ -157,378 +157,257 @@ export default function Home() {
   }, []);
 
   return (
-    <div style={{ background: '#faf6ee' }}>
+    <div className="bg-ivory">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(eventStructuredData) }}
       />
-      {/* ─── 1. HERO SECTION ────────────────────────────────────────────── */}
-      <section className="relative w-full md:min-h-[92vh] flex items-center overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, #f5c518 0%, #fcd958 30%, #faf6ee 60%, #faf6ee 100%)' }}>
+      {/* ─── 1. HERO ───────────────────────────────────────────────────── */}
+      <section className="relative w-full overflow-hidden bg-[linear-gradient(135deg,#f5c518_0%,#fcd958_28%,#faf6ee_62%,#faf6ee_100%)] md:min-h-[88vh] md:flex md:items-center">
 
-        {/* Green right-side slab */}
-        <div className="dark-surface absolute right-0 top-0 h-full w-[45%] hidden md:block"
-          style={{ background: '#0d3b1a', clipPath: 'polygon(12% 0, 100% 0, 100% 100%, 0% 100%)' }}>
-          <div className="absolute inset-0 opacity-30">
-            <Image src="/assets/campus/sports-complex.webp" alt="" fill sizes="45vw" className="object-cover" />
-          </div>
-          {/* Hero logo centered in green panel */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-52 h-52 opacity-85 transition-transform duration-700 hover:scale-105">
-              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill sizes="208px" className="object-contain drop-shadow-2xl" />
+        {/* Photo panel: natural campus image with a dark fade for the logo */}
+        <div className="absolute right-0 top-0 hidden h-full w-[46%] md:block [clip-path:polygon(14%_0,100%_0,100%_100%,0_100%)]">
+          <Image src="/assets/campus/sports-complex.webp" alt="" fill priority sizes="46vw" className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-l from-brand-dark/80 via-brand-dark/55 to-brand-dark/20" aria-hidden="true" />
+          <div className="absolute inset-0 flex items-center justify-center pl-[10%]">
+            <div className="relative h-56 w-56 transition-transform duration-500 hover:scale-[1.03]">
+              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill sizes="224px" className="object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]" />
             </div>
           </div>
         </div>
 
-        {/* Yellow decorative arch top-left */}
-        <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full opacity-30 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #fbc02d 0%, transparent 70%)' }} />
+        <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-[radial-gradient(circle,#fbc02d_0%,transparent_70%)] opacity-30" aria-hidden="true" />
 
-        {/* Hero Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full pt-10 pb-20 sm:py-24">
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 pt-12 pb-24 sm:px-6 sm:pt-16 md:py-24 lg:px-8">
           <div className="max-w-xl">
-            {/* Eyebrow */}
-            <div className="animate-fadeUp flex items-center gap-3 mb-6">
-              <span className="inline-block w-8 h-0.5 bg-brand-dark rounded-full" />
-              <span className="text-xs font-black uppercase tracking-[0.25em] text-brand-dark/80">
-                9th Edition &bull; {eventInfo.host}
-              </span>
-            </div>
+            <p className="animate-fadeUp mb-5 flex items-center gap-3 font-display text-sm font-bold uppercase tracking-[0.16em] text-ink">
+              <span className="inline-block h-0.5 w-8 rounded-full bg-ink" aria-hidden="true" />
+              9th Edition · {eventInfo.host}
+            </p>
 
-            {/* Main Title */}
-            <h1 className="animate-fadeUp animation-delay-100 font-black leading-[1.0] tracking-tight mb-5"
-              style={{ fontSize: 'clamp(2.8rem, 7vw, 5.5rem)', color: '#0a2112' }}>
-              <span className="block text-[0.5em] tracking-[0.08em] mb-2">ALL INDIA</span>{' '}
-              INTER-IIIT{' '}<br />
-              <span style={{ color: '#1b5e20' }}>SPORTS</span>{' '}<br />
-              <span style={{ color: '#1b5e20' }}>MEET</span>
+            <h1 className="animate-fadeUp animation-delay-100 heading-display text-ink text-[clamp(3.6rem,10vw,7.25rem)]">
+              <span className="block text-[0.42em] tracking-[0.06em] leading-none mb-2">All India </span>
+              <span className="block">Inter-IIIT </span>
+              <span className="block text-brand-primary">Sports Meet</span>
             </h1>
 
-            {/* Date + Host benchmark */}
-            <div className="animate-fadeUp animation-delay-200 flex items-start gap-4 mb-10">
-              <div className="w-1 h-14 rounded-full shrink-0" style={{ background: '#1b5e20' }} />
+            <div className="animate-fadeUp animation-delay-200 mt-6 mb-9 flex items-stretch gap-4">
+              <span className="w-1 shrink-0 rounded-full bg-brand-primary" aria-hidden="true" />
               <div>
-                <div className="font-black text-2xl" style={{ color: '#1b5e20' }}>
-                  19 – 23 December 2026
-                </div>
-                <div className="mt-1.5 text-sm font-medium" style={{ color: '#0a2112', opacity: 0.85 }}>
-                  {eventInfo.host}, Chennai
-                </div>
+                <p className="stat-number text-[2rem] text-brand-primary">19 – 23 December 2026</p>
+                <p className="mt-1.5 text-sm font-medium text-ink-soft">{eventInfo.host}, Chennai</p>
               </div>
             </div>
 
-            {/* CTAs */}
             <div className="animate-fadeUp animation-delay-300 flex flex-wrap gap-3">
-              <Link href="/register"
-                className="dark-surface group relative overflow-hidden px-8 py-3.5 font-black text-sm rounded-full transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/20 shadow-md"
-                style={{ background: '#0a2112', color: '#f5c518', letterSpacing: '0.06em' }}>
-                <span className="relative z-10 flex items-center gap-2">
-                  <span>REGISTER ROSTER</span>
-                </span>
-                <span className="absolute inset-0 bg-amber-400/20 scale-x-0 origin-left transition-transform duration-300 group-hover:scale-x-100" />
+              <Link href="/register" className="btn btn-primary group px-6">
+                Register roster
+                <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true">&rarr;</span>
               </Link>
-              <Link href="/events"
-                className="group relative overflow-hidden px-8 py-3.5 font-bold text-sm rounded-full border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-950/15"
-                style={{ borderColor: '#1b5e20', color: '#1b5e20', background: 'transparent' }}>
-                <span className="relative z-10 flex items-center gap-2">
-                  <span>View Events</span>
-                  <span className="inline-block transition-transform duration-300 group-hover:translate-x-1">&rarr;</span>
-                </span>
-                <span className="absolute inset-0 bg-emerald-800/10 scale-x-0 origin-left transition-transform duration-300 group-hover:scale-x-100" />
+              <Link href="/events" className="btn btn-outline bg-paper/60 px-6">
+                View events
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Mobile logo (shown below content on small screens) */}
-        <div className="md:hidden absolute bottom-16 right-6 w-24 h-24 opacity-30">
+        {/* Mobile logo watermark */}
+        <div className="pointer-events-none absolute bottom-16 right-5 h-24 w-24 opacity-25 md:hidden" aria-hidden="true">
           <Image src="/assets/brand/inter-iiit-logo.png" alt="" fill sizes="96px" className="object-contain" />
         </div>
 
-        {/* Scrolling Marquee Ticker */}
-        <div aria-hidden="true" className="dark-surface absolute bottom-0 w-full py-2.5 overflow-hidden z-20"
-          style={{ background: '#0a2112', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex whitespace-nowrap" style={{ animation: 'marquee 28s linear infinite' }}>
+        {/* Ticker (decorative; repeats the facts above) */}
+        <div aria-hidden="true" className="absolute bottom-0 z-20 w-full overflow-hidden border-t border-white/5 bg-brand-dark py-2.5">
+          <div className="flex whitespace-nowrap" style={{ animation: 'marquee 32s linear infinite' }}>
             {[...Array(8)].map((_, i) => (
-              <span key={i} className="text-[11px] font-black tracking-[0.2em] uppercase mx-8 flex items-center gap-4" style={{ color: '#f5c518' }}>
+              <span key={i} className="mx-8 flex items-center gap-5 font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-highlight">
                 {eventInfo.dates}
-                <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
+                <span className="text-brand-highlight/40">◆</span>
                 {eventInfo.host}
-                <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
+                <span className="text-brand-highlight/40">◆</span>
                 9th All India Inter-IIIT Sports Meet
-                <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
+                <span className="text-brand-highlight/40">◆</span>
                 {iiits.length} Participating Institutes
-                <span style={{ color: 'rgba(245,197,24,0.4)' }}>◆</span>
+                <span className="text-brand-highlight/40">◆</span>
               </span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── 2. QUICK LOGISTICS INFORMATION CARDS ───────────────────────── */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8 -mt-2">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            <div className="rounded-2xl p-6 border transition-all duration-300 hover:shadow-sm"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                Tournament Dates
-              </div>
-              <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                19 – 23 December 2026
-              </div>
-              <div className="text-xs text-gray-600">
-                5 Championship Days of track, court, and field competition.
-              </div>
+      {/* ─── 2. QUICK FACTS ────────────────────────────────────────────── */}
+      <section className="px-4 pt-10 pb-12 sm:px-6 lg:px-8">
+        <dl className="mx-auto grid max-w-7xl grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          {[
+            { label: 'Tournament dates', value: '19 – 23 Dec 2026', note: 'Five championship days of track, court and field competition.' },
+            { label: 'Host campus', value: 'IIITDM Kancheepuram', note: '51-acre green campus on Vandalur–Kelambakkam Road, Chennai.' },
+            { label: 'National scale', value: `${iiits.length} IIITs`, note: 'Over 2,000 student-athletes and staff delegations.' },
+            { label: 'Disciplines', value: `${sports.length} sports`, note: 'Athletics, aquatics, racquet, team and strength events.' },
+          ].map((fact) => (
+            <div key={fact.label} className="card card-accent px-4 pt-5 pb-4 sm:px-5 sm:pt-6 sm:pb-5">
+              <dt className="eyebrow">{fact.label}</dt>
+              <dd className="mt-2 font-display text-[1.375rem] font-bold uppercase leading-none text-ink sm:text-[1.75rem]">{fact.value}</dd>
+              <dd className="meta mt-2 text-xs sm:mt-2.5 sm:text-[0.8125rem]">{fact.note}</dd>
             </div>
-
-            <div className="rounded-2xl p-6 border transition-all duration-300 hover:shadow-sm"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                Host Campus
-              </div>
-              <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                IIITDM Kancheepuram
-              </div>
-              <div className="text-xs text-gray-600">
-                51-Acre Green Campus on Vandalur-Kelambakkam Road, Chennai.
-              </div>
-            </div>
-
-            <div className="rounded-2xl p-6 border transition-all duration-300 hover:shadow-sm"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                National Scale
-              </div>
-              <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                {iiits.length} IIITs Nationwide
-              </div>
-              <div className="text-xs text-gray-600">
-                Over 2,000 student-athletes and staff delegations participating.
-              </div>
-            </div>
-
-            <div className="rounded-2xl p-6 border transition-all duration-300 hover:shadow-sm"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                Championship Disciplines
-              </div>
-              <div className="font-black text-xl mb-1" style={{ color: '#0a2112' }}>
-                {sports.length} Sports
-              </div>
-              <div className="text-xs text-gray-600">
-                Athletics, Aquatics, Racquet, Team, and Combat disciplines.
-              </div>
-            </div>
-
-          </div>
-        </div>
+          ))}
+        </dl>
       </section>
 
-      {/* ─── 3. STATS BAND ──────────────────────────────────────────────── */}
-      <section style={{ background: '#1b5e20' }} className="dark-surface py-10">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-white/10">
-            {eventInfo.stats.map((stat, idx) => (
-              <div key={idx} className="px-3 sm:px-8 py-4 text-center">
-                <div className="font-black text-white" style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', lineHeight: 1 }}>
-                  {stat.value}
-                </div>
-                <div className="mt-1.5 text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: 'rgba(245,197,24,0.85)' }}>
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* ─── 3. STATS BAND ─────────────────────────────────────────────── */}
+      <section className="bg-brand-primary py-12 sm:py-14">
+        <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-y-8 px-4 md:grid-cols-4 md:divide-x md:divide-white/15">
+          {eventInfo.stats.map((stat) => (
+            <div key={stat.label} className="flex flex-col-reverse items-center px-3 text-center sm:px-8">
+              <dt className="mt-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-highlight">{stat.label}</dt>
+              <dd className="stat-number text-[clamp(2.75rem,6vw,4.25rem)] text-white">{stat.value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
-      {/* ─── 4. ABOUT PREVIEW ────────────────────────────────────────────── */}
-      <section className="section-pad" style={{ background: '#faf6ee' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
-            <div>
-              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>About the Meet</span>
-              <h2 className="mt-3 font-black leading-tight" style={{ fontSize: 'clamp(2rem, 4vw, 3.25rem)', color: '#0a2112' }}>
-                A Legacy of<br />
-                <span style={{ color: '#1b5e20' }}>Sportsmanship</span>
-              </h2>
-              <div className="mt-4 w-10 h-1 rounded-full" style={{ background: '#c9972f' }} />
-              <p className="mt-6 text-base leading-relaxed text-gray-700">
-                {eventInfo.description}
-              </p>
-              <p className="mt-4 text-base leading-relaxed text-gray-700">
-                The meet is the flagship arena for student-athletes to demonstrate teamwork, athletic excellence, and sportsmanship.
-              </p>
-              <Link href="/about"
-                className="inline-flex items-center gap-2 mt-8 font-bold text-sm group transition-all"
-                style={{ color: '#1b5e20' }}>
-                Read Full History &amp; Legacy
-                <span className="group-hover:translate-x-1 transition-transform inline-block">&rarr;</span>
-              </Link>
-            </div>
-            <div className="relative">
-              <div className="absolute -bottom-4 -right-4 w-full h-full rounded-2xl"
-                style={{ background: '#f5c518', opacity: 0.25 }} />
-              <div className="relative w-full h-[260px] sm:h-[380px] rounded-2xl overflow-hidden shadow-lg">
-                <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 5. HOST INSTITUTE SPOTLIGHT BANNER ─────────────────────────── */}
-      <section className="py-12 px-4 sm:px-6 lg:px-8" style={{ background: '#f3ead8' }}>
-        <div className="max-w-7xl mx-auto rounded-3xl p-8 sm:p-12 border flex flex-col lg:flex-row items-center justify-between gap-8"
-          style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#86601a' }}>
-              <span>Host Institute Spotlight</span>
-            </div>
-            <h3 className="font-black text-2xl sm:text-3xl mb-3" style={{ color: '#0a2112' }}>
-              Welcome to {hostInstitute.shortName}
-            </h3>
-            <p className="text-sm leading-relaxed text-gray-700 mb-4">
-              An Institute of National Importance under the Ministry of Education, Government of India. Set across a 51-acre green campus in Melakottaiyur, Chennai, the institute features an athletic stadium, indoor sports complex, competition swimming pool, and floodlit courts ready to host visiting delegations.
+      {/* ─── 4. ABOUT PREVIEW ──────────────────────────────────────────── */}
+      <section className="section-pad">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 md:grid-cols-2 md:gap-16 lg:px-8">
+          <div>
+            <p className="eyebrow">About the meet</p>
+            <h2 className="heading-section mt-3">
+              A legacy of<br />
+              <span className="text-brand-primary">sportsmanship</span>
+            </h2>
+            <span className="gold-rule" aria-hidden="true" />
+            <p className="mt-6 text-base leading-relaxed text-ink-soft">{eventInfo.description}</p>
+            <p className="mt-4 text-base leading-relaxed text-ink-soft">
+              The meet is the flagship arena for student-athletes to demonstrate teamwork, athletic excellence, and sportsmanship.
             </p>
-            <div className="flex flex-wrap gap-4 text-xs font-semibold text-emerald-900">
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">51-Acre Eco Campus</span>
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">Comprehensive Sports Arenas</span>
-              <span className="bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">21 km from Chennai Airport</span>
-            </div>
+            <Link href="/about" className="group mt-8 inline-flex items-center gap-2 text-sm font-bold text-brand-primary underline-offset-4 hover:underline">
+              Read the full history
+              <span className="inline-block transition-transform group-hover:translate-x-1" aria-hidden="true">&rarr;</span>
+            </Link>
           </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0 w-full lg:w-auto">
-            <Link
-              href="/location"
-              className="dark-surface w-full sm:w-auto text-center px-7 py-3.5 rounded-full text-xs font-black transition-all hover:-translate-y-0.5 shadow-sm"
-              style={{ background: '#1b5e20', color: '#fff' }}
-            >
-              View Campus &amp; Travel Guide &rarr;
-            </Link>
-            <Link
-              href="/about"
-              className="w-full sm:w-auto text-center px-7 py-3.5 rounded-full text-xs font-bold border transition-all hover:bg-gray-50"
-              style={{ borderColor: 'rgba(27,94,32,0.3)', color: '#0a2112' }}
-            >
-              About the Host
-            </Link>
+          <div className="relative">
+            <div className="absolute -bottom-4 -right-4 h-full w-full rounded-card bg-brand-highlight/30" aria-hidden="true" />
+            <div className="relative h-[280px] w-full overflow-hidden rounded-card border border-line sm:h-[400px]">
+              <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── 6. PARTICIPATING IIITs ──────────────────────────────────────── */}
-      <section className="section-pad" style={{ background: '#faf6ee' }}>
-        <div className="max-w-[1600px] mx-auto px-5 sm:px-[30px] lg:px-10">
-          <div className="text-center mb-12">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>{iiits.length} Institutes</span>
-            <h2 className="mt-3 font-black text-3xl sm:text-4xl" style={{ color: '#0a2112' }}>Participating IIITs</h2>
+      {/* ─── 5. HOST INSTITUTE FEATURE ─────────────────────────────────── */}
+      <section className="px-4 pb-16 sm:px-6 lg:px-8">
+        <div className="card-ink relative mx-auto max-w-7xl overflow-hidden rounded-card">
+          <div className="grid lg:grid-cols-[1.4fr_1fr]">
+            <div className="p-8 sm:p-12">
+              <p className="font-display text-sm font-bold uppercase tracking-[0.14em] text-brand-highlight">Host institute</p>
+              <h3 className="heading-display mt-3 text-[clamp(2rem,4vw,3rem)] text-white">
+                Welcome to {hostInstitute.shortName}
+              </h3>
+              <p className="mt-4 max-w-xl text-[0.9375rem] leading-relaxed text-white/80">
+                An Institute of National Importance under the Ministry of Education, Government of India. Set across a 51-acre green campus in Melakottaiyur, Chennai, the institute features an athletic stadium, indoor sports complex, competition swimming pool, and floodlit courts ready to host visiting delegations.
+              </p>
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {['51-acre eco campus', 'Comprehensive sports arenas', '21 km from Chennai airport'].map((item) => (
+                  <li key={item} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/90">{item}</li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href="/location" className="btn btn-accent">
+                  Campus &amp; travel guide <span aria-hidden="true">&rarr;</span>
+                </Link>
+                <Link href="/about" className="btn btn-on-dark">About the host</Link>
+              </div>
+            </div>
+            <div className="relative hidden min-h-[320px] lg:block">
+              <Image src="/assets/campus/indoor-court.webp" alt="" fill sizes="40vw" className="object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-r from-brand-dark via-brand-dark/20 to-transparent" aria-hidden="true" />
+            </div>
           </div>
-          <ul className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 sm:gap-5">
+        </div>
+      </section>
+
+      {/* ─── 6. PARTICIPATING IIITs ────────────────────────────────────── */}
+      <section className="section-pad border-y border-line bg-ivory-warm">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="eyebrow">{iiits.length} institutes</p>
+              <h2 className="heading-section mt-3">Participating IIITs</h2>
+            </div>
+            <p className="meta max-w-sm sm:text-right">Every government-funded IIIT competes for the overall championship trophy.</p>
+          </div>
+          <ul className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 sm:gap-4 md:grid-cols-5">
             {iiits.map((iiit) => (
-              <li key={iiit.name}
-                className="group flex flex-col items-center text-center px-1.5 py-3 sm:p-[15px] rounded-xl sm:rounded-[15px] border transition-all hover:-translate-y-0.5 hover:shadow-md cursor-default"
-                style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}>
-                <div className="relative w-11 h-11 sm:w-[60px] sm:h-[60px] mb-2 sm:mb-2.5">
-                  <Image
-                    src={iiit.logo}
-                    alt=""
-                    fill
-                    sizes="60px"
-                    className="object-contain"
-                  />
+              <li key={iiit.name} className="card card-interactive flex flex-col items-center px-2 py-4 text-center sm:px-4 sm:py-5">
+                <div className="relative mb-3 h-12 w-12 sm:h-16 sm:w-16">
+                  <Image src={iiit.logo} alt="" fill sizes="64px" className="object-contain" />
                 </div>
-                <span className="text-[11px] sm:text-[12.5px] font-semibold leading-tight text-gray-700">
-                  {iiit.name}
-                </span>
+                <span className="text-xs font-semibold leading-snug text-ink-soft sm:text-[0.8125rem]">{iiit.name}</span>
               </li>
             ))}
           </ul>
         </div>
       </section>
 
-      {/* ─── 7. STUDENTS' & EMPLOYEES' MEET ──────────────────────────────── */}
-      <section className="flex flex-col md:flex-row">
-        {/* Students */}
-        <div className="dark-surface flex-1 relative min-h-[380px] flex items-end" style={{ background: '#282828' }}>
-          <div className="absolute inset-0 opacity-25">
-            <Image src="/assets/gallery/gallery-02.jpg" alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-          </div>
-          <div className="absolute inset-0" />
-          <div className="relative z-10 p-10 md:p-14">
-            {/* <div className="students-badge inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4"
-              style={{ background: '#f5c518', color: '#1b5e20' }}>
-              Students
-            </div> */}
-            <h2 className="font-black text-white text-3xl md:text-4xl leading-tight mb-3">Students&apos; <br />Sports Meet</h2>
-            <p className="text-sm leading-relaxed max-w-sm text-white/75">
-              2,000+ student-athletes from {iiits.length} IIITs competing across {sports.length} sports over 5 championship days.
-            </p>
-          </div>
-        </div>
-        {/* Employees */}
-        <div className="dark-surface flex-1 relative min-h-[380px] flex items-end" style={{ background: '#282828' }}>
-          <div className="absolute inset-0 opacity-25">
-            <Image src="/assets/gallery/gallery-03.jpg" alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-          </div>
-          <div className="absolute inset-0" />
-          <div className="relative z-10 p-10 md:p-14">
-            {/* <div className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4"
-              style={{ background: '#c9972f', color: '#fff' }}>Faculty &amp; Staff</div> */}
-            <h2 className="font-black text-white text-3xl md:text-4xl leading-tight mb-3">Employees&apos; <br />Sports Meet</h2>
-            <p className="text-sm leading-relaxed max-w-sm text-white/75">
-              Faculty and staff from IIITs unite in friendly competition, camaraderie, and community health.
-            </p>
-          </div>
-        </div>
+      {/* ─── 7. STUDENTS' & EMPLOYEES' MEET ────────────────────────────── */}
+      <section className="grid md:grid-cols-2">
+        {[
+          { image: '/assets/gallery/gallery-02.jpg', tag: 'Students', title: <>Students&apos;<br />Sports Meet</>, text: `2,000+ student-athletes from ${iiits.length} IIITs competing across ${sports.length} sports over 5 championship days.` },
+          { image: '/assets/gallery/gallery-03.jpg', tag: 'Faculty & staff', title: <>Employees&apos;<br />Sports Meet</>, text: 'Faculty and staff from IIITs unite in friendly competition, camaraderie, and community health.' },
+        ].map((block) => (
+          <article key={block.tag} className="group relative flex min-h-[400px] items-end overflow-hidden bg-brand-dark">
+            <Image src={block.image} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent" aria-hidden="true" />
+            <div className="relative z-10 p-8 md:p-12">
+              <span className="chip chip-ink">{block.tag}</span>
+              <h2 className="heading-display mt-4 text-[clamp(2.25rem,4vw,3.25rem)] text-white">{block.title}</h2>
+              <p className="mt-3 max-w-sm text-[0.9375rem] leading-relaxed text-white/85">{block.text}</p>
+            </div>
+          </article>
+        ))}
       </section>
 
-      {/* ─── 8. GALLERY PREVIEW ──────────────────────────────────────────── */}
-      <section className="section-pad" style={{ background: '#faf6ee' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-end justify-between gap-4 mb-10">
+      {/* ─── 8. GALLERY PREVIEW ────────────────────────────────────────── */}
+      <section className="section-pad">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 flex items-end justify-between gap-4">
             <div>
-              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>Glimpses</span>
-              <h2 className="mt-2 font-black text-3xl md:text-4xl" style={{ color: '#0a2112' }}>Gallery</h2>
+              <p className="eyebrow">Glimpses</p>
+              <h2 className="heading-section mt-3">Gallery</h2>
             </div>
-            <Link href="/gallery" className="text-sm font-bold hidden sm:inline-flex items-center gap-1.5 group" style={{ color: '#1b5e20' }}>
-              View All Photos <span className="group-hover:translate-x-1 transition-transform inline-block">&rarr;</span>
+            <Link href="/gallery" className="btn btn-outline btn-sm hidden sm:inline-flex">
+              View all photos <span aria-hidden="true">&rarr;</span>
             </Link>
           </div>
           <HomeGalleryScroller />
+          <Link href="/gallery" className="btn btn-outline mt-6 w-full sm:hidden">
+            View all photos <span aria-hidden="true">&rarr;</span>
+          </Link>
         </div>
       </section>
 
-      {/* ─── 9. PARTNERS & SUPPORTERS ───────────────────────────────────── */}
-      <section className="py-14" style={{ background: '#f3ead8', borderTop: '1px solid rgba(27,94,32,0.1)' }}>
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>Partners &amp; Sponsors</span>
-            <h2 className="mt-2 font-black text-2xl" style={{ color: '#0a2112' }}>Our Supporters</h2>
+      {/* ─── 9. PARTNERS & SUPPORTERS ──────────────────────────────────── */}
+      <section className="border-t border-line bg-ivory-dark py-16">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 text-center">
+            <p className="eyebrow">Partners &amp; sponsors</p>
+            <h2 className="heading-section mt-3 text-[clamp(1.85rem,3vw,2.5rem)]">Our supporters</h2>
           </div>
           {/* TODO: confirm the 2026 supporters with the organisers and give each logo its sponsor's name as alt text. */}
-          <div className="flex flex-wrap justify-center gap-5 items-center">
-            {[1, 2, 3, 4, 5].map(num => (
-              <div key={num}
-                className="relative h-16 w-36 rounded-xl flex items-center justify-center border transition-shadow hover:shadow-md"
-                style={{ background: '#faf6ee', borderColor: 'rgba(201,151,47,0.25)' }}>
-                <Image src={`/assets/sponsors/sponsor-0${num}.png`} alt="" fill sizes="144px" className="object-contain p-3" />
-              </div>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((num) => (
+              <li key={num} className="relative h-20 rounded-card border border-line bg-paper">
+                <Image src={`/assets/sponsors/sponsor-0${num}.png`} alt="" fill sizes="(max-width: 640px) 45vw, 180px" className="object-contain p-4" />
+              </li>
             ))}
-          </div>
-          <div className="mt-12 text-center">
-            <p className="text-sm mb-4 text-gray-600">Interested in supporting the 9th All India Inter-IIIT Sports Meet?</p>
-            <a href="mailto:sports@iiitdm.ac.in"
-              className="dark-surface inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5 shadow-sm"
-              style={{ background: '#1b5e20', color: '#fff' }}>
-              Contact us &rarr; sports@iiitdm.ac.in
+          </ul>
+          <div className="mt-12 flex flex-col items-center gap-4 text-center">
+            <p className="text-sm text-ink-soft">Interested in supporting the 9th All India Inter-IIIT Sports Meet?</p>
+            <a href="mailto:sports@iiitdm.ac.in" className="btn btn-primary">
+              Contact us · sports@iiitdm.ac.in
             </a>
           </div>
         </div>
       </section>
-
     </div>
   );
 }

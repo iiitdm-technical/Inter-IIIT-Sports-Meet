@@ -19,23 +19,23 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="dark-surface sticky top-0 z-50 w-full" style={{ background: 'rgba(10,33,18,0.97)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-[60px] sm:h-[68px]">
+    <nav className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-brand-dark/[0.97] backdrop-blur-md" aria-label="Main">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-[60px] items-center justify-between sm:h-[68px]">
 
-          {/* Logo + Brand */}
-          <Link href="/" className="flex items-center gap-3 group shrink-0">
-            <div className="w-10 h-10 relative rounded-full p-1 border-amber-400/70 flex items-center justify-center group-hover:bg-white/10 group-hover:border-amber-300 transition-colors">
-              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill sizes="40px" className="object-contain p-1" />
+          {/* Logo + wordmark */}
+          <Link href="/" className="group flex shrink-0 items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-highlight">
+            <div className="relative h-10 w-10 rounded-full bg-white/[0.06] ring-1 ring-brand-highlight/30 transition-colors group-hover:ring-brand-highlight/60 sm:h-11 sm:w-11">
+              <Image src="/assets/brand/inter-iiit-logo.png" alt="All India Inter-IIIT Sports Meet logo" fill sizes="44px" className="object-contain p-1" />
             </div>
-            <div className="block leading-tight">
-              <div className="text-white font-black text-sm sm:text-base tracking-wide">ALL INDIA INTER-IIIT</div>
-              <div className="text-amber-400 font-semibold text-[8px] sm:text-[10px] tracking-[0.14em] sm:tracking-[0.18em] uppercase opacity-90">Sports Meet 2026</div>
+            <div className="leading-none">
+              <div className="font-display text-[1.0625rem] font-bold uppercase tracking-[0.04em] text-white sm:text-[1.25rem]">All India Inter-IIIT</div>
+              <div className="mt-1 font-display text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">Sports Meet 2026</div>
             </div>
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden items-center gap-0.5 lg:flex">
             {links.map(({ href, label }) => {
               const active = pathname === href;
               return (
@@ -43,16 +43,16 @@ export default function Navbar() {
                   key={href}
                   href={href}
                   prefetch={href === '/team' ? false : undefined}
-                  className={`relative px-3.5 py-2 text-[13px] font-semibold tracking-wide rounded-md transition-all duration-200 ${
-                    active
-                      ? 'text-amber-400'
-                      : 'text-gray-300 hover:text-white hover:bg-white/5'
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative rounded-md px-3.5 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-highlight ${
+                    active ? 'text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   {label}
-                  {active && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-amber-400" />
-                  )}
+                  <span
+                    aria-hidden="true"
+                    className={`absolute -bottom-0.5 left-1/2 h-[3px] -translate-x-1/2 rounded-full bg-brand-highlight transition-all duration-300 ${active ? 'w-5 opacity-100' : 'w-0 opacity-0'}`}
+                  />
                 </Link>
               );
             })}
@@ -60,23 +60,21 @@ export default function Navbar() {
 
           {/* CTA + mobile toggle */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/register"
-                className="yellow-button hidden lg:inline-flex items-center px-5 py-2 text-[13px] font-bold text-brand-dark bg-brand-highlight hover:bg-amber-300 rounded-full transition-colors shadow-sm"
-            >
+            <Link href="/register" className="btn btn-accent btn-sm hidden px-5 lg:inline-flex">
               Register
             </Link>
             <button
+              type="button"
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden -mr-2 p-3 text-gray-300 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400 transition-colors"
-              aria-label="Toggle menu"
+              className="-mr-2 rounded-md p-3 text-white/80 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-highlight lg:hidden"
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileOpen}
               aria-controls="mobile-navigation"
             >
               {mobileOpen ? (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               ) : (
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
               )}
             </button>
           </div>
@@ -85,28 +83,30 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div id="mobile-navigation" className="lg:hidden max-h-[calc(100dvh-60px)] overflow-y-auto bg-brand-dark border-t border-white/5 px-4 py-4 space-y-1">
-          {links.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              prefetch={href === '/team' ? false : undefined}
-              onClick={() => setMobileOpen(false)}
-              className={`block px-4 py-3.5 rounded-lg text-sm font-semibold transition-colors ${
-                pathname === href
-                  ? 'bg-brand-primary/40 text-amber-400'
-                  : 'text-gray-300 hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {label}
-            </Link>
-          ))}
-          <Link
-            href="/register"
-            onClick={() => setMobileOpen(false)}
-            className="yellow-button block mt-3 px-4 py-3 text-center text-sm font-bold text-brand-dark bg-brand-highlight hover:bg-amber-300 rounded-full transition-colors"
-          >
-            Register Now
+        <div id="mobile-navigation" className="max-h-[calc(100dvh-60px)] overflow-y-auto border-t border-white/5 bg-brand-dark px-4 pt-3 pb-5 lg:hidden">
+          <ul className="divide-y divide-white/[0.06]">
+            {links.map(({ href, label }) => {
+              const active = pathname === href;
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    prefetch={href === '/team' ? false : undefined}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => setMobileOpen(false)}
+                    className={`flex items-center justify-between px-2 py-3.5 font-display text-lg font-bold uppercase tracking-[0.06em] transition-colors ${
+                      active ? 'text-brand-highlight' : 'text-white/85 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                    {active && <span className="h-1.5 w-1.5 rounded-full bg-brand-highlight" aria-hidden="true" />}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <Link href="/register" onClick={() => setMobileOpen(false)} className="btn btn-accent mt-4 w-full">
+            Register now
           </Link>
         </div>
       )}

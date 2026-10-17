@@ -122,57 +122,52 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
   const uploadedFileName = paymentDetails?.proofFileName || localFile?.name || "";
 
   return (
-    <div className="mt-6 border-t border-gray-200 pt-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-5">
-        <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
-          <svg className="w-4 h-4 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        </div>
-        <h2 className="text-base font-black text-gray-900 uppercase tracking-wider">Payment Details</h2>
+    <div>
+      <div className="mb-5">
+        <h2 className="heading-section text-[2rem]">Payment Details</h2>
+        <p className="meta mt-1">Pay the amount below, then record the transfer and upload its proof.</p>
       </div>
 
       {/* Amount Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-          <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">Unique Students</p>
-          <p className="text-2xl font-black text-gray-900">{uniqueStudentsCount}</p>
+      <dl className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="card-tint rounded-control p-3 sm:p-4">
+          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Students</dt>
+          <dd className="stat-number mt-1 text-3xl text-ink">{uniqueStudentsCount}</dd>
         </div>
-        <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-          <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">Rate Per Student</p>
-          <p className="text-lg font-black text-gray-700">{formatCurrency(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</p>
+        <div className="card-tint rounded-control p-3 sm:p-4">
+          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Per student</dt>
+          <dd className="stat-number mt-1 text-3xl text-ink">{formatCurrency(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
         </div>
-        <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-center">
-          <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider mb-1">Amount Payable</p>
-          <p className="text-xl font-black text-amber-800">{formatCurrency(amount)}</p>
+        <div className="rounded-control border border-[#ecd27a] bg-gold-wash p-3 sm:p-4">
+          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-gold-text">Amount payable</dt>
+          <dd className="stat-number mt-1 text-3xl text-ink">{formatCurrency(amount)}</dd>
         </div>
-      </div>
+      </dl>
 
-      <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-5">
-        <h3 className="text-sm font-black uppercase tracking-wider text-green-950">Pay by UPI</h3>
+      <div className="mb-6 rounded-control border border-[#cfe0c7] bg-green-wash p-4 sm:p-5">
+        <h3 className="heading-card text-brand-deep">Pay by UPI</h3>
         {upiPayment?.configured ? (
           <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-lg border border-green-200 bg-white p-2" />
-            <div className="text-sm text-green-950">
+            <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-control border border-line bg-white p-2" />
+            <div className="text-sm text-ink">
               <p>Scan with your UPI app and confirm the payee and amount before paying.</p>
               <p className="mt-3 font-bold">Payee: {upiPayment.payeeName}</p>
               <p className="font-bold">UPI ID: {upiPayment.upiId}</p>
               <p className="font-bold">Amount: {formatCurrency(upiPayment.amount)}</p>
-              <a href={upiPayment.paymentUri} className="mt-3 inline-block font-bold underline underline-offset-2">Open UPI app</a>
+              <a href={upiPayment.paymentUri} className="btn btn-primary btn-sm mt-3">Open UPI app</a>
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-green-900">The organizer will publish the official UPI QR here. You can submit a payment made through an approved alternate method.</p>
+          <p className="mt-1.5 text-sm text-ink-soft">The organizer will publish the official UPI QR here. You can submit a payment made through an approved alternate method.</p>
         )}
       </div>
 
       {/* Form Fields */}
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {/* Transaction Date */}
         <div>
-          <label htmlFor="payment-transaction-date" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Transaction Date <span className="text-red-500">*</span>
+          <label htmlFor="payment-transaction-date" className="mb-1.5 block text-sm font-semibold text-ink">
+            Transaction Date <span className="text-red-700" aria-hidden="true">*</span>
           </label>
           <input
             id="payment-transaction-date"
@@ -182,21 +177,21 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             max={todayStr}
             value={paymentDetails?.transactionDate || ""}
             onChange={(e) => handleFieldChange("transactionDate", e.target.value)}
-            className={`w-full px-3 py-2.5 text-sm rounded-lg border outline-none transition-colors ${
+            className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 ${
               errors.transactionDate
-                ? "border-red-400 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-[#1b5e20]"
+                ? "border-red-400 bg-red-50 focus:border-red-600"
+                : "border-line focus:border-brand-primary"
             }`}
           />
           {errors.transactionDate && (
-            <p id="payment-transaction-date-error" className="mt-1 text-xs text-red-700 font-medium">{errors.transactionDate}</p>
+            <p id="payment-transaction-date-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.transactionDate}</p>
           )}
         </div>
 
         {/* Transaction ID */}
         <div>
-          <label htmlFor="payment-transaction-id" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Transaction ID / UTR Number <span className="text-red-500">*</span>
+          <label htmlFor="payment-transaction-id" className="mb-1.5 block text-sm font-semibold text-ink">
+            Transaction ID / UTR Number <span className="text-red-700" aria-hidden="true">*</span>
           </label>
           <input
             id="payment-transaction-id"
@@ -206,21 +201,21 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             placeholder="e.g. 423108765432"
             value={paymentDetails?.transactionId || ""}
             onChange={(e) => handleFieldChange("transactionId", e.target.value)}
-            className={`w-full px-3 py-2.5 text-sm rounded-lg border outline-none transition-colors font-mono ${
+            className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 font-mono ${
               errors.transactionId
-                ? "border-red-400 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-[#1b5e20]"
+                ? "border-red-400 bg-red-50 focus:border-red-600"
+                : "border-line focus:border-brand-primary"
             }`}
           />
           {errors.transactionId && (
-            <p id="payment-transaction-id-error" className="mt-1 text-xs text-red-700 font-medium">{errors.transactionId}</p>
+            <p id="payment-transaction-id-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.transactionId}</p>
           )}
         </div>
 
         {/* Bank Name */}
         <div>
-          <label htmlFor="payment-bank-name" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Bank Name <span className="text-gray-600 font-medium normal-case text-xs">(optional)</span>
+          <label htmlFor="payment-bank-name" className="mb-1.5 block text-sm font-semibold text-ink">
+            Bank Name <span className="font-normal text-ink-muted">(optional)</span>
           </label>
           <input
             id="payment-bank-name"
@@ -228,14 +223,14 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             placeholder="e.g. State Bank of India"
             value={paymentDetails?.bankName || ""}
             onChange={(e) => handleFieldChange("bankName", e.target.value)}
-            className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-300 outline-none focus:border-[#1b5e20] transition-colors"
+            className="w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
           />
         </div>
 
         {/* Payment Mode */}
         <div>
-          <label htmlFor="payment-mode" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Payment Mode <span className="text-red-500">*</span>
+          <label htmlFor="payment-mode" className="mb-1.5 block text-sm font-semibold text-ink">
+            Payment Mode <span className="text-red-700" aria-hidden="true">*</span>
           </label>
           <select
             id="payment-mode"
@@ -243,10 +238,10 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             aria-describedby={errors.paymentMode ? "payment-mode-error" : undefined}
             value={paymentDetails?.paymentMode || ""}
             onChange={(e) => handleFieldChange("paymentMode", e.target.value)}
-            className={`w-full px-3 py-2.5 text-sm rounded-lg border outline-none transition-colors bg-white ${
+            className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 bg-white ${
               errors.paymentMode
-                ? "border-red-400 bg-red-50 focus:border-red-500"
-                : "border-gray-300 focus:border-[#1b5e20]"
+                ? "border-red-400 bg-red-50 focus:border-red-600"
+                : "border-line focus:border-brand-primary"
             }`}
           >
             <option value="" disabled>Select payment mode</option>
@@ -257,15 +252,15 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             <option value="OTHER">Other</option>
           </select>
           {errors.paymentMode && (
-            <p id="payment-mode-error" className="mt-1 text-xs text-red-700 font-medium">{errors.paymentMode}</p>
+            <p id="payment-mode-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.paymentMode}</p>
           )}
         </div>
 
         {/* Other Payment Mode */}
         {paymentDetails?.paymentMode === "OTHER" && (
-          <div>
-            <label htmlFor="other-payment-mode" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-              Other Payment Mode <span className="text-red-500">*</span>
+          <div className="sm:col-span-2">
+            <label htmlFor="other-payment-mode" className="mb-1.5 block text-sm font-semibold text-ink">
+              Other Payment Mode <span className="text-red-700" aria-hidden="true">*</span>
             </label>
             <input
               id="other-payment-mode"
@@ -275,22 +270,22 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
               placeholder="e.g. Demand Draft"
               value={paymentDetails?.otherPaymentMode || ""}
               onChange={(e) => handleFieldChange("otherPaymentMode", e.target.value)}
-              className={`w-full px-3 py-2.5 text-sm rounded-lg border outline-none transition-colors ${
+              className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 ${
                 errors.otherPaymentMode
-                  ? "border-red-400 bg-red-50 focus:border-red-500"
-                  : "border-gray-300 focus:border-[#1b5e20]"
+                  ? "border-red-400 bg-red-50 focus:border-red-600"
+                  : "border-line focus:border-brand-primary"
               }`}
             />
             {errors.otherPaymentMode && (
-              <p id="other-payment-mode-error" className="mt-1 text-xs text-red-700 font-medium">{errors.otherPaymentMode}</p>
+              <p id="other-payment-mode-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.otherPaymentMode}</p>
             )}
           </div>
         )}
 
         {/* Proof Upload */}
-        <div>
-          <p id="payment-proof-label" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Transaction Proof <span className="text-red-500">*</span>
+        <div className="sm:col-span-2">
+          <p id="payment-proof-label" className="mb-1.5 block text-sm font-semibold text-ink">
+            Transaction Proof <span className="text-red-700" aria-hidden="true">*</span>
           </p>
 
           {uploadStatus !== "success" && (
@@ -299,14 +294,14 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
               onDragOver={(e) => { e.preventDefault(); if (uploadStatus !== "uploading") setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              className={`relative block rounded-xl border-2 border-dashed transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#1b5e20] ${
+              className={`relative block rounded-card border-2 border-dashed transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-primary ${
                 uploadStatus === "uploading" ? "cursor-wait" : "cursor-pointer"
               } ${
                 errors.proof || uploadStatus === "error"
                   ? "border-red-300 bg-red-50"
                   : uploadStatus === "uploading" || isDragging
-                  ? "border-green-400 bg-green-50"
-                  : "border-gray-300 hover:border-[#1b5e20] bg-gray-50 hover:bg-green-50"
+                  ? "border-brand-primary bg-green-wash"
+                  : "border-line hover:border-brand-primary bg-ivory hover:bg-green-wash"
               }`}
             >
               <input
@@ -321,24 +316,24 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                 aria-describedby="payment-proof-help payment-proof-error"
                 aria-invalid={Boolean(errors.proof || uploadStatus === "error") || undefined}
               />
-              <div className="p-5 text-center">
+              <div className="px-5 py-7 text-center">
                 {uploadStatus === "uploading" ? (
                   <div className="flex flex-col items-center gap-2" role="status">
-                    <svg className="w-6 h-6 text-green-600 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg className="w-6 h-6 text-brand-primary animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    <p className="text-sm font-bold text-green-700">Uploading {localFile?.name}…</p>
-                    <p className="text-xs text-gray-500">{localFile && formatFileSize(localFile.size)}</p>
+                    <p className="text-sm font-bold text-brand-primary">Uploading {localFile?.name}…</p>
+                    <p className="text-xs text-ink-muted">{localFile && formatFileSize(localFile.size)}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    <svg className={`w-8 h-8 ${uploadStatus === "error" ? "text-red-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <svg className={`w-8 h-8 ${uploadStatus === "error" ? "text-red-500" : "text-brand-primary"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <div>
-                      <p className="text-sm font-bold text-gray-700">Choose a file or drop it here</p>
-                      <p id="payment-proof-help" className="text-xs text-gray-600 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
+                      <p className="text-sm font-bold text-ink">Choose a file or drop it here</p>
+                      <p id="payment-proof-help" className="mt-1 text-xs text-ink-muted">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
                     </div>
                   </div>
                 )}
@@ -347,25 +342,25 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           )}
 
           {uploadStatus === "success" && (
-            <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4">
+            <div role="status" className="rounded-card border border-[#cfe0c7] bg-green-wash p-4">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-control bg-brand-primary text-white">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-green-800">Upload successful</p>
-                  <p className="text-xs text-green-700 mt-0.5 truncate font-mono">{uploadedFileName}</p>
+                  <p className="text-sm font-bold text-brand-deep">Upload successful</p>
+                  <p className="mt-0.5 truncate font-mono text-xs text-ink-soft">{uploadedFileName}</p>
                   {localFile && (
-                    <p className="text-xs text-green-600 mt-0.5">{localFile.type} — {formatFileSize(localFile.size)}</p>
+                    <p className="mt-0.5 text-xs text-ink-muted">{localFile.type} — {formatFileSize(localFile.size)}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={handleReplaceFile}
                   aria-label={`Replace uploaded proof ${uploadedFileName}`}
-                  className="flex-shrink-0 text-xs font-bold text-green-700 hover:text-green-900 underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20]"
+                  className="btn btn-outline btn-sm flex-shrink-0"
                 >
                   Replace
                 </button>
@@ -374,7 +369,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           )}
 
           {uploadStatus === "error" && uploadError && (
-            <p id="payment-proof-error" role="alert" className="mt-1.5 text-xs text-red-700 font-medium flex items-start gap-1.5">
+            <p id="payment-proof-error" role="alert" className="mt-1.5 flex items-start gap-1.5 text-sm font-medium text-red-700">
               <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
@@ -382,7 +377,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             </p>
           )}
           {errors.proof && uploadStatus !== "success" && uploadStatus !== "error" && (
-            <p id="payment-proof-error" className="mt-1.5 text-xs text-red-700 font-medium">{errors.proof}</p>
+            <p id="payment-proof-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.proof}</p>
           )}
         </div>
       </div>

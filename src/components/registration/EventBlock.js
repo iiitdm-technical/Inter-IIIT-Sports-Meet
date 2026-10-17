@@ -37,15 +37,18 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
   const reserveSlots = Array.from({ length: maxReserves || 0 }, (_, i) => renderSlot("reserve", i));
 
   return (
-    <div className="mb-6 last:mb-0">
-      <div className="mb-3">
-        <h4 className="font-bold text-gray-800 text-sm">{eventName}</h4>
-        <p className="text-xs text-gray-500">Max {maxParticipants} participants{maxReserves ? ` + ${maxReserves} reserves` : ''}</p>
+    <div>
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h4 className="heading-card">{eventName}</h4>
+        <p className="meta">
+          Up to {maxParticipants} {maxParticipants === 1 ? "participant" : "participants"}{maxReserves ? ` + ${maxReserves} ${maxReserves === 1 ? "reserve" : "reserves"}` : ""}
+        </p>
       </div>
       <div className="space-y-2">
         {mainSlots}
         {reserveSlots.length > 0 && (
-          <div className="pt-2 border-t border-dashed border-gray-200 mt-2 space-y-2">
+          <div className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gold-text">Reserves</p>
             {reserveSlots}
           </div>
         )}

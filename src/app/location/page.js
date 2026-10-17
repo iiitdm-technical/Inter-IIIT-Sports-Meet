@@ -1,262 +1,152 @@
-'use client';
-
 import PageHeader from '@/components/PageHeader';
-
-import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { eventInfo } from '@/data/info';
 
 /**
  * Location Page Component
- * 
+ *
  * Purpose:
  * Provides visiting sports contingents, officials, and attendees with verified
  * geographical, travel, landmark, and campus facility information for IIITDM Kancheepuram.
- * 
+ *
  * Features:
  * - Direct "Get Directions" action integrating with Google Maps navigation
- * - Structured travel cards for Airport, Railway, Bus, and Local Cabs
+ * - Travel cards for air, rail and road, each led by its distance
  * - Verified nearby regional landmarks with distance benchmarks
- * - Interactive embedded Google Map with pan/zoom and direct link to full app
- * - Campus sports facilities breakdown and contingent check-in instructions
- * - Fully responsive layout adhering to the warm ivory (#faf6ee) and brand green design system
+ * - Embedded Google Map with a direct link to the full app
+ * - Campus sports facilities and contingent check-in instructions
  */
+
+function TravelCard({ mode, distance, distanceLabel, title, subtitle, children, footnote }) {
+  return (
+    <article className="card card-interactive flex flex-col p-6 sm:p-7">
+      <div className="flex items-start justify-between gap-4 border-b border-line pb-5">
+        <div>
+          <p className="eyebrow">{mode}</p>
+          <p className="stat-number mt-2 text-5xl text-ink">{distance}</p>
+          <p className="meta mt-1">{distanceLabel}</p>
+        </div>
+      </div>
+      <h3 className="heading-card mt-5">{title}</h3>
+      {subtitle && <p className="mt-1 text-sm font-semibold text-brand-primary">{subtitle}</p>}
+      <div className="mt-3 flex-1 text-sm leading-relaxed text-ink-soft">{children}</div>
+      <p className="mt-6 rounded-control bg-ivory px-4 py-3 text-xs font-semibold leading-relaxed text-ink-soft">
+        {footnote}
+      </p>
+    </article>
+  );
+}
+
 export default function Location() {
   const { location, hostInstitute, sportsFacilities } = eventInfo;
-
-  useEffect(() => {
-    const revealItems = document.querySelectorAll('[data-reveal]');
-
-    if (!revealItems.length) return;
-
-    const activate = (element) => {
-      element.classList.add('is-visible');
-      element.dataset.visible = 'true';
-    };
-
-    if (!('IntersectionObserver' in window)) {
-      revealItems.forEach((item) => activate(item));
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            activate(entry.target);
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15 }
-    );
-
-    revealItems.forEach((item) => {
-      if (item.getBoundingClientRect().top < window.innerHeight + 120) {
-        activate(item);
-        return;
-      }
-      observer.observe(item);
-    });
-
-    return () => observer.disconnect();
-  }, []);
+  const [nearestStation] = location.railway.stations;
 
   return (
-    <div style={{ background: '#faf6ee', minHeight: '100vh' }}>
-      
-      {/* ─── 1. PAGE HERO & HEADER ──────────────────────────────────────── */}
+    <div className="min-h-screen bg-ivory">
       {/* Gold header band with dark, high-contrast event information */}
       <PageHeader title="Location & How to Reach" label="Visit" badgeLabel="Our Campus" description={`The 9th All India Inter-IIIT Sports Meet is held at the ${hostInstitute.campusArea} of ${hostInstitute.name}, situated in Melakottaiyur, Chennai.`}>
-          <div className="mt-8 flex flex-wrap items-center gap-4">
-            {/* Primary "Get Directions" Button */}
-            <a
-              href={location.googleMapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-sm font-black transition-all hover:-translate-y-0.5 shadow-lg"
-              style={{ background: '#f5c518', color: '#0a2112' }}
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>Get Directions</span>
-              <span className="text-xs opacity-75">↗</span>
-            </a>
-
-            {/* GPS Coordinates Badge */}
-            <div
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-full text-xs font-bold border"
-              style={{ background: 'rgba(255,255,255,0.38)', borderColor: 'rgba(10,33,18,0.18)', color: '#0a2112' }}
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-              GPS: {location.coordinates.latitude}, {location.coordinates.longitude}
-            </div>
-
-            {/* Address snippet */}
-            <span className="text-xs sm:text-sm font-medium" style={{ color: 'rgba(10,33,18,0.76)' }}>
-              {location.address}
-            </span>
-          </div>
+        <div className="w-full">
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            href={location.googleMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Get Directions
+            <span aria-hidden="true">↗</span>
+            <span className="sr-only">(opens Google Maps in a new tab)</span>
+          </a>
+          <span className="chip bg-white/60 text-ink">
+            GPS {location.coordinates.latitude}, {location.coordinates.longitude}
+          </span>
+        </div>
+        <p className="mt-4 max-w-2xl text-sm font-medium text-ink">{location.address}</p>
+        </div>
       </PageHeader>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
 
-        {/* ─── 2. TRAVEL INFORMATION CARDS ──────────────────────────────── */}
-        {/* Responsive grid displaying transit modes with accurate distance benchmarks */}
-        <div className="mb-14">
-          <div className="mb-8">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
-              How to Reach
-            </span>
-            <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
-              Travel &amp; Distance Matrix
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
+        {/* Travel cards */}
+        <section className="mb-16" aria-labelledby="travel-title">
+          <div className="mb-8 max-w-2xl">
+            <p className="eyebrow">How to reach</p>
+            <h2 id="travel-title" className="heading-section mt-2">Travel &amp; distance</h2>
+            <p className="mt-3 text-base text-ink-soft">
               Connectivity options from major air, rail, and bus transit terminals in the Chennai metropolitan area.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            {/* Card 1: Airport */}
-            <div
-              data-reveal
-              className="reveal travel-card rounded-2xl p-7 border transition-all duration-300 hover:shadow-md flex flex-col justify-between"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.14)' }}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <TravelCard
+              mode="By air"
+              distance={location.airport.distance}
+              distanceLabel={`${location.airport.time} by road`}
+              title={location.airport.name}
+              subtitle="Via Vandalur-Kelambakkam Road"
+              footnote="Recommended: Airport prepaid taxi, Ola, Uber, or Fast Track."
             >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider" style={{ background: '#f5c518', color: '#0a2112' }}>
-                    ~{location.airport.distance}
-                  </span>
-                </div>
+              <p>{location.airport.details}</p>
+            </TravelCard>
 
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                  By Air
-                </div>
-                <h3 className="font-bold text-lg mb-2" style={{ color: '#0a2112' }}>
-                  {location.airport.name}
-                </h3>
-                <p className="text-xs font-semibold mb-4" style={{ color: '#1b5e20' }}>
-                  Approx. {location.airport.time} drive via Vandalur-Kelambakkam Road
-                </p>
-                <p className="text-sm leading-relaxed text-gray-600">
-                  {location.airport.details}
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-                Recommended: Airport prepaid taxi, Ola, Uber, or Fast Track.
-              </div>
-            </div>
-
-            {/* Card 2: Railway Stations */}
-            <div
-              data-reveal
-              className="reveal travel-card rounded-2xl p-7 border transition-all duration-300 hover:shadow-md flex flex-col justify-between"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.14)' }}
+            <TravelCard
+              mode="By train"
+              distance={nearestStation.distance}
+              distanceLabel={`to ${nearestStation.name}, the nearest hub`}
+              title="Major railway terminals"
+              footnote="Tambaram (TBM) is the closest and most frequent suburban connecting station."
             >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider" style={{ background: '#1b5e20', color: '#fff' }}>
-                    Rail Hubs
-                  </span>
-                </div>
+              <ul className="space-y-3">
+                {location.railway.stations.map((stn) => (
+                  <li key={stn.name}>
+                    <span className="flex items-baseline justify-between gap-3 font-bold text-ink">
+                      {stn.name}
+                      <span className="chip shrink-0">{stn.distance}</span>
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-ink-muted">{stn.details}</span>
+                  </li>
+                ))}
+              </ul>
+            </TravelCard>
 
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                  By Train
-                </div>
-                <h3 className="font-bold text-lg mb-3" style={{ color: '#0a2112' }}>
-                  Major Railway Terminals
-                </h3>
-
-                <ul className="space-y-3">
-                  {location.railway.stations.map((stn, idx) => (
-                    <li key={idx} className="text-xs leading-relaxed text-gray-600">
-                      <span className="font-bold block text-sm" style={{ color: '#1b5e20' }}>
-                        {stn.name} &bull; {stn.distance}
-                      </span>
-                      {stn.details}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-                Tambaram (TBM) is the closest and most frequent suburban connecting station.
-              </div>
-            </div>
-
-            {/* Card 3: Bus & Interstate Terminus */}
-            <div
-              data-reveal
-              className="reveal travel-card rounded-2xl p-7 border transition-all duration-300 hover:shadow-md flex flex-col justify-between"
-              style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.14)' }}
+            <TravelCard
+              mode="By bus & road"
+              distance={location.bus.distance}
+              distanceLabel="to the interstate bus terminus"
+              title={location.bus.hub}
+              subtitle="Interstate terminus for south-bound buses"
+              footnote='MTC Bus Stop: "Melakottaiyur / IIITDM Gate" located at the main entrance.'
             >
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider" style={{ background: '#f5c518', color: '#0a2112' }}>
-                    ~{location.bus.distance}
-                  </span>
-                </div>
-
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
-                  By Bus &amp; Road
-                </div>
-                <h3 className="font-bold text-lg mb-2" style={{ color: '#0a2112' }}>
-                  {location.bus.hub}
-                </h3>
-                <p className="text-xs font-semibold mb-4" style={{ color: '#1b5e20' }}>
-                  Interstate terminus for south-bound buses
-                </p>
-                <p className="text-sm leading-relaxed text-gray-600">
-                  {location.bus.routes}
-                </p>
-              </div>
-
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
-                MTC Bus Stop: &quot;Melakottaiyur / IIITDM Gate&quot; located at the main entrance.
-              </div>
-            </div>
-
+              <p>{location.bus.routes}</p>
+            </TravelCard>
           </div>
-        </div>
+        </section>
 
-        {/* ─── 3. INTERACTIVE MAP SECTION ────────────────────────────────── */}
-        {/* Full-width interactive Google Maps embed with location context panel */}
-        <div data-reveal className="reveal mb-14">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4">
+        {/* Map and campus facilities */}
+        <section className="mb-16" aria-labelledby="map-title">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
-                Interactive Campus Locator
-              </span>
-              <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
-                Campus Map &amp; Navigation
-              </h2>
+              <p className="eyebrow">Interactive campus locator</p>
+              <h2 id="map-title" className="heading-section mt-2">Campus map &amp; navigation</h2>
             </div>
-            
-            {/* Direct Google Maps Action */}
             <a
               href={location.googleMapsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-bold transition-colors hover:underline"
-              style={{ color: '#1b5e20' }}
+              className="btn btn-outline btn-sm self-start sm:self-auto"
             >
-              Open in Google Maps App ↗
+              Open in Google Maps <span aria-hidden="true">↗</span>
+              <span className="sr-only">(opens in a new tab)</span>
             </a>
           </div>
 
-          <div
-            data-reveal
-            className="reveal rounded-3xl overflow-hidden border shadow-sm grid grid-cols-1 lg:grid-cols-3"
-            style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.15)' }}
-          >
-            {/* Interactive Map Iframe */}
-            <div className="lg:col-span-2 relative min-h-[380px] sm:min-h-[460px] w-full bg-gray-100">
+          <div className="card grid grid-cols-1 overflow-hidden lg:grid-cols-3">
+            <div className="relative min-h-[380px] w-full bg-ivory-dark sm:min-h-[460px] lg:col-span-2">
               <iframe
                 title="IIITDM Kancheepuram Google Map"
                 src={location.mapEmbedUrl}
@@ -266,127 +156,82 @@ export default function Location() {
                 allowFullScreen=""
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                className="w-full h-full"
+                className="absolute inset-0 h-full w-full"
               />
             </div>
 
-            {/* Campus Facilities & Entry Guide Panel */}
-            <div className="p-8 flex flex-col justify-between" style={{ background: '#faf6ee' }}>
+            <div className="flex flex-col justify-between border-t border-line bg-ivory p-6 sm:p-8 lg:border-l lg:border-t-0">
               <div>
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#86601a' }}>
-                  <span className="w-2 h-2 rounded-full" style={{ background: '#1b5e20' }} />
-                  Campus Layout
-                </div>
-                <h3 className="font-black text-xl mb-4" style={{ color: '#0a2112' }}>
-                  Sports Facilities Hub
-                </h3>
-                
-                <p className="text-xs leading-relaxed mb-6 text-gray-600">
+                <p className="eyebrow">Campus layout</p>
+                <h3 className="heading-card mt-2 text-xl">Sports facilities hub</h3>
+                <p className="meta mt-2">
                   Outdoor and indoor facilities are located within the campus perimeter within walking distance of contingent hostels.
                 </p>
 
-                <div className="space-y-3.5">
-                  {sportsFacilities.map((facility, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg">
+                <ul className="mt-6 space-y-4">
+                  {sportsFacilities.map((facility) => (
+                    <li key={facility.name} className="flex items-start gap-3">
+                      <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-control">
                         <Image src={facility.image} alt={facility.name} fill sizes="80px" className="object-cover" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold" style={{ color: '#0a2112' }}>{facility.name}</div>
-                        <div className="text-[11px] text-gray-600">{facility.desc}</div>
+                        <p className="text-sm font-bold text-ink">{facility.name}</p>
+                        <p className="text-xs leading-relaxed text-ink-muted">{facility.desc}</p>
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
 
-              {/* Contingent Arrival Notice */}
-              <div
-                className="mt-8 p-4 rounded-xl border text-xs"
-                style={{ background: '#fff', borderColor: 'rgba(201,151,47,0.3)', color: '#444' }}
-              >
-                <div className="font-bold mb-1" style={{ color: '#1b5e20' }}>
-                  Contingent Reporting Desk
-                </div>
-                Arriving IIIT delegations should report to the Sports Council Helpdesk in the Administrative Foyer for registration kits and hostel allocation.
+              <div className="card card-accent mt-8 p-4 text-sm leading-relaxed text-ink-soft">
+                <p className="font-bold text-brand-primary">Contingent reporting desk</p>
+                <p className="mt-1">
+                  Arriving IIIT delegations should report to the Sports Council Helpdesk in the Administrative Foyer for registration kits and hostel allocation.
+                </p>
               </div>
             </div>
-
           </div>
-        </div>
+        </section>
 
-        {/* ─── 4. NEARBY LANDMARKS & POINTS OF INTEREST ───────────────────── */}
-        <div className="mb-14">
-          <div className="mb-8">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
-              Surrounding Area
-            </span>
-            <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
-              Nearby Landmarks
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
+        {/* Nearby landmarks */}
+        <section className="mb-16" aria-labelledby="landmarks-title">
+          <div className="mb-8 max-w-2xl">
+            <p className="eyebrow">Surrounding area</p>
+            <h2 id="landmarks-title" className="heading-section mt-2">Nearby landmarks</h2>
+            <p className="mt-3 text-base text-ink-soft">
               Key regional transit, education, and cultural landmarks surrounding the Melakottaiyur campus.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {location.landmarks.map((landmark, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl p-6 border transition-all duration-300 hover:shadow-md flex flex-col justify-between"
-                style={{ background: '#fff', borderColor: 'rgba(27,94,32,0.12)' }}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-black px-2.5 py-1 rounded-full" style={{ background: 'rgba(27,94,32,0.08)', color: '#1b5e20' }}>
-                      {landmark.distance}
-                    </span>
-                  </div>
-                  <h3 className="font-bold text-sm mb-2" style={{ color: '#0a2112' }}>
-                    {landmark.name}
-                  </h3>
-                  <p className="text-xs leading-relaxed text-gray-600">
-                    {landmark.desc}
-                  </p>
-                </div>
-              </div>
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {location.landmarks.map((landmark) => (
+              <li key={landmark.name} className="card card-tint flex flex-col p-5">
+                <p className="stat-number text-3xl text-brand-primary">{landmark.distance}</p>
+                <h3 className="heading-card mt-3 text-base">{landmark.name}</h3>
+                <p className="meta mt-1">{landmark.desc}</p>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </section>
 
-        {/* ─── 5. LOCAL TIPS & CONTACT FOOTNOTE ──────────────────────────── */}
-        <div
-          className="rounded-2xl p-8 sm:p-10 text-white flex flex-col md:flex-row items-center justify-between gap-6"
-          style={{ background: '#0a2112' }}
-        >
-          <div>
-            <span className="text-[10px] font-black tracking-[0.2em] uppercase" style={{ color: '#f5c518' }}>
-              Assistance for Traveling Teams
-            </span>
-            <h3 className="mt-1 font-black text-2xl">Need Local Travel Coordination?</h3>
-            <p className="mt-2 text-sm max-w-xl leading-relaxed text-white/70">
-              Student volunteer transport marshals will coordinate assistance at Tambaram Railway Station and Kilambakkam Bus Terminus during peak arrival hours for the 9th All India Inter-IIIT Sports Meet.
-            </p>
-          </div>
+        {/* Travel coordination */}
+        <section className="card card-ink overflow-hidden p-8 sm:p-10" aria-labelledby="travel-help-title">
+          <div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full border border-white/10" aria-hidden="true" />
+          <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            <div className="max-w-xl">
+              <p className="eyebrow text-brand-highlight">Assistance for travelling teams</p>
+              <h2 id="travel-help-title" className="heading-section mt-4 text-white">Need local travel coordination?</h2>
+              <p className="mt-3 text-sm leading-relaxed text-white/80 sm:text-base">
+                Student volunteer transport marshals will coordinate assistance at Tambaram Railway Station and Kilambakkam Bus Terminus during peak arrival hours for the 9th All India Inter-IIIT Sports Meet.
+              </p>
+            </div>
 
-          <div className="flex flex-wrap items-center gap-4 shrink-0">
-            <Link
-              href="/contact"
-              className="px-6 py-3 rounded-full text-sm font-bold transition-all hover:-translate-y-0.5"
-              style={{ background: '#f5c518', color: '#0a2112' }}
-            >
-              Contact Sports Cell
-            </Link>
-            <a
-              href="mailto:sports@iiitdm.ac.in"
-              className="px-6 py-3 rounded-full text-sm font-bold border transition-all hover:bg-white/10"
-              style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
-            >
-              sports@iiitdm.ac.in
-            </a>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <Link href="/contact" className="btn btn-accent">Contact Sports Cell</Link>
+              <a href="mailto:sports@iiitdm.ac.in" className="btn btn-on-dark">sports@iiitdm.ac.in</a>
+            </div>
           </div>
-        </div>
-
+        </section>
       </div>
     </div>
   );

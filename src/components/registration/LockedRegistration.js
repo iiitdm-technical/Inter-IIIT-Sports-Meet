@@ -53,190 +53,165 @@ export default function LockedRegistration({ registrationData }) {
     document.body.removeChild(a);
   };
 
+  const formatDateTime = (value) => value ? new Date(value).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "N/A";
+  const detailLabel = "text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted";
+  const detailValue = "mt-0.5 text-sm font-semibold text-ink";
+
   return (
-    <div className="min-h-screen bg-[#faf6ee] font-sans pb-20">
+    <div className="min-h-screen bg-ivory pb-20">
       <LockedHeader iiitName={registration.iiitName} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className={`${isPaymentVerified ? "bg-green-50 border-green-100" : "bg-amber-50 border-amber-100"} border-b px-8 py-10 text-center`}>
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isPaymentVerified ? "bg-green-100 text-green-600" : "bg-amber-100 text-amber-700"}`}>
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d={isPaymentVerified ? "M5 13l4 4L19 7" : "M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"} />
-              </svg>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-10 space-y-5">
+        <section className="card card-accent overflow-hidden">
+          <div className="flex flex-col gap-4 px-5 pt-6 pb-5 sm:flex-row sm:items-start sm:justify-between sm:px-8 sm:pt-8">
+            <div>
+              <p className="eyebrow">{isPaymentVerified ? "All steps complete" : "Step 3 of 3 · Verification"}</p>
+              <h1 className="heading-section mt-2">{isPaymentVerified ? "Registration complete" : "Payment submitted — awaiting verification"}</h1>
+              <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">{isPaymentVerified ? "The organizers have confirmed your bank transfer. Your registration is complete and locked." : "Your roster and payment details are locked. The organizers will check the transfer against their bank statement; this page updates when they do."}</p>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">{isPaymentVerified ? "Registration complete" : "Payment submitted — awaiting verification"}</h1>
-            <p className={`${isPaymentVerified ? "text-green-800" : "text-amber-900"} font-medium`}>{isPaymentVerified ? "The organizers have confirmed your bank transfer. Your registration is complete and locked." : "Your roster and payment details are locked. The organizers will check the transfer against their bank statement; this page updates when they do."}</p>
-            <div className="mx-auto mt-6 max-w-md">
+            <span className={`chip shrink-0 self-start ${isPaymentVerified ? "" : "chip-gold"}`}>
+              {isPaymentVerified ? "Verified" : "Awaiting verification"}
+            </span>
+          </div>
+          <div className="border-t border-line bg-ivory/70 px-5 py-5 sm:px-8">
+            <div className="mx-auto max-w-lg">
               <RegistrationSteps current={isPaymentVerified ? 3 : 2} />
             </div>
           </div>
+        </section>
 
-          <div className="p-8">
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">Summary</h2>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 font-medium text-sm">Total Unique Students</span>
-                    <span className="font-black text-gray-900">{students?.length || 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 font-medium text-sm">Total Event Entries</span>
-                    <span className="font-black text-gray-900">{entries?.length || 0}</span>
-                  </div>
-                  <div className="flex justify-between pt-3 border-t border-gray-200">
-                    <span className="text-gray-600 font-medium text-sm">Submitted At</span>
-                    <span className="font-bold text-gray-900 text-sm">
-                      {registration.submittedAt ? new Date(registration.submittedAt).toLocaleString() : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 font-medium text-sm">Submitted By</span>
-                    <span className="font-bold text-gray-900 text-sm">{registration.submittedBy || "N/A"}</span>
-                  </div>
-                </div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <section className="card p-5 sm:p-6" aria-labelledby="locked-summary-title">
+            <h2 id="locked-summary-title" className="heading-card">Summary</h2>
+            <dl className="mt-4 grid grid-cols-2 gap-3">
+              <div className="card-tint rounded-control p-3">
+                <dt className={detailLabel}>Unique students</dt>
+                <dd className="stat-number mt-1 text-3xl text-ink">{students?.length || 0}</dd>
               </div>
+              <div className="card-tint rounded-control p-3">
+                <dt className={detailLabel}>Event entries</dt>
+                <dd className="stat-number mt-1 text-3xl text-ink">{entries?.length || 0}</dd>
+              </div>
+              <div>
+                <dt className={detailLabel}>Submitted at</dt>
+                <dd className={detailValue}>{formatDateTime(registration.submittedAt)}</dd>
+              </div>
+              <div>
+                <dt className={detailLabel}>Submitted by</dt>
+                <dd className={detailValue}>{registration.submittedBy || "N/A"}</dd>
+              </div>
+            </dl>
+          </section>
 
-              <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">Contact Details</h2>
-                <div className="space-y-3">
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase">Faculty In-Charge</span>
-                    <span className="font-bold text-gray-900 text-sm">{registration.contactName || "—"}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase">Email</span>
-                    <span className="font-bold text-gray-900 text-sm">{registration.contactEmail || "—"}</span>
-                  </div>
-                  <div>
-                    <span className="block text-xs font-bold text-gray-500 uppercase">Phone</span>
-                    <span className="font-bold text-gray-900 text-sm">{registration.contactPhone || "—"}</span>
-                  </div>
-                </div>
+          <section className="card p-5 sm:p-6" aria-labelledby="locked-contact-title">
+            <h2 id="locked-contact-title" className="heading-card">Contact Details</h2>
+            <dl className="mt-4 space-y-3">
+              <div>
+                <dt className={detailLabel}>Faculty in-charge</dt>
+                <dd className={detailValue}>{registration.contactName || "—"}</dd>
+              </div>
+              <div>
+                <dt className={detailLabel}>Email</dt>
+                <dd className={`${detailValue} break-all`}>{registration.contactEmail || "—"}</dd>
+              </div>
+              <div>
+                <dt className={detailLabel}>Phone</dt>
+                <dd className={detailValue}>{registration.contactPhone || "—"}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+
+        {payment && (
+          <section className="card p-5 sm:p-6" aria-labelledby="locked-payment-title">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h2 id="locked-payment-title" className="heading-card">Payment Details</h2>
+              <div className="text-right">
+                <span role="status" aria-live="polite" className={`chip ${isPaymentVerified ? "" : "chip-gold"}`}>
+                  {isPaymentVerified ? "Bank Verified" : "Awaiting Bank Verification"}
+                </span>
+                {isPaymentVerified && verification.verifiedAt && (
+                  <span className="meta mt-1 block">Verified {new Date(verification.verifiedAt).toLocaleDateString("en-IN")}</span>
+                )}
+                {!isPaymentVerified && (
+                  <button type="button" onClick={refreshPaymentStatus} className="mt-1.5 block w-full text-right text-sm font-semibold text-brand-primary underline underline-offset-2">Check status now</button>
+                )}
               </div>
             </div>
-
-            {/* Payment Details Section */}
-            {payment && (
-              <div className="bg-white rounded-xl p-6 border border-amber-100 mb-8">
-                <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-4">Payment Details</h2>
-                <div className="grid sm:grid-cols-2 gap-4 mb-4">
-                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Unique Students</span>
-                      <span className="font-black text-gray-900">{payment.uniqueStudentCount}</span>
-                    </div>
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Rate</span>
-                      <span className="font-bold text-gray-700">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-amber-200">
-                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Amount paid</span>
-                      <span className="font-black text-amber-900 text-lg">{formatRupees(payment.amount)}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <span className="block text-xs font-bold text-gray-500 uppercase">Transaction ID / UTR</span>
-                      <span className="font-mono font-bold text-gray-900 text-sm">{payment.transactionId}</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold text-gray-500 uppercase">Transaction Date</span>
-                      <span className="font-bold text-gray-900 text-sm">
-                        {payment.transactionDate ? new Date(payment.transactionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold text-gray-500 uppercase">Bank</span>
-                      <span className="font-bold text-gray-900 text-sm">{payment.bankName || "Not provided"}</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs font-bold text-gray-500 uppercase">Payment Mode</span>
-                      <span className="font-bold text-gray-900 text-sm">
-                        {payment.paymentMode === "OTHER"
-                          ? `Other (${payment.otherPaymentMode})`
-                          : payment.paymentMode || "Not provided"}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <div>
-                        <span className="block text-xs font-bold text-gray-500 uppercase">Payment Status</span>
-                        <span role="status" aria-live="polite" className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 rounded-full text-xs font-black ${isPaymentVerified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-900"}`}>
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                          {isPaymentVerified ? "Bank Verified" : "Awaiting Bank Verification"}
-                        </span>
-                        {isPaymentVerified && verification.verifiedAt && (
-                          <span className="block mt-1 text-xs text-gray-500">Verified {new Date(verification.verifiedAt).toLocaleDateString("en-IN")}</span>
-                        )}
-                        {!isPaymentVerified && (
-                          <button type="button" onClick={refreshPaymentStatus} className="block mt-2 text-xs font-bold text-amber-800 underline underline-offset-2">Check status now</button>
-                        )}
-                      </div>
-                      {payment.proofPathname && (
-                        <a
-                          href={`/api/payment/proof?iiitCode=${registration.iiitCode}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 text-amber-800 text-xs font-bold hover:bg-amber-200 transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                          View Proof
-                        </a>
-                      )}
-                    </div>
-                  </div>
+            <div className="mt-4 grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+              <dl className="space-y-2 rounded-control border border-[#ecd27a] bg-gold-wash p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-sm text-ink-soft">Unique students</dt>
+                  <dd className="font-semibold text-ink">{payment.uniqueStudentCount}</dd>
                 </div>
-              </div>
-            )}
-
-            <section className="mb-8" aria-labelledby="locked-roster-title">
-              <h2 id="locked-roster-title" className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-600">Locked roster</h2>
-              <RosterSummary entries={entries} />
-              <p className="mt-3 text-sm text-gray-700">
-                Need a correction? Email the IIITDM Kancheepuram Sports Cell at{" "}
-                <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-bold text-[#1b5e20] underline underline-offset-2">{SPORTS_CELL_EMAIL}</a>.
-              </p>
-            </section>
-
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <button
-                type="button"
-                onClick={downloadCsv}
-                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1b5e20] text-white rounded-full font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download Registration CSV
-              </button>
-
-              {payment?.proofPathname && (
-                <a
-                  href={`/api/payment/proof?iiitCode=${registration.iiitCode}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-amber-700 text-white rounded-full font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                  View / Download Payment Proof
-                </a>
-              )}
-
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center px-8 py-3.5 bg-gray-100 text-gray-700 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors"
-              >
-                Return to Home
-              </Link>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-sm text-ink-soft">Rate</dt>
+                  <dd className="font-semibold text-ink">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 border-t border-[#ecd27a] pt-2">
+                  <dt className="text-sm font-semibold text-gold-text">Amount paid</dt>
+                  <dd className="stat-number text-3xl text-ink">{formatRupees(payment.amount)}</dd>
+                </div>
+              </dl>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div className="col-span-2">
+                  <dt className={detailLabel}>Transaction ID / UTR</dt>
+                  <dd className={`${detailValue} font-mono break-all`}>{payment.transactionId}</dd>
+                </div>
+                <div>
+                  <dt className={detailLabel}>Transaction date</dt>
+                  <dd className={detailValue}>
+                    {payment.transactionDate ? new Date(payment.transactionDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className={detailLabel}>Payment mode</dt>
+                  <dd className={detailValue}>
+                    {payment.paymentMode === "OTHER"
+                      ? `Other (${payment.otherPaymentMode})`
+                      : payment.paymentMode || "Not provided"}
+                  </dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className={detailLabel}>Bank</dt>
+                  <dd className={detailValue}>{payment.bankName || "Not provided"}</dd>
+                </div>
+              </dl>
             </div>
+          </section>
+        )}
+
+        <section className="card p-5 sm:p-6" aria-labelledby="locked-roster-title">
+          <h2 id="locked-roster-title" className="heading-card">Locked roster</h2>
+          <div className="mt-4">
+            <RosterSummary entries={entries} />
           </div>
+          <p className="mt-4 text-sm text-ink-soft">
+            Need a correction? Email the IIITDM Kancheepuram Sports Cell at{" "}
+            <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-semibold text-brand-primary underline underline-offset-2">{SPORTS_CELL_EMAIL}</a>.
+          </p>
+        </section>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <button type="button" onClick={downloadCsv} className="btn btn-primary">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Registration CSV
+          </button>
+          {payment?.proofPathname && (
+            <a
+              href={`/api/payment/proof?iiitCode=${registration.iiitCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline"
+            >
+              View payment proof
+            </a>
+          )}
+          <Link href="/" className="btn btn-outline">
+            Return to Home
+          </Link>
         </div>
       </div>
     </div>
