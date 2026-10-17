@@ -6,10 +6,17 @@ import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
  * @param {Object} payload
  * @param {Array} payload.students - Array of { rollNumber, name, gender }
  * @param {Array} payload.entries - Array of { sportId, eventId, gender, rollNumber, isReserve }
- * @returns {{ isValid: boolean, errors: string[] }}
+ * @returns {{ isValid: boolean, errors: string[], issues: Array }}
+ *   `issues` mirrors `errors` with the roll numbers, sport, event and category
+ *   each message refers to, so the form can point to the offending slots.
  */
 export function validateRegistrationRules({ students, entries }) {
   const errors = [];
+  const issues = [];
+  const fail = (message, target = {}) => {
+    errors.push(message);
+    issues.push({ message, ...target });
+  };
 
   // 1. Validate total unique students <= 150
   const uniqueRollNumbers = new Set();
@@ -18,7 +25,7 @@ export function validateRegistrationRules({ students, entries }) {
   for (const s of students) {
     const roll = s.rollNumber.trim().toUpperCase();
     if (uniqueRollNumbers.has(roll)) {
-      errors.push(`Duplicate student roll number detected in student roster: ${roll}`);
+      fail(`Duplicate student roll number detected in student roster: ${roll}`, { rolls: [roll] });
     }
     uniqueRollNumbers.add(roll);
     studentMap.set(roll, {
@@ -29,7 +36,7 @@ export function validateRegistrationRules({ students, entries }) {
   }
 
   if (uniqueRollNumbers.size > GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT) {
-    errors.push(
+    fail(
       `Maximum unique students limit exceeded: ${uniqueRollNumbers.size} registered (Maximum allowed is ${GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT} students per IIIT).`
     );
   }
@@ -48,32 +55,37 @@ export function validateRegistrationRules({ students, entries }) {
     const eventId = entry.eventId.toLowerCase();
     const eventGender = entry.gender;
     const isReserve = !!entry.isReserve;
+    const entryTarget = { rolls: [roll], sportId, eventId, gender: eventGender };
 
     // Check student exists in roster
     const student = studentMap.get(roll);
     if (!student) {
-      errors.push(
-        `Event entry references unregistered student with roll number: ${roll} (Sport: ${sportId}, Event: ${eventId})`
+      fail(
+        `Event entry references unregistered student with roll number: ${roll} (Sport: ${sportId}, Event: ${eventId})`,
+        entryTarget
       );
       continue;
     }
 
     // Check gender compatibility
     if (eventGender === "M" && student.gender !== "M") {
-      errors.push(
-        `Gender mismatch: Student ${student.name} (${roll}) is female but registered in Men's ${sportId} - ${eventId}`
+      fail(
+        `Gender mismatch: Student ${student.name} (${roll}) is female but registered in Men's ${sportId} - ${eventId}`,
+        entryTarget
       );
     } else if (eventGender === "F" && student.gender !== "F") {
-      errors.push(
-        `Gender mismatch: Student ${student.name} (${roll}) is male but registered in Women's ${sportId} - ${eventId}`
+      fail(
+        `Gender mismatch: Student ${student.name} (${roll}) is male but registered in Women's ${sportId} - ${eventId}`,
+        entryTarget
       );
     }
 
     // Check duplicate entry for same student in same event
     const duplicateKey = `${roll}_${sportId}_${eventId}`;
     if (entryDuplicates.has(duplicateKey)) {
-      errors.push(
-        `Student ${student.name} (${roll}) is entered multiple times in ${sportId} - ${eventId}`
+      fail(
+        `Student ${student.name} (${roll}) is entered multiple times in ${sportId} - ${eventId}`,
+        entryTarget
       );
     }
     entryDuplicates.add(duplicateKey);
@@ -81,31 +93,31 @@ export function validateRegistrationRules({ students, entries }) {
     // Verify sport exists in catalog
     const sportConfig = getSportConfig(sportId);
     if (!sportConfig) {
-      errors.push(`Unrecognized sport ID: ${sportId}`);
+      fail(`Unrecognized sport ID: ${sportId}`, entryTarget);
       continue;
     }
 
     if (!sportConfig.genders.includes(eventGender)) {
-      errors.push(`Unsupported category for ${sportConfig.name}: ${eventGender}`);
+      fail(`Unsupported category for ${sportConfig.name}: ${eventGender}`, entryTarget);
       continue;
     }
     if (sportConfig.type === "team" || sportConfig.type === "combined_team") {
       if (eventId !== "team") {
-        errors.push(`Unrecognized event for ${sportConfig.name}: ${eventId}`);
+        fail(`Unrecognized event for ${sportConfig.name}: ${eventId}`, entryTarget);
         continue;
       }
       if (isReserve) {
-        errors.push(`${sportConfig.name} does not allow reserve slots`);
+        fail(`${sportConfig.name} does not allow reserve slots`, entryTarget);
         continue;
       }
     } else {
       const event = sportConfig.events?.[eventGender]?.find((item) => item.id === eventId);
       if (!event) {
-        errors.push(`Unrecognized event for ${sportConfig.name} (${eventGender}): ${eventId}`);
+        fail(`Unrecognized event for ${sportConfig.name} (${eventGender}): ${eventId}`, entryTarget);
         continue;
       }
       if (isReserve && !event.maxReserves) {
-        errors.push(`${sportConfig.name} ${event.name} does not allow reserve slots`);
+        fail(`${sportConfig.name} ${event.name} does not allow reserve slots`, entryTarget);
         continue;
       }
     }
@@ -165,34 +177,37 @@ export function validateRegistrationRules({ students, entries }) {
 
     // Normal sports limit: max 2
     if (track.normalSports.size > GLOBAL_RULES.MAX_NORMAL_SPORTS_PER_STUDENT) {
-      errors.push(
+      fail(
         `Multi-sport rule violated for ${studentDisplayName}: Participates in ${
           track.normalSports.size
         } normal sports (${Array.from(track.normalSports).join(
           ", "
-        )}). Maximum allowed is ${GLOBAL_RULES.MAX_NORMAL_SPORTS_PER_STUDENT} normal sports.`
+        )}). Maximum allowed is ${GLOBAL_RULES.MAX_NORMAL_SPORTS_PER_STUDENT} normal sports.`,
+        { rolls: [roll], sportIds: Array.from(track.normalSports) }
       );
     }
 
     // Athletics individual events limit: max 3 (excluding relays)
     if (track.athleticsIndividualEvents.size > GLOBAL_RULES.MAX_ATHLETICS_INDIVIDUAL_EVENTS) {
-      errors.push(
+      fail(
         `Athletics event limit violated for ${studentDisplayName}: Entered in ${
           track.athleticsIndividualEvents.size
         } individual athletics events (${Array.from(
           track.athleticsIndividualEvents
-        ).join(", ")}). Maximum allowed is ${GLOBAL_RULES.MAX_ATHLETICS_INDIVIDUAL_EVENTS}.`
+        ).join(", ")}). Maximum allowed is ${GLOBAL_RULES.MAX_ATHLETICS_INDIVIDUAL_EVENTS}.`,
+        { rolls: [roll], sportId: "athletics" }
       );
     }
 
     // Aquatics individual events limit: max 3 (excluding relays)
     if (track.aquaticsIndividualEvents.size > GLOBAL_RULES.MAX_AQUATICS_INDIVIDUAL_EVENTS) {
-      errors.push(
+      fail(
         `Aquatics event limit violated for ${studentDisplayName}: Entered in ${
           track.aquaticsIndividualEvents.size
         } individual swimming events (${Array.from(
           track.aquaticsIndividualEvents
-        ).join(", ")}). Maximum allowed is ${GLOBAL_RULES.MAX_AQUATICS_INDIVIDUAL_EVENTS}.`
+        ).join(", ")}). Maximum allowed is ${GLOBAL_RULES.MAX_AQUATICS_INDIVIDUAL_EVENTS}.`,
+        { rolls: [roll], sportId: "aquatics" }
       );
     }
   }
@@ -204,19 +219,22 @@ export function validateRegistrationRules({ students, entries }) {
     if (!sportConfig) continue;
 
     const totalCount = mains.length + reserves.length;
+    const eventTarget = { sportId, eventId, gender };
 
     if (sportConfig.type === "team") {
       const limit = sportConfig.teamLimits?.[gender] || 0;
       if (totalCount > limit) {
-        errors.push(
-          `Squad size exceeded for ${sportConfig.name} (${gender}): ${totalCount} players registered (Maximum limit is ${limit}).`
+        fail(
+          `Squad size exceeded for ${sportConfig.name} (${gender}): ${totalCount} players registered (Maximum limit is ${limit}).`,
+          eventTarget
         );
       }
     } else if (sportConfig.type === "combined_team") {
       const limit = sportConfig.teamLimits?.mixed || 4;
       if (totalCount > limit) {
-        errors.push(
-          `Squad size exceeded for ${sportConfig.name}: ${totalCount} players registered (Maximum limit is ${limit}).`
+        fail(
+          `Squad size exceeded for ${sportConfig.name}: ${totalCount} players registered (Maximum limit is ${limit}).`,
+          eventTarget
         );
       }
     } else if (sportConfig.type === "weight_category_based") {
@@ -224,10 +242,11 @@ export function validateRegistrationRules({ students, entries }) {
       const cat = categories.find((c) => c.id === eventId);
       const limit = cat?.maxParticipants || 2;
       if (totalCount > limit) {
-        errors.push(
+        fail(
           `Participant limit exceeded for ${sportConfig.name} (${gender} - ${
             cat?.name || eventId
-          }): ${totalCount} registered (Maximum limit is ${limit}).`
+          }): ${totalCount} registered (Maximum limit is ${limit}).`,
+          eventTarget
         );
       }
     } else if (sportConfig.type === "event_based") {
@@ -235,13 +254,15 @@ export function validateRegistrationRules({ students, entries }) {
       const ev = events.find((e) => e.id === eventId);
       if (ev) {
         if (mains.length > ev.maxParticipants) {
-          errors.push(
-            `Competitor limit exceeded for ${sportConfig.name} (${gender} - ${ev.name}): ${mains.length} main participants (Maximum allowed is ${ev.maxParticipants}).`
+          fail(
+            `Competitor limit exceeded for ${sportConfig.name} (${gender} - ${ev.name}): ${mains.length} main participants (Maximum allowed is ${ev.maxParticipants}).`,
+            eventTarget
           );
         }
         if (reserves.length > (ev.maxReserves || 0)) {
-          errors.push(
-            `Reserve limit exceeded for ${sportConfig.name} (${gender} - ${ev.name}): ${reserves.length} reserves (Maximum allowed is ${ev.maxReserves}).`
+          fail(
+            `Reserve limit exceeded for ${sportConfig.name} (${gender} - ${ev.name}): ${reserves.length} reserves (Maximum allowed is ${ev.maxReserves}).`,
+            eventTarget
           );
         }
       }
@@ -251,5 +272,6 @@ export function validateRegistrationRules({ students, entries }) {
   return {
     isValid: errors.length === 0,
     errors,
+    issues,
   };
 }

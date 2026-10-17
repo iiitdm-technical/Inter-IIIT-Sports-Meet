@@ -39,6 +39,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
   const [uploadError, setUploadError] = useState("");
   const [localFile, setLocalFile] = useState(null);
   const [upiPayment, setUpiPayment] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -56,8 +57,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
     onChange((current) => ({ ...current, [field]: value }));
   };
 
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
+  const uploadFile = async (file) => {
     if (!file) return;
 
     setUploadError("");
@@ -96,6 +96,15 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
     } finally {
       if (onUploadBusy) onUploadBusy(false);
     }
+  };
+
+  const handleFileSelect = (e) => uploadFile(e.target.files?.[0]);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (uploadStatus === "uploading") return;
+    uploadFile(e.dataTransfer.files?.[0]);
   };
 
   const handleReplaceFile = () => {
@@ -271,25 +280,42 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
 
         {/* Proof Upload */}
         <div>
-          <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
+          <p id="payment-proof-label" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
             Transaction Proof <span className="text-red-500">*</span>
-          </label>
+          </p>
 
           {uploadStatus !== "success" && (
-            <div
-              className={`relative rounded-xl border-2 border-dashed transition-colors cursor-pointer ${
+            <label
+              htmlFor="payment-proof-file"
+              onDragOver={(e) => { e.preventDefault(); if (uploadStatus !== "uploading") setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`relative block rounded-xl border-2 border-dashed transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#1b5e20] ${
+                uploadStatus === "uploading" ? "cursor-wait" : "cursor-pointer"
+              } ${
                 errors.proof || uploadStatus === "error"
                   ? "border-red-300 bg-red-50"
-                  : uploadStatus === "uploading"
-                  ? "border-green-300 bg-green-50"
+                  : uploadStatus === "uploading" || isDragging
+                  ? "border-green-400 bg-green-50"
                   : "border-gray-300 hover:border-[#1b5e20] bg-gray-50 hover:bg-green-50"
               }`}
-              onClick={() => uploadStatus !== "uploading" && fileInputRef.current?.click()}
             >
+              <input
+                id="payment-proof-file"
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                className="sr-only"
+                onChange={handleFileSelect}
+                disabled={uploadStatus === "uploading"}
+                aria-labelledby="payment-proof-label"
+                aria-describedby="payment-proof-help payment-proof-error"
+                aria-invalid={Boolean(errors.proof || uploadStatus === "error") || undefined}
+              />
               <div className="p-5 text-center">
                 {uploadStatus === "uploading" ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <svg className="w-6 h-6 text-green-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <div className="flex flex-col items-center gap-2" role="status">
+                    <svg className="w-6 h-6 text-green-600 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
@@ -298,29 +324,21 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-2">
-                    <svg className={`w-8 h-8 ${uploadStatus === "error" ? "text-red-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className={`w-8 h-8 ${uploadStatus === "error" ? "text-red-400" : "text-gray-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                     <div>
-                      <p className="text-sm font-bold text-gray-700">Choose File / Upload Proof</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
+                      <p className="text-sm font-bold text-gray-700">Choose a file or drop it here</p>
+                      <p id="payment-proof-help" className="text-xs text-gray-500 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
                     </div>
                   </div>
                 )}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={handleFileSelect}
-                disabled={uploadStatus === "uploading"}
-              />
-            </div>
+            </label>
           )}
 
           {uploadStatus === "success" && (
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+            <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
                   <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -337,7 +355,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                 <button
                   type="button"
                   onClick={handleReplaceFile}
-                  className="flex-shrink-0 text-xs font-bold text-green-700 hover:text-green-900 underline underline-offset-2"
+                  aria-label={`Replace uploaded proof ${uploadedFileName}`}
+                  className="flex-shrink-0 text-xs font-bold text-green-700 hover:text-green-900 underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20]"
                 >
                   Replace
                 </button>
@@ -346,15 +365,15 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           )}
 
           {uploadStatus === "error" && uploadError && (
-            <p className="mt-1.5 text-xs text-red-600 font-medium flex items-start gap-1.5">
+            <p id="payment-proof-error" role="alert" className="mt-1.5 text-xs text-red-600 font-medium flex items-start gap-1.5">
               <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               {uploadError}
             </p>
           )}
-          {errors.proof && uploadStatus !== "success" && (
-            <p className="mt-1.5 text-xs text-red-600 font-medium">{errors.proof}</p>
+          {errors.proof && uploadStatus !== "success" && uploadStatus !== "error" && (
+            <p id="payment-proof-error" className="mt-1.5 text-xs text-red-600 font-medium">{errors.proof}</p>
           )}
         </div>
       </div>

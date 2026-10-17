@@ -1,22 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PaymentSection from "./PaymentSection";
 
+const EMPTY_PAYMENT_DETAILS = {
+  transactionDate: "",
+  transactionId: "",
+  bankName: "",
+  proofPathname: "",
+  proofFileName: "",
+};
+
 export default function PaymentPending({ iiitCode, registrationData }) {
   const router = useRouter();
-  const [paymentDetails, setPaymentDetails] = useState({
-    transactionDate: "",
-    transactionId: "",
-    bankName: "",
-    proofPathname: "",
-    proofFileName: "",
+  // Keep entered details and the uploaded proof reference in this browser so a
+  // reload or expired session does not lose them before submission.
+  const storageKey = `inter_iiit_payment_${iiitCode}`;
+  const [paymentDetails, setPaymentDetails] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+      return saved && typeof saved === "object" ? { ...EMPTY_PAYMENT_DETAILS, ...saved } : EMPTY_PAYMENT_DETAILS;
+    } catch {
+      return EMPTY_PAYMENT_DETAILS;
+    }
   });
   const [paymentErrors, setPaymentErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [uploadBusy, setUploadBusy] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(paymentDetails));
+    } catch {
+      // Storage is a convenience; the form still works without it.
+    }
+  }, [storageKey, paymentDetails]);
 
   const { registration } = registrationData;
   const uniqueStudentsCount = registration.totalStudentsCount;
@@ -69,6 +89,11 @@ export default function PaymentPending({ iiitCode, registrationData }) {
       }
 
       // Success — reload to show submitted/locked state
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        // The server has the payment; a stale local copy is harmless.
+      }
       window.location.reload();
     } catch (err) {
       setSubmitError(err.message || "An unexpected error occurred during payment submission.");

@@ -1,48 +1,40 @@
 "use client";
 
 import ParticipantSlot from "./ParticipantSlot";
-import { getSlotKey } from "@/lib/registration/client-utils";
+import { getSlotKey, getSlotInputId } from "@/lib/registration/client-utils";
 
-export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, studentRegistry }) {
-  
+const GENDER_LABELS = { M: "Men", F: "Women", mixed: "Combined" };
+
+export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, studentRegistry, errorSlotKeys }) {
+
   // Is it a combined event like Chess where gender is mixed?
   const isCombined = sportConfig.type === "combined_team" || gender === "mixed";
   // The actual fixed gender for slots. If combined, it's null so the selector appears.
   const fixedSlotGender = isCombined ? null : gender;
+  const context = `${GENDER_LABELS[gender] || gender} ${eventName}`;
 
-  const mainSlots = Array.from({ length: maxParticipants }).map((_, i) => {
-    const key = getSlotKey(sportConfig.id, eventId, gender, "main", i);
+  const renderSlot = (role, i) => {
+    const key = getSlotKey(sportConfig.id, eventId, gender, role, i);
     const data = slotsMap[key];
     const knownName = data?.rollNumber ? studentRegistry.get(data.rollNumber.trim().toUpperCase())?.name : null;
     return (
       <ParticipantSlot
         key={key}
-        label={`Slot ${i + 1}`}
+        inputId={getSlotInputId(key)}
+        label={role === "main" ? `Slot ${i + 1}` : `Reserve ${i + 1}`}
+        context={context}
         slotData={data}
         onChange={(val) => onChangeSlot(key, val)}
         fixedGender={fixedSlotGender}
-        isReserve={false}
+        isReserve={role === "reserve"}
         knownName={knownName}
+        hasError={errorSlotKeys.has(key)}
       />
     );
-  });
+  };
 
-  const reserveSlots = Array.from({ length: maxReserves || 0 }).map((_, i) => {
-    const key = getSlotKey(sportConfig.id, eventId, gender, "reserve", i);
-    const data = slotsMap[key];
-    const knownName = data?.rollNumber ? studentRegistry.get(data.rollNumber.trim().toUpperCase())?.name : null;
-    return (
-      <ParticipantSlot
-        key={key}
-        label={`Reserve ${i + 1}`}
-        slotData={data}
-        onChange={(val) => onChangeSlot(key, val)}
-        fixedGender={fixedSlotGender}
-        isReserve={true}
-        knownName={knownName}
-      />
-    );
-  });
+  const mainSlots = Array.from({ length: maxParticipants }, (_, i) => renderSlot("main", i));
+  const reserveSlots = Array.from({ length: maxReserves || 0 }, (_, i) => renderSlot("reserve", i));
 
   return (
     <div className="mb-6 last:mb-0">

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
+import useModalFocus from "@/components/useModalFocus";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -129,15 +130,13 @@ export default function AdminDashboardPage() {
     loadEntries(1, nextFilters);
   };
 
+  // Export exactly what the table shows: the applied filters, not unsubmitted edits.
   const downloadMasterCsv = (useFilters = false) => {
     const params = new URLSearchParams();
     if (useFilters) {
-      if (filters.iiit) params.set("iiit", filters.iiit);
-      if (filters.sport) params.set("sport", filters.sport);
-      if (filters.event) params.set("event", filters.event);
-      if (filters.gender) params.set("gender", filters.gender);
-      if (filters.name) params.set("name", filters.name);
-      if (filters.rollNumber) params.set("rollNumber", filters.rollNumber);
+      for (const [key, value] of Object.entries(appliedFilters)) {
+        if (value) params.set(key, value);
+      }
     }
     const downloadUrl = `/api/admin/csv?${params.toString()}`;
     const a = document.createElement("a");
@@ -157,6 +156,20 @@ export default function AdminDashboardPage() {
       console.error("Logout error:", err);
     }
     router.push("/login");
+  };
+
+  const closeVerification = useCallback(() => {
+    if (!verificationBusy) setVerificationTarget(null);
+  }, [verificationBusy]);
+  const verificationPanelRef = useModalFocus(Boolean(verificationTarget), closeVerification);
+
+  const viewIiitEntries = (row) => {
+    // The IIIT code matches exactly; a name such as "IIIT Kota" would also match "IIIT Kottayam".
+    const nextFilters = { iiit: row.iiitCode, sport: "", event: "", gender: "", rollNumber: "", name: "" };
+    setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+    setActiveTab("entries");
+    loadEntries(1, nextFilters);
   };
 
   const openVerification = (row) => {
@@ -509,6 +522,7 @@ export default function AdminDashboardPage() {
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50/50 text-[11px] font-black text-gray-500 uppercase tracking-wider">
                     <th className="px-4 py-3">IIIT</th>
+                    <th className="px-4 py-3">Contact</th>
                     <th className="px-4 py-3 text-center">Status</th>
                     <th className="px-4 py-3 text-center">Students</th>
                     <th className="px-4 py-3 text-center">Amount</th>
@@ -523,7 +537,23 @@ export default function AdminDashboardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {registrationsOverview.map((row) => (
                     <tr key={row.iiitCode || row.iiitName} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3 font-semibold text-gray-900 truncate max-w-[180px]" title={row.iiitName}>{row.iiitName}</td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="font-semibold text-gray-900 truncate max-w-[180px]" title={row.iiitName}>{row.iiitName}</div>
+                        {row.isSubmitted && (
+                          <button type="button" onClick={() => viewIiitEntries(row)} className="mt-1 text-[11px] font-bold text-[#1b5e20] underline underline-offset-2 hover:text-green-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700">
+                            View entries<span className="sr-only"> for {row.iiitName}</span>
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top text-gray-700">
+                        {row.contactName ? (
+                          <div className="space-y-0.5">
+                            <div className="font-semibold text-gray-900">{row.contactName}</div>
+                            {row.contactEmail && <a href={`mailto:${row.contactEmail}`} className="block text-[#1b5e20] underline underline-offset-2">{row.contactEmail}</a>}
+                            {row.contactPhone && <a href={`tel:${row.contactPhone.replace(/[^+0-9]/g, "")}`} className="block text-gray-700 underline underline-offset-2">{row.contactPhone}</a>}
+                          </div>
+                        ) : "—"}
+                      </td>
                       <td className="px-4 py-3 text-center">
                         {row.status === "submitted"
                           ? <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-black">Submitted</span>
@@ -587,7 +617,7 @@ export default function AdminDashboardPage() {
                   ))}
                   {registrationsOverview.length === 0 && (
                     <tr>
-                      <td colSpan={10} className="text-center py-10 text-gray-400">No IIITs found.</td>
+                      <td colSpan={11} className="text-center py-10 text-gray-400">No IIITs found.</td>
                     </tr>
                   )}
                 </tbody>
@@ -621,8 +651,8 @@ export default function AdminDashboardPage() {
           </section>
         )}
         {verificationTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a2112]/70 p-4" role="dialog" aria-modal="true" aria-labelledby="verify-payment-title">
-            <form onSubmit={submitVerification} className="w-full max-w-lg rounded-2xl bg-[#faf6ee] p-6 shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a2112]/70 p-4" onClick={(event) => { if (event.target === event.currentTarget) closeVerification(); }}>
+            <form ref={verificationPanelRef} onSubmit={submitVerification} role="dialog" aria-modal="true" aria-labelledby="verify-payment-title" tabIndex={-1} className="w-full max-w-lg rounded-2xl bg-[#faf6ee] p-6 shadow-2xl outline-none">
               <h2 id="verify-payment-title" className="text-xl font-black text-[#0a2112]">Verify bank transfer</h2>
               <p className="mt-2 text-sm text-gray-700">{verificationTarget.iiitName} submitted a proof for ₹{Number(verificationTarget.paymentAmount).toLocaleString("en-IN")}. Check the bank statement before confirming receipt.</p>
               <div className="mt-5 space-y-4">
@@ -641,7 +671,7 @@ export default function AdminDashboardPage() {
               </div>
               {verificationError && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{verificationError}</p>}
               <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button type="button" onClick={() => setVerificationTarget(null)} disabled={verificationBusy} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:opacity-50">Cancel</button>
+                <button type="button" onClick={closeVerification} disabled={verificationBusy} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 disabled:opacity-50">Cancel</button>
                 <button type="submit" disabled={verificationBusy || !bankConfirmed} className="rounded-lg bg-[#1b5e20] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{verificationBusy ? "Verifying…" : "Mark verified"}</button>
               </div>
             </form>
