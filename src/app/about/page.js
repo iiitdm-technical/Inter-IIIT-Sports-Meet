@@ -6,6 +6,8 @@ import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { eventInfo } from '@/data/info';
+import { iiits } from '@/data/iiits';
+import { sports } from '@/data/sports';
 
 /**
  * About Page Component
@@ -65,7 +67,7 @@ export default function About() {
   return (
     <div style={{ background: '#faf6ee', minHeight: '100vh' }}>
       {/* ─── 1. PAGE HEADER ──────────────────────────────────────────────── */}
-      <PageHeader title="About the Meet" label="Discover" badgeLabel="Our Story" description="The flagship national sports gathering uniting 20+ Indian Institutes of Information Technology, hosted at IIITDM Kancheepuram." />
+      <PageHeader title="About the Meet" label="Discover" badgeLabel="Our Story" description={`The flagship national sports gathering uniting ${iiits.length} Indian Institutes of Information Technology, hosted at IIITDM Kancheepuram.`} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         
@@ -100,10 +102,10 @@ export default function About() {
           {/* Editorial Photography (Natural, no green filter) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="info-card relative h-64 sm:h-80 rounded-2xl overflow-hidden shadow-md">
-              <Image src="/assets/campus/indoor-court.webp" alt="Basketball at the indoor sports complex" fill className="object-cover transition-transform duration-500 hover:scale-105" />
+              <Image src="/assets/campus/indoor-court.webp" alt="Basketball at the indoor sports complex" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover transition-transform duration-500 hover:scale-105" />
             </div>
             <div className="info-card relative h-64 sm:h-80 rounded-2xl overflow-hidden shadow-md mt-6">
-              <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill className="object-cover transition-transform duration-500 hover:scale-105" />
+              <Image src="/assets/campus/sports-team.webp" alt="IIITDM athletes with championship trophies" fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover transition-transform duration-500 hover:scale-105" />
             </div>
           </div>
         </div>
@@ -115,7 +117,7 @@ export default function About() {
             <div className="lg:col-span-2">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#1b5e20' }} />
-                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+                <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
                   Host Institute
                 </span>
               </div>
@@ -174,7 +176,7 @@ export default function About() {
         {/* ─── 4. SPORTS INFRASTRUCTURE BREAKDOWN ─────────────────────────── */}
         <div data-reveal className="reveal mb-20">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
               Campus Facilities
             </span>
             <h2 className="mt-2 font-black text-3xl sm:text-4xl" style={{ color: '#0a2112' }}>
@@ -237,7 +239,7 @@ export default function About() {
             </div>
 
             <div className="relative min-h-[300px] md:min-h-0">
-              <Image src="/assets/campus/badminton.webp" alt="Badminton at IIITDM Kancheepuram" fill className="object-cover opacity-60" />
+              <Image src="/assets/campus/badminton.webp" alt="Badminton at IIITDM Kancheepuram" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover opacity-60" />
             </div>
           </div>
         </div>
@@ -245,14 +247,14 @@ export default function About() {
         {/* ─── 6. CONTINGENT HOSPITALITY & CAMPUS LIFE ────────────────────── */}
         <div data-reveal className="reveal rounded-2xl p-8 sm:p-10 border" style={{ background: '#f3ead8', borderColor: 'rgba(27,94,32,0.15)' }}>
           <div className="max-w-3xl">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
               Logistics &amp; Hospitality
             </span>
             <h3 className="mt-2 font-black text-2xl" style={{ color: '#0a2112' }}>
               Contingent Accommodation &amp; Care
             </h3>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: '#444' }}>
-              Visiting teams from 20+ IIITs are accommodated in on-campus student hostels with dedicated dining arrangements serving regional dietary preferences. A 24/7 campus health center, first-aid teams, and local transport assistance marshals ensure a secure and organized tournament experience.
+              Visiting teams from {iiits.length} IIITs are accommodated in on-campus student hostels with dedicated dining arrangements serving regional dietary preferences. A 24/7 campus health center, first-aid teams, and local transport assistance marshals ensure a secure and organized tournament experience.
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
               <Link
@@ -267,7 +269,7 @@ export default function About() {
                 className="px-6 py-2.5 rounded-full text-xs font-bold border transition-all hover:bg-white"
                 style={{ borderColor: '#1b5e20', color: '#1b5e20' }}
               >
-                View 15+ Sports Disciplines
+                View All {sports.length} Sports
               </Link>
             </div>
           </div>

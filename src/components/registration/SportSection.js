@@ -69,8 +69,14 @@ export default function SportSection({ sportConfig, gender, slotsMap, onChangeSl
         className="w-full px-4 sm:px-6 py-4 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-green-700"
       >
         <div className="flex items-center gap-3">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm ${filledCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`} aria-hidden="true">
-            {sportConfig.name.substring(0, 1)}
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${errorCount > 0 ? 'bg-red-100 text-red-700' : filledCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-400'}`} aria-hidden="true">
+            {errorCount > 0 ? (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+            ) : filledCount > 0 ? (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            ) : (
+              <span className="w-2.5 h-2.5 rounded-full border-2 border-current" />
+            )}
           </div>
           <h3 className="font-bold text-gray-900 text-base sm:text-lg text-left">{sportConfig.name}</h3>
         </div>

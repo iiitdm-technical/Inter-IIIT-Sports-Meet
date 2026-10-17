@@ -108,7 +108,7 @@ export default function Location() {
         {/* Responsive grid displaying transit modes with accurate distance benchmarks */}
         <div className="mb-14">
           <div className="mb-8">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
               How to Reach
             </span>
             <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
@@ -134,7 +134,7 @@ export default function Location() {
                   </span>
                 </div>
 
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#c9972f' }}>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
                   By Air
                 </div>
                 <h3 className="font-bold text-lg mb-2" style={{ color: '#0a2112' }}>
@@ -148,7 +148,7 @@ export default function Location() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-500" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 Recommended: Airport prepaid taxi, Ola, Uber, or Fast Track.
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function Location() {
                   </span>
                 </div>
 
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#c9972f' }}>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
                   By Train
                 </div>
                 <h3 className="font-bold text-lg mb-3" style={{ color: '#0a2112' }}>
@@ -185,7 +185,7 @@ export default function Location() {
                 </ul>
               </div>
 
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-500" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 Tambaram (TBM) is the closest and most frequent suburban connecting station.
               </div>
             </div>
@@ -203,7 +203,7 @@ export default function Location() {
                   </span>
                 </div>
 
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#c9972f' }}>
+                <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: '#86601a' }}>
                   By Bus &amp; Road
                 </div>
                 <h3 className="font-bold text-lg mb-2" style={{ color: '#0a2112' }}>
@@ -217,7 +217,7 @@ export default function Location() {
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-500" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
+              <div className="mt-6 pt-4 border-t text-xs font-semibold text-gray-600" style={{ borderColor: 'rgba(0,0,0,0.06)' }}>
                 MTC Bus Stop: &quot;Melakottaiyur / IIITDM Gate&quot; located at the main entrance.
               </div>
             </div>
@@ -230,7 +230,7 @@ export default function Location() {
         <div data-reveal className="reveal mb-14">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-6 gap-4">
             <div>
-              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+              <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
                 Interactive Campus Locator
               </span>
               <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>
@@ -273,7 +273,7 @@ export default function Location() {
             {/* Campus Facilities & Entry Guide Panel */}
             <div className="p-8 flex flex-col justify-between" style={{ background: '#faf6ee' }}>
               <div>
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#c9972f' }}>
+                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3" style={{ color: '#86601a' }}>
                   <span className="w-2 h-2 rounded-full" style={{ background: '#1b5e20' }} />
                   Campus Layout
                 </div>
@@ -293,7 +293,7 @@ export default function Location() {
                       </div>
                       <div>
                         <div className="text-xs font-bold" style={{ color: '#0a2112' }}>{facility.name}</div>
-                        <div className="text-[11px] text-gray-500">{facility.desc}</div>
+                        <div className="text-[11px] text-gray-600">{facility.desc}</div>
                       </div>
                     </div>
                   ))}
@@ -318,7 +318,7 @@ export default function Location() {
         {/* ─── 4. NEARBY LANDMARKS & POINTS OF INTEREST ───────────────────── */}
         <div className="mb-14">
           <div className="mb-8">
-            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#c9972f' }}>
+            <span className="text-xs font-black tracking-[0.2em] uppercase" style={{ color: '#86601a' }}>
               Surrounding Area
             </span>
             <h2 className="mt-2 font-black text-2xl sm:text-3xl" style={{ color: '#0a2112' }}>

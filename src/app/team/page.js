@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import PageHeader from '@/components/PageHeader';
 const teamSections = [
   {
@@ -94,12 +95,12 @@ export default function Team() {
                 style={{ background: "rgba(27,94,32,0.15)" }}
               />
 
-              <h3
+              <h2
                 className="text-[15px] text-center font-black uppercase tracking-[0.25em] px-5"
-                style={{ color: "#c9972f" }}
+                style={{ color: "#86601a" }}
               >
                 {section.title}
-              </h3>
+              </h2>
 
               <div
                 className="h-px flex-1"
@@ -127,9 +128,11 @@ export default function Team() {
                     }}
                   >
                     {member.image ? (
-                      <img
+                      <Image
                         src={member.image}
-                        alt={member.name}
+                        alt=""
+                        width={120}
+                        height={120}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -145,17 +148,17 @@ export default function Team() {
                   </div>
 
                   {/* Name */}
-                  <h4
+                  <h3
                     className="font-bold text-[17.5px]"
                     style={{ color: "#0a2112" }}
                   >
                     {member.name}
-                  </h4>
+                  </h3>
 
                   {/* Role */}
                   <p
                     className="text-[15px] mt-[2.5px]"
-                    style={{ color: "#888" }}
+                    style={{ color: "#5f5f5f" }}
                   >
                     {member.role}
                   </p>

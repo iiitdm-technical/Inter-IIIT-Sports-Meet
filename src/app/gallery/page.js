@@ -19,6 +19,7 @@ export default function Gallery() {
             src={featured}
             alt="Gallery featured"
             fill
+            sizes="(max-width: 1280px) 100vw, 1280px"
             className="object-cover transition-transform duration-700 group-hover:scale-105"
           />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(10,33,18,0.5) 0%, transparent 50%)' }} />
@@ -33,6 +34,7 @@ export default function Gallery() {
                 src={img}
                 alt={`Gallery image ${idx + 2}`}
                 fill
+                sizes={idx === 0 ? '(max-width: 768px) 50vw, 40vw' : '(max-width: 768px) 50vw, 20vw'}
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"

@@ -1,5 +1,6 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import SiteChrome from '@/components/SiteChrome';
 import Footer from "@/components/Footer";
 
 export const metadata = {
@@ -60,11 +61,14 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col" style={{ background: '#faf6ee' }}>
-        <Navbar />
-        <main className="flex-grow">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-[#0a2112] focus:shadow-lg">
+          Skip to content
+        </a>
+        <SiteChrome><Navbar /></SiteChrome>
+        <main id="main-content" tabIndex={-1} className="flex-grow outline-none">
           {children}
         </main>
-        <Footer />
+        <SiteChrome><Footer /></SiteChrome>
       </body>
     </html>
   );

@@ -23,7 +23,7 @@ export default function ParticipantSlot({ inputId, label, context, slotData, onC
 
   return (
     <div className={`p-3 rounded-lg border flex flex-col md:flex-row gap-3 items-start md:items-center ${containerTone}`}>
-      <div className="w-24 shrink-0 font-bold text-xs uppercase tracking-wider text-gray-500" aria-hidden="true">
+      <div className="w-24 shrink-0 font-bold text-xs uppercase tracking-wider text-gray-600" aria-hidden="true">
         {label}
       </div>
 
@@ -77,7 +77,7 @@ export default function ParticipantSlot({ inputId, label, context, slotData, onC
           type="button"
           onClick={handleClear}
           aria-label={`Clear ${accessibleSlot}`}
-          className="shrink-0 self-end md:self-auto rounded px-2 py-1.5 text-xs font-bold text-gray-500 hover:bg-gray-100 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
+          className="shrink-0 self-end md:self-auto rounded px-2 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 hover:text-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
         >
           Clear
         </button>

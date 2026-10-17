@@ -541,7 +541,7 @@ export default function CircularGallery({
             key={activeIdx}
             className="text-2xl sm:text-3xl md:text-4xl font-black tracking-wider uppercase text-[#1C2E24]"
             style={{
-              fontFamily: "'Cinzel Decorative', 'Cinzel', serif",
+              fontFamily: "'Montserrat', var(--font-sans)",
               animation: 'sportTitleShift 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
               textShadow: '0 2px 10px rgba(28, 46, 36, 0.12)',
             }}
@@ -594,7 +594,7 @@ export default function CircularGallery({
           color: '#1C2E24',
           opacity: 0.6,
           fontSize: '11px',
-          fontFamily: "'Cinzel', serif",
+          fontFamily: "'Montserrat', var(--font-sans)",
           letterSpacing: '0.18em',
           pointerEvents: 'none',
           userSelect: 'none',
@@ -647,7 +647,7 @@ export default function CircularGallery({
               </span>
               <h3
                 className="text-2xl sm:text-3xl font-black uppercase tracking-wide mt-1"
-                style={{ fontFamily: "'Cinzel Decorative', 'Cinzel', serif", color: '#ffffff', opacity: 1 }}
+                style={{ fontFamily: "'Montserrat', var(--font-sans)", color: '#ffffff', opacity: 1 }}
               >
                 {zoomedItem.text}
               </h3>

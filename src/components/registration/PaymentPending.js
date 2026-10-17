@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import PaymentSection from "./PaymentSection";
+import LockedHeader from "./LockedHeader";
+import RegistrationSteps from "./RegistrationSteps";
+import RosterSummary from "./RosterSummary";
+import { SPORTS_CELL_EMAIL, formatRupees, getRegistrationFee } from "@/lib/registration/labels";
 
 const EMPTY_PAYMENT_DETAILS = {
   transactionDate: "",
@@ -13,7 +16,6 @@ const EMPTY_PAYMENT_DETAILS = {
 };
 
 export default function PaymentPending({ iiitCode, registrationData }) {
-  const router = useRouter();
   // Keep entered details and the uploaded proof reference in this browser so a
   // reload or expired session does not lose them before submission.
   const storageKey = `inter_iiit_payment_${iiitCode}`;
@@ -25,7 +27,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
       return EMPTY_PAYMENT_DETAILS;
     }
   });
-  const [paymentErrors, setPaymentErrors] = useState({});
+  const [attempted, setAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -38,7 +40,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
     }
   }, [storageKey, paymentDetails]);
 
-  const { registration } = registrationData;
+  const { registration, entries } = registrationData;
   const uniqueStudentsCount = registration.totalStudentsCount;
 
   const validatePayment = () => {
@@ -51,8 +53,11 @@ export default function PaymentPending({ iiitCode, registrationData }) {
       today.setHours(23, 59, 59, 999);
       if (d > today) errors.transactionDate = "Transaction date cannot be in the future.";
     }
-    if (!paymentDetails?.transactionId?.trim()) {
+    const transactionId = paymentDetails?.transactionId?.trim() || "";
+    if (!transactionId) {
       errors.transactionId = "Transaction ID / UTR is required.";
+    } else if (transactionId.length < 5 || transactionId.length > 64) {
+      errors.transactionId = "Transaction ID / UTR must be 5 to 64 characters.";
     }
     if (!paymentDetails?.paymentMode) {
       errors.paymentMode = "Payment Mode is required.";
@@ -67,9 +72,10 @@ export default function PaymentPending({ iiitCode, registrationData }) {
 
   const handleFinalSubmit = async () => {
     setSubmitError("");
-    const pErrors = validatePayment();
-    if (Object.keys(pErrors).length > 0) {
-      setPaymentErrors(pErrors);
+    setAttempted(true);
+    if (Object.keys(validatePayment()).length > 0) {
+      // Errors render on the next paint; then move focus to the first one.
+      setTimeout(() => document.querySelector("[aria-invalid='true']")?.focus(), 0);
       return;
     }
     if (uploadBusy || isSubmitting) return;
@@ -101,129 +107,74 @@ export default function PaymentPending({ iiitCode, registrationData }) {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
+  // After the first submit attempt, errors update as the coordinator fixes them.
+  const paymentErrors = attempted ? validatePayment() : {};
   const canFinalSubmit = !uploadBusy && !isSubmitting;
+  const amount = getRegistrationFee(uniqueStudentsCount);
 
   return (
     <div className="min-h-screen bg-[#faf6ee] font-sans pb-20">
-      <div className="bg-[#0a2112] text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#c9972f] block">9th All India Inter-IIIT Sports Meet</span>
-              <span className="font-bold text-white text-lg">{registration.iiitName}</span>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="text-sm font-bold hover:text-[#f5c518] transition-colors">
-            Log out
-          </button>
-        </div>
-      </div>
+      <LockedHeader iiitName={registration.iiitName} />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 sm:mt-10">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-          <div className="bg-amber-50 border-b border-amber-100 px-8 py-10 text-center">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
+          <div className="border-b border-amber-100 bg-amber-50 px-5 py-8 sm:px-8">
+            <h1 className="text-center text-2xl sm:text-3xl font-black text-gray-900">Roster locked — payment pending</h1>
+            <p className="mt-2 text-center text-sm text-amber-900">
+              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. Pay {formatRupees(amount)} and submit the proof below.
+            </p>
+            <div className="mx-auto mt-6 max-w-md">
+              <RegistrationSteps current={1} />
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">Registration Locked — Payment Pending</h1>
-            <p className="text-amber-800 font-medium">Your student registration has already been submitted and cannot be changed.</p>
           </div>
 
-          <div className="p-8">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
-              <h3 className="text-lg font-bold text-green-900 mb-2">Registration Submitted Successfully</h3>
-              <p className="text-sm text-green-800 mb-1">Your student registration has now been submitted and cannot be edited.</p>
-              <p className="text-sm text-green-800 font-bold mb-4">Any corrections after this point must be requested through the IIITDM Kancheepuram Sports Cell.</p>
-              
-              <h4 className="text-md font-bold text-green-900 mb-1">Next Step: Payment Details</h4>
-              <p className="text-sm text-green-800">Complete the payment details and upload the transaction proof to finalize your registration.</p>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-              <h3 className="text-sm font-bold text-blue-900 mb-2">Before submitting payment, you can verify the submitted participant details below.</h3>
-              
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const a = document.createElement("a");
-                    a.href = "/api/registration/csv";
-                    a.download = "";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Registration CSV
-                </button>
+          <div className="p-5 sm:p-8">
+            <details className="group mb-8 rounded-xl border border-gray-200 bg-gray-50">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20]">
+                <h2 className="text-sm font-bold">Check your locked roster ({entries?.length || 0} event entries)</h2>
+                <svg className="h-4 w-4 shrink-0 text-gray-500 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <div className="space-y-3 px-4 pb-4">
+                <RosterSummary entries={entries} />
+                <a href="/api/registration/csv" download className="inline-flex items-center gap-2 text-sm font-bold text-[#1b5e20] underline underline-offset-2">
+                  Download roster as CSV
+                </a>
+                <p className="text-xs text-gray-600">
+                  Found a mistake? Email <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-bold underline">{SPORTS_CELL_EMAIL}</a> before paying.
+                </p>
               </div>
-              <p className="text-sm text-blue-900 font-black mb-4">Please verify your registration carefully before submitting payment.</p>
-              
-              <div className="pt-4 border-t border-blue-200">
-                <h3 className="text-sm font-bold text-blue-800 mb-1">Your registration contains {uniqueStudentsCount} unique {uniqueStudentsCount === 1 ? "student" : "students"}.</h3>
-                <p className="text-sm text-blue-700">Amount payable: <strong>₹{(uniqueStudentsCount * 2500).toLocaleString('en-IN')}</strong></p>
-              </div>
-            </div>
+            </details>
 
             {submitError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-start gap-3">
-                <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <div>
-                  <h4 className="text-red-800 font-bold text-sm">Submission Failed</h4>
-                  <p className="text-sm text-red-700 mt-0.5">{submitError}</p>
-                </div>
+              <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <h2 className="text-red-800 font-bold text-sm">Payment could not be submitted</h2>
+                <p className="text-sm text-red-700 mt-0.5">{submitError}</p>
               </div>
             )}
 
-            <div className="mb-6">
-              <h3 className="text-lg font-black text-gray-900 mb-1">Payment submission is the final step.</h3>
-              <p className="text-sm text-gray-700 mb-4">Once payment details and proof are submitted, both the registration and payment record will be permanently locked.</p>
-              
-              <PaymentSection
-                uniqueStudentsCount={uniqueStudentsCount}
-                iiitCode={iiitCode}
-                paymentDetails={paymentDetails}
-                onChange={setPaymentDetails}
-                errors={paymentErrors}
-                onUploadBusy={setUploadBusy}
-              />
-            </div>
+            <PaymentSection
+              uniqueStudentsCount={uniqueStudentsCount}
+              paymentDetails={paymentDetails}
+              onChange={setPaymentDetails}
+              errors={paymentErrors}
+              onUploadBusy={setUploadBusy}
+            />
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
-              <h4 className="text-md font-bold text-red-900 mb-2">Final Submission — Permanent Lock</h4>
-              <p className="text-sm text-red-800 mb-2">After submitting payment, you will not be able to modify the registration, payment details, transaction proof, or transaction information.</p>
-              <p className="text-sm text-red-800 font-bold">For any correction after final submission, contact the IIITDM Kancheepuram Sports Cell.</p>
-            </div>
-
-            <div className="flex justify-end pt-6 border-t border-gray-200">
+            <div className="mt-8 flex flex-col gap-4 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-gray-700 sm:max-w-md">
+                Submitting locks your payment details and proof. The organizers then check the transfer against their bank statement.
+              </p>
               <button
                 type="button"
                 disabled={!canFinalSubmit}
-                className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-3 bg-[#1b5e20] text-base font-black text-white hover:bg-green-800 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full sm:w-auto shrink-0 inline-flex justify-center rounded-lg px-6 py-3 bg-[#1b5e20] text-base font-black text-white hover:bg-green-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1b5e20] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 onClick={handleFinalSubmit}
               >
                 {isSubmitting
                   ? "Submitting…"
                   : uploadBusy
                   ? "Upload in progress…"
-                  : "Submit Payment & Lock Registration"}
+                  : "Submit payment"}
               </button>
             </div>
           </div>

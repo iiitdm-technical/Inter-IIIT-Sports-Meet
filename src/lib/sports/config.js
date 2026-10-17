@@ -9,6 +9,8 @@ export const GLOBAL_RULES = {
   MAX_NORMAL_SPORTS_PER_STUDENT: 2,
   MAX_ATHLETICS_INDIVIDUAL_EVENTS: 3,
   MAX_AQUATICS_INDIVIDUAL_EVENTS: 3,
+  // Rupees per unique student. The rulebook states Rs 2,000 + 18% GST; confirm before changing.
+  REGISTRATION_FEE_PER_STUDENT: 2500,
   EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics'],
 };
 

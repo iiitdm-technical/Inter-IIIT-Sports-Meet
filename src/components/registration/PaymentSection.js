@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { getRegistrationFee } from "@/lib/registration/labels";
+import { GLOBAL_RULES } from "@/lib/sports/config";
 import Image from "next/image";
 
-const RATE_PER_STUDENT = 2500;
 const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
@@ -29,7 +30,7 @@ function formatCurrency(amount) {
  *  onUploadBusy         — fn(bool) so parent can gate submit button
  */
 export default function PaymentSection({ uniqueStudentsCount, paymentDetails, onChange, errors = {}, onUploadBusy }) {
-  const amount = uniqueStudentsCount * RATE_PER_STUDENT;
+  const amount = getRegistrationFee(uniqueStudentsCount);
   const fileInputRef = useRef(null);
 
   // idle | uploading | success | error
@@ -129,27 +130,27 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h4 className="text-base font-black text-gray-900 uppercase tracking-wider">Payment Details</h4>
+        <h2 className="text-base font-black text-gray-900 uppercase tracking-wider">Payment Details</h2>
       </div>
 
       {/* Amount Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Unique Students</p>
+          <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">Unique Students</p>
           <p className="text-2xl font-black text-gray-900">{uniqueStudentsCount}</p>
         </div>
         <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 text-center">
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1">Rate Per Student</p>
-          <p className="text-lg font-black text-gray-700">₹2,500</p>
+          <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-1">Rate Per Student</p>
+          <p className="text-lg font-black text-gray-700">{formatCurrency(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</p>
         </div>
         <div className="bg-amber-50 rounded-xl p-3 border border-amber-200 text-center">
-          <p className="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-1">Amount Payable</p>
+          <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider mb-1">Amount Payable</p>
           <p className="text-xl font-black text-amber-800">{formatCurrency(amount)}</p>
         </div>
       </div>
 
       <div className="mb-5 rounded-xl border border-green-200 bg-green-50 p-5">
-        <h5 className="text-sm font-black uppercase tracking-wider text-green-950">Pay by UPI</h5>
+        <h3 className="text-sm font-black uppercase tracking-wider text-green-950">Pay by UPI</h3>
         {upiPayment?.configured ? (
           <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-lg border border-green-200 bg-white p-2" />
@@ -175,6 +176,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           </label>
           <input
             id="payment-transaction-date"
+            aria-invalid={Boolean(errors.transactionDate) || undefined}
+            aria-describedby={errors.transactionDate ? "payment-transaction-date-error" : undefined}
             type="date"
             max={todayStr}
             value={paymentDetails?.transactionDate || ""}
@@ -186,7 +189,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             }`}
           />
           {errors.transactionDate && (
-            <p className="mt-1 text-xs text-red-600 font-medium">{errors.transactionDate}</p>
+            <p id="payment-transaction-date-error" className="mt-1 text-xs text-red-700 font-medium">{errors.transactionDate}</p>
           )}
         </div>
 
@@ -197,6 +200,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           </label>
           <input
             id="payment-transaction-id"
+            aria-invalid={Boolean(errors.transactionId) || undefined}
+            aria-describedby={errors.transactionId ? "payment-transaction-id-error" : undefined}
             type="text"
             placeholder="e.g. 423108765432"
             value={paymentDetails?.transactionId || ""}
@@ -208,14 +213,14 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             }`}
           />
           {errors.transactionId && (
-            <p className="mt-1 text-xs text-red-600 font-medium">{errors.transactionId}</p>
+            <p id="payment-transaction-id-error" className="mt-1 text-xs text-red-700 font-medium">{errors.transactionId}</p>
           )}
         </div>
 
         {/* Bank Name */}
         <div>
           <label htmlFor="payment-bank-name" className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-1.5">
-            Bank Name <span className="text-gray-400 font-medium normal-case text-xs">(optional)</span>
+            Bank Name <span className="text-gray-600 font-medium normal-case text-xs">(optional)</span>
           </label>
           <input
             id="payment-bank-name"
@@ -234,6 +239,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           </label>
           <select
             id="payment-mode"
+            aria-invalid={Boolean(errors.paymentMode) || undefined}
+            aria-describedby={errors.paymentMode ? "payment-mode-error" : undefined}
             value={paymentDetails?.paymentMode || ""}
             onChange={(e) => handleFieldChange("paymentMode", e.target.value)}
             className={`w-full px-3 py-2.5 text-sm rounded-lg border outline-none transition-colors bg-white ${
@@ -250,7 +257,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             <option value="OTHER">Other</option>
           </select>
           {errors.paymentMode && (
-            <p className="mt-1 text-xs text-red-600 font-medium">{errors.paymentMode}</p>
+            <p id="payment-mode-error" className="mt-1 text-xs text-red-700 font-medium">{errors.paymentMode}</p>
           )}
         </div>
 
@@ -262,6 +269,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             </label>
             <input
               id="other-payment-mode"
+            aria-invalid={Boolean(errors.otherPaymentMode) || undefined}
+            aria-describedby={errors.otherPaymentMode ? "other-payment-mode-error" : undefined}
               type="text"
               placeholder="e.g. Demand Draft"
               value={paymentDetails?.otherPaymentMode || ""}
@@ -273,7 +282,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
               }`}
             />
             {errors.otherPaymentMode && (
-              <p className="mt-1 text-xs text-red-600 font-medium">{errors.otherPaymentMode}</p>
+              <p id="other-payment-mode-error" className="mt-1 text-xs text-red-700 font-medium">{errors.otherPaymentMode}</p>
             )}
           </div>
         )}
@@ -329,7 +338,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                     </svg>
                     <div>
                       <p className="text-sm font-bold text-gray-700">Choose a file or drop it here</p>
-                      <p id="payment-proof-help" className="text-xs text-gray-500 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
+                      <p id="payment-proof-help" className="text-xs text-gray-600 mt-0.5">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
                     </div>
                   </div>
                 )}
@@ -365,7 +374,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           )}
 
           {uploadStatus === "error" && uploadError && (
-            <p id="payment-proof-error" role="alert" className="mt-1.5 text-xs text-red-600 font-medium flex items-start gap-1.5">
+            <p id="payment-proof-error" role="alert" className="mt-1.5 text-xs text-red-700 font-medium flex items-start gap-1.5">
               <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
@@ -373,7 +382,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             </p>
           )}
           {errors.proof && uploadStatus !== "success" && uploadStatus !== "error" && (
-            <p id="payment-proof-error" className="mt-1.5 text-xs text-red-600 font-medium">{errors.proof}</p>
+            <p id="payment-proof-error" className="mt-1.5 text-xs text-red-700 font-medium">{errors.proof}</p>
           )}
         </div>
       </div>

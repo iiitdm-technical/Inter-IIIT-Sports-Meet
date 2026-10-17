@@ -1,4 +1,5 @@
 import { eq, desc } from "drizzle-orm";
+import { getRegistrationFee } from "./labels.js";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { headProof } from "../storage/neon.js";
@@ -274,7 +275,7 @@ export async function submitPayment(iiitCode, rawPayload, username) {
 
   // Calculate amount based on authoritative totalStudentsCount
   const uniqueStudentsCount = reg.totalStudentsCount;
-  const amount = uniqueStudentsCount * 2500;
+  const amount = getRegistrationFee(uniqueStudentsCount);
 
   // 4. Execute atomic database transaction
   const result = await db.transaction(async (tx) => {

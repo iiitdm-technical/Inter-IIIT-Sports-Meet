@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { getCategoryLabel, getEventName, getRegistrationFee, getSportName } from "@/lib/registration/labels";
 import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
@@ -20,6 +22,9 @@ export default function AdminDashboardPage() {
   const [bankConfirmed, setBankConfirmed] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [verificationBusy, setVerificationBusy] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [entriesError, setEntriesError] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
   // Entries search filters & data
   const [entriesData, setEntriesData] = useState({ rows: [], total: 0, page: 1, totalPages: 1 });
@@ -62,15 +67,23 @@ export default function AdminDashboardPage() {
       }
 
       const res = await fetch(`/api/admin/entries?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEntriesData(data.data);
-      }
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setEntriesData(data.data);
+      setEntriesError("");
     } catch (err) {
       console.error("Failed to filter entries:", err);
+      setEntriesError("Could not load entries. Check your connection and try again.");
     } finally {
       setEntriesLoading(false);
     }
+  }, []);
+
+  const refreshStats = useCallback(async () => {
+    const statsRes = await fetch("/api/admin/stats");
+    if (!statsRes.ok) throw new Error("Could not load statistics");
+    const sData = await statsRes.json();
+    setStats(sData.data || null);
   }, []);
 
   useEffect(() => {
@@ -92,36 +105,31 @@ export default function AdminDashboardPage() {
 
         setCurrentUser(authData.user);
 
-        // Fetch overview stats and initial entries
-        const statsRes = await fetch("/api/admin/stats");
-        if (statsRes.ok) {
-          const sData = await statsRes.json();
-          setStats(sData.data || null);
-        }
-
-        // Fetch registrations overview (for IIITs & Payments tab)
-        const regRes = await fetch("/api/admin/registrations");
-        if (regRes.ok) {
-          const regData = await regRes.json();
-          setRegistrationsOverview(regData.data || []);
-        }
-
-        const accountsRes = await fetch("/api/admin/accounts");
-        if (accountsRes.ok) {
-          const accountsData = await accountsRes.json();
-          setAdminAccounts(accountsData.data || []);
-        }
-
+        // Load each panel independently so one failure does not hide the rest.
+        const failures = [];
+        await Promise.all([
+          refreshStats().catch(() => failures.push("statistics")),
+          fetch("/api/admin/registrations").then(async (regRes) => {
+            if (!regRes.ok) throw new Error();
+            setRegistrationsOverview((await regRes.json()).data || []);
+          }).catch(() => failures.push("IIITs and payments")),
+          fetch("/api/admin/accounts").then(async (accountsRes) => {
+            if (!accountsRes.ok) throw new Error();
+            setAdminAccounts((await accountsRes.json()).data || []);
+          }).catch(() => failures.push("admin accounts")),
+        ]);
+        if (failures.length > 0) setLoadError(`Could not load ${failures.join(", ")}. Reload the page to try again.`);
         loadEntries(1, {});
       } catch (err) {
         console.error("Failed to load admin data:", err);
+        setLoadError("Could not load the dashboard. Reload the page to try again.");
       } finally {
         setLoading(false);
       }
     }
 
     checkAuthAndLoadData();
-  }, [router, loadEntries]);
+  }, [router, loadEntries, refreshStats]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -202,12 +210,27 @@ export default function AdminDashboardPage() {
         ? { ...row, paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy }
         : row));
       setVerificationTarget(null);
+      refreshStats().catch(() => {});
     } catch (error) {
       setVerificationError(error.message || "Could not verify payment");
     } finally {
       setVerificationBusy(false);
     }
   };
+
+  const paymentStage = (row) => {
+    if (!row.status) return "not_submitted";
+    if (row.status === "payment_pending") return "awaiting_payment";
+    return row.paymentVerificationStatus === "verified" ? "verified" : "awaiting_verification";
+  };
+  const stageCounts = registrationsOverview.reduce((counts, row) => {
+    const stage = paymentStage(row);
+    counts[stage] = (counts[stage] || 0) + 1;
+    return counts;
+  }, {});
+  const filteredRegistrations = paymentFilter === "all"
+    ? registrationsOverview
+    : registrationsOverview.filter((row) => paymentStage(row) === paymentFilter);
 
   if (loading) {
     return (
@@ -224,11 +247,14 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <header className="border-b" style={{ background: "#0a2112", borderColor: "rgba(255,255,255,0.08)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider" style={{ background: "#f5c518", color: "#0a2112" }}>
+          <div className="flex items-center gap-3 min-w-0">
+            <Link href="/" className="shrink-0 text-xs font-bold text-[#f5c518] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f5c518]">
+              <span aria-hidden="true">←</span> Home
+            </Link>
+            <span className="px-2.5 py-1 rounded text-xs font-black uppercase tracking-wider" style={{ background: "#f5c518", color: "#0a2112" }} aria-hidden="true">
               Admin
             </span>
-            <h1 className="hidden sm:block text-white text-base font-black tracking-wide">
+            <h1 className="text-white text-sm sm:text-base font-black tracking-wide truncate">
               Admin Dashboard
             </h1>
           </div>
@@ -239,72 +265,68 @@ export default function AdminDashboardPage() {
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-lg border border-red-500/40 text-red-300 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              type="button"
+              className="whitespace-nowrap text-xs font-bold px-3 py-1.5 rounded-lg border border-white/25 text-white hover:bg-white/10 transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f5c518]"
             >
-              {isLoggingOut ? "Logging out..." : "Sign Out"}
+              {isLoggingOut ? "Signing out…" : "Sign out"}
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {loadError && (
+          <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">{loadError}</div>
+        )}
+
         {/* KPI Cards */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-xs">
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Submitted IIITs</div>
-              <div className="text-3xl font-black mt-2" style={{ color: "#1b5e20" }}>
-                {stats.submittedIIITs} / {stats.totalIIITs}
-              </div>
+              <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Rosters locked</dt>
+              <dd className="text-3xl font-black mt-2 text-[#1b5e20]">
+                {stats.lockedIIITs} <span className="text-lg text-gray-500">/ {stats.totalIIITs}</span>
+              </dd>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-xs">
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Unique Students</div>
-              <div className="text-3xl font-black mt-2" style={{ color: "#0a2112" }}>
-                {stats.totalStudents}
-              </div>
+              <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Payments verified</dt>
+              <dd className="text-3xl font-black mt-2 text-[#1b5e20]">
+                {stats.paymentsVerified} <span className="text-lg text-gray-500">/ {stats.lockedIIITs}</span>
+              </dd>
+              {stats.paymentsSubmitted > stats.paymentsVerified && (
+                <dd className="mt-1 text-xs font-bold text-amber-800">{stats.paymentsSubmitted - stats.paymentsVerified} awaiting verification</dd>
+              )}
             </div>
             <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-xs">
-              <div className="text-xs font-bold uppercase tracking-wider text-gray-500">Total Event Entries</div>
-              <div className="text-3xl font-black mt-2" style={{ color: "#c9972f" }}>
-                {stats.totalEventEntries}
-              </div>
+              <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Unique students</dt>
+              <dd className="text-3xl font-black mt-2 text-[#0a2112]">{stats.totalStudents}</dd>
             </div>
-          </div>
+            <div className="p-5 rounded-2xl bg-white border border-gray-200/80 shadow-xs">
+              <dt className="text-xs font-bold uppercase tracking-wider text-gray-600">Event entries</dt>
+              <dd className="text-3xl font-black mt-2 text-[#0a2112]">{stats.totalEventEntries}</dd>
+            </div>
+          </dl>
         )}
 
         {/* Tab Nav */}
-        <div className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab("entries")}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
-              activeTab === "entries"
-                ? "border-[#1b5e20] text-[#1b5e20]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Registration Entries
-          </button>
-          <button
-            onClick={() => setActiveTab("payments")}
-            className={`px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
-              activeTab === "payments"
-                ? "border-amber-500 text-amber-700"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            IIITs &amp; Payments
-          </button>
-          <button
-            onClick={() => setActiveTab("admins")}
-            className={`whitespace-nowrap px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${
-              activeTab === "admins"
-                ? "border-[#1b5e20] text-[#1b5e20]"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Admin Accounts
-          </button>
+        <div role="tablist" aria-label="Dashboard sections" className="flex gap-2 mb-6 border-b border-gray-200 overflow-x-auto">
+          {[["entries", "Registration Entries"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              onClick={() => setActiveTab(tab)}
+              className={`whitespace-nowrap px-4 py-2.5 text-sm font-bold border-b-2 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1b5e20] ${
+                activeTab === tab
+                  ? "border-[#1b5e20] text-[#1b5e20]"
+                  : "border-transparent text-gray-600 hover:text-gray-800"
+              }`}
+            >
+              {tabLabel}
+            </button>
+          ))}
         </div>
 
         {/* Filter Controls and Export */}
@@ -338,18 +360,20 @@ export default function AdminDashboardPage() {
           <form onSubmit={handleSearchSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">IIIT</label>
+                <label htmlFor="filter-iiit" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">IIIT</label>
                 <input
+                  id="filter-iiit"
                   type="text"
                   value={filters.iiit}
                   onChange={(e) => setFilters({ ...filters, iiit: e.target.value })}
-                  placeholder="e.g. Gwalior"
+                  placeholder="Name or code, e.g. Gwalior"
                   className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 outline-none focus:border-[#1b5e20]"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">Sport</label>
+                <label htmlFor="filter-sport" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">Sport</label>
                 <select
+                  id="filter-sport"
                   value={filters.sport}
                   onChange={(e) => setFilters({ ...filters, sport: e.target.value, event: "" })}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 outline-none focus:border-[#1b5e20] bg-white"
@@ -361,8 +385,9 @@ export default function AdminDashboardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">Event</label>
+                <label htmlFor="filter-event" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">Event</label>
                 <select
+                  id="filter-event"
                   value={filters.event}
                   onChange={(e) => setFilters({ ...filters, event: e.target.value })}
                   disabled={!filters.sport || availableEvents.length === 0}
@@ -375,8 +400,9 @@ export default function AdminDashboardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">Gender</label>
+                <label htmlFor="filter-gender" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">Gender</label>
                 <select
+                  id="filter-gender"
                   value={filters.gender}
                   onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
                   className="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 outline-none focus:border-[#1b5e20] bg-white"
@@ -387,8 +413,9 @@ export default function AdminDashboardPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">Roll Number</label>
+                <label htmlFor="filter-roll" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">Roll Number</label>
                 <input
+                  id="filter-roll"
                   type="text"
                   value={filters.rollNumber}
                   onChange={(e) => setFilters({ ...filters, rollNumber: e.target.value })}
@@ -397,8 +424,9 @@ export default function AdminDashboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-gray-500 mb-1">Student Name</label>
+                <label htmlFor="filter-name" className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1">Student Name</label>
                 <input
+                  id="filter-name"
                   type="text"
                   value={filters.name}
                   onChange={(e) => setFilters({ ...filters, name: e.target.value })}
@@ -435,7 +463,10 @@ export default function AdminDashboardPage() {
         {/* Entries Table */}
         {activeTab === "entries" && (
         <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-gray-200 bg-gray-50/80 flex justify-between items-center text-xs text-gray-600">
+          {entriesError && (
+            <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">{entriesError}</div>
+          )}
+          <div className="p-4 border-b border-gray-200 bg-gray-50/80 flex justify-between items-center text-xs text-gray-600" aria-live="polite">
             <span className="font-bold">Matching Entries: {entriesData.total || 0}</span>
             {entriesData.totalPages > 0 && (
               <span>Page {entriesData.page} of {entriesData.totalPages}</span>
@@ -444,10 +475,12 @@ export default function AdminDashboardPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50/50 text-[11px] font-black text-gray-500 uppercase tracking-wider">
+                <tr className="border-b border-gray-200 bg-gray-50/50 text-[11px] font-black text-gray-600 uppercase tracking-wider">
                   <th className="px-4 py-3">IIIT Name</th>
                   <th className="px-4 py-3">Sport</th>
                   <th className="px-4 py-3">Event</th>
+                  <th className="px-4 py-3">Category</th>
+                  <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3 text-center">Gender</th>
                   <th className="px-4 py-3">Roll Number</th>
                   <th className="px-4 py-3 w-full">Student Name</th>
@@ -456,7 +489,7 @@ export default function AdminDashboardPage() {
               <tbody className="divide-y divide-gray-100">
                 {!entriesData.rows || entriesData.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-12 text-gray-500">
+                    <td colSpan={8} className="text-center py-12 text-gray-500">
                       {entriesLoading ? "Searching database..." : (
                         <div className="flex flex-col items-center gap-2">
                           <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -471,8 +504,10 @@ export default function AdminDashboardPage() {
                   entriesData.rows.map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3 font-semibold text-gray-900 truncate max-w-[200px]" title={row.iiitName}>{row.iiitName}</td>
-                      <td className="px-4 py-3 font-medium capitalize text-gray-800">{row.sportId}</td>
-                      <td className="px-4 py-3 text-gray-800">{row.eventId}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800">{getSportName(row.sportId)}</td>
+                      <td className="px-4 py-3 text-gray-800">{getEventName(row.sportId, row.eventId, row.eventGender)}</td>
+                      <td className="px-4 py-3 text-gray-700">{getCategoryLabel(row.eventGender)}</td>
+                      <td className="px-4 py-3">{row.isReserve ? <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-orange-800">Reserve</span> : <span className="text-gray-600">Main</span>}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${row.studentGender === 'F' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>
                           {row.studentGender}
@@ -513,14 +548,30 @@ export default function AdminDashboardPage() {
         {/* IIITs & Payments Tab */}
         {activeTab === "payments" && (
           <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-gray-200 bg-gray-50/80 flex items-center justify-between">
-              <span className="font-bold text-xs text-gray-600">{registrationsOverview.length} IIITs registered</span>
-              <span className="text-xs text-gray-400">{registrationsOverview.filter(r => r.isSubmitted).length} submitted</span>
+            <div className="p-4 border-b border-gray-200 bg-gray-50/80 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-bold text-xs text-gray-600">
+                {registrationsOverview.length} IIIT accounts · {registrationsOverview.filter(r => r.isSubmitted).length} rosters locked
+              </span>
+              <div className="flex items-center gap-2">
+                <label htmlFor="payment-filter" className="text-xs font-bold text-gray-600">Show</label>
+                <select
+                  id="payment-filter"
+                  value={paymentFilter}
+                  onChange={(event) => setPaymentFilter(event.target.value)}
+                  className="rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs focus:border-[#1b5e20] focus:outline-none"
+                >
+                  <option value="all">All IIITs ({registrationsOverview.length})</option>
+                  <option value="awaiting_verification">Awaiting verification ({stageCounts.awaiting_verification || 0})</option>
+                  <option value="awaiting_payment">Awaiting payment ({stageCounts.awaiting_payment || 0})</option>
+                  <option value="verified">Verified ({stageCounts.verified || 0})</option>
+                  <option value="not_submitted">Not submitted ({stageCounts.not_submitted || 0})</option>
+                </select>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50/50 text-[11px] font-black text-gray-500 uppercase tracking-wider">
+                  <tr className="border-b border-gray-200 bg-gray-50/50 text-[11px] font-black text-gray-600 uppercase tracking-wider">
                     <th className="px-4 py-3">IIIT</th>
                     <th className="px-4 py-3">Contact</th>
                     <th className="px-4 py-3 text-center">Status</th>
@@ -535,7 +586,7 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {registrationsOverview.map((row) => (
+                  {filteredRegistrations.map((row) => (
                     <tr key={row.iiitCode || row.iiitName} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-4 py-3 align-top">
                         <div className="font-semibold text-gray-900 truncate max-w-[180px]" title={row.iiitName}>{row.iiitName}</div>
@@ -555,18 +606,16 @@ export default function AdminDashboardPage() {
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {row.status === "submitted"
-                          ? <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-black">Submitted</span>
-                          : row.status === "payment_pending"
-                          ? <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black">Payment Pending</span>
-                          : <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-500 text-[10px] font-bold">Draft</span>}
+                        {row.status
+                          ? <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-[10px] font-black">Roster locked</span>
+                          : <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold">Not submitted</span>}
                       </td>
                       <td className="px-4 py-3 text-center font-bold text-gray-700">{row.isSubmitted ? row.totalStudentsCount : "—"}</td>
                       <td className="px-4 py-3 text-center font-bold text-amber-700">
                         {row.paymentAmount
                           ? `₹${Number(row.paymentAmount).toLocaleString("en-IN")}`
                           : row.status === "payment_pending"
-                          ? `₹${(row.totalStudentsCount * 2500).toLocaleString("en-IN")}`
+                          ? `₹${getRegistrationFee(row.totalStudentsCount).toLocaleString("en-IN")}`
                           : "—"}
                       </td>
                       <td className="px-4 py-3 text-gray-800">
@@ -607,7 +656,7 @@ export default function AdminDashboardPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
-                            View
+                            View<span className="sr-only"> payment proof for {row.iiitName}</span>
                           </a>
                         ) : (
                           <span className="text-gray-300 text-[10px]">—</span>
@@ -615,9 +664,9 @@ export default function AdminDashboardPage() {
                       </td>
                     </tr>
                   ))}
-                  {registrationsOverview.length === 0 && (
+                  {filteredRegistrations.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="text-center py-10 text-gray-400">No IIITs found.</td>
+                      <td colSpan={11} className="text-center py-10 text-gray-600">No IIITs match this filter.</td>
                     </tr>
                   )}
                 </tbody>
@@ -677,7 +726,7 @@ export default function AdminDashboardPage() {
             </form>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

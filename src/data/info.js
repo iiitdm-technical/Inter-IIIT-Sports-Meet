@@ -1,3 +1,6 @@
+import { iiits } from "./iiits";
+import { sports } from "./sports";
+
 export const eventInfo = {
   name: "9th All India Inter-IIIT Sports Meet",
   shortName: "All India Inter-IIIT Sports Meet 2026",
@@ -5,11 +8,11 @@ export const eventInfo = {
   dates: "19 December to 23 December 2026",
   stats: [
     { label: "Student-Athletes", value: "2,000+" },
-    { label: "Participating IIITs", value: "20+" },
-    { label: "Sporting Disciplines", value: "15+" },
+    { label: "Participating IIITs", value: String(iiits.length) },
+    { label: "Sporting Disciplines", value: String(sports.length) },
     { label: "Expected Footfall", value: "5,000+" }
   ],
-  description: "The All India Inter-IIIT Sports Meet, hosted once every four years, serves as a paramount display of unity and competition among 20+ government-funded IIITs spread across the nation. This year marks the exciting transition to the 9th edition hosted by IIITDM Kancheepuram.",
+  description: `The All India Inter-IIIT Sports Meet, hosted once every four years, serves as a paramount display of unity and competition among ${iiits.length} IIITs spread across the nation. This year marks the exciting transition to the 9th edition hosted by IIITDM Kancheepuram.`,
   location: {
     institute: "Indian Institute of Information Technology, Design and Manufacturing (IIITDM) Kancheepuram",
     address: "Melakottaiyur, Off Vandalur-Kelambakkam Road, Chennai 600127, Tamil Nadu, India",

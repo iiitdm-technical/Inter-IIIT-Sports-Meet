@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { eventInfo } from '@/data/info';
+import { iiits } from '@/data/iiits';
 
 export default function Footer() {
   return (
@@ -19,7 +20,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-sm leading-relaxed max-w-xs" style={{ color: 'rgba(255,255,255,0.72)' }}>
-              Celebrating unity, sportsmanship and excellence across 20+ Indian Institutes of Information Technology.
+              Celebrating unity, sportsmanship and excellence across {iiits.length} Indian Institutes of Information Technology.
             </p>
             <div className="mt-5 text-sm font-semibold" style={{ color: '#f5c518' }}>
               {eventInfo.dates}
@@ -28,7 +29,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-5" style={{ color: '#c9972f' }}>Navigation</h3>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] mb-5" style={{ color: '#c9972f' }}>Navigation</h2>
             <ul className="space-y-2.5">
               {[
                 { href: '/about', label: 'About the Meet' },
@@ -49,15 +50,14 @@ export default function Footer() {
 
           {/* Contact + CTA */}
           <div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-5" style={{ color: '#c9972f' }}>Contact</h3>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] mb-5" style={{ color: '#c9972f' }}>Contact</h2>
             <div className="space-y-3 mb-6">
               <div className="text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>
                 <span className="block font-semibold text-white mb-0.5">{eventInfo.host}</span>
                 Kancheepuram, Tamil Nadu
               </div>
               <a href="mailto:sports@iiitdm.ac.in" className="text-sm transition-colors hover:text-white"
-                style={{ color: 'rgba(255,255,255,0.72)' }}
-                aria-label="Email the All India Inter-IIIT Sports Meet organising team">
+                style={{ color: 'rgba(255,255,255,0.72)' }}>
                 sports@iiitdm.ac.in
               </a>
             </div>

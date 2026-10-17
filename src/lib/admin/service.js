@@ -1,4 +1,4 @@
-import { eq, and, ilike, sql, desc, count, inArray } from "drizzle-orm";
+import { eq, and, ilike, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 
@@ -188,67 +188,32 @@ export async function getAdminFilteredEntries({
  */
 export async function getAdminStats() {
   const db = getDb();
+  // Locked rosters count from the moment of roster submission, matching the
+  // entries list; payment progress is reported separately.
+  const lockedStatuses = inArray(registrations.status, ["payment_pending", "submitted"]);
 
-  // 1. Total IIITs and Submitted IIITs
-  const totalIIITsResult = await db
-    .select({ count: count() })
-    .from(users)
-    .where(eq(users.role, "iiit"));
+  const [totalIIITsResult, registrationCounts, totalStudentsResult, totalEntriesResult, verifiedResult] = await Promise.all([
+    db.select({ count: count() }).from(users).where(eq(users.role, "iiit")),
+    db.select({ status: registrations.status, count: count() }).from(registrations).where(lockedStatuses).groupBy(registrations.status),
+    db.select({ count: count() }).from(students)
+      .innerJoin(registrations, eq(students.registrationId, registrations.id))
+      .where(lockedStatuses),
+    db.select({ count: count() }).from(studentEventParticipations)
+      .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
+      .where(lockedStatuses),
+    db.select({ count: count() }).from(paymentTransactions)
+      .where(eq(paymentTransactions.verificationStatus, "verified")),
+  ]);
 
-  const submittedIIITsResult = await db
-    .select({ count: count() })
-    .from(registrations)
-    .where(eq(registrations.status, "submitted"));
-
-  // 2. Total unique submitted students
-  const totalStudentsResult = await db
-    .select({ count: count() })
-    .from(students)
-    .innerJoin(registrations, eq(students.registrationId, registrations.id))
-    .where(eq(registrations.status, "submitted"));
-
-  // 2b. Total event entries
-  const totalEntriesResult = await db
-    .select({ count: count() })
-    .from(studentEventParticipations)
-    .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
-    .where(eq(registrations.status, "submitted"));
-
-  // 3. Gender breakdown
-  const genderBreakdownResult = await db
-    .select({
-      gender: students.gender,
-      count: count(),
-    })
-    .from(students)
-    .innerJoin(registrations, eq(students.registrationId, registrations.id))
-    .where(eq(registrations.status, "submitted"))
-    .groupBy(students.gender);
-
-  // 4. Sport participation counts
-  const sportBreakdownResult = await db
-    .select({
-      sportId: studentEventParticipations.sportId,
-      count: count(),
-    })
-    .from(studentEventParticipations)
-    .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
-    .where(eq(registrations.status, "submitted"))
-    .groupBy(studentEventParticipations.sportId)
-    .orderBy(desc(count()));
+  const byStatus = Object.fromEntries(registrationCounts.map((row) => [row.status, Number(row.count)]));
+  const paymentsSubmitted = byStatus.submitted || 0;
 
   return {
     totalIIITs: Number(totalIIITsResult[0]?.count || 0),
-    submittedIIITs: Number(submittedIIITsResult[0]?.count || 0),
+    lockedIIITs: paymentsSubmitted + (byStatus.payment_pending || 0),
+    paymentsSubmitted,
+    paymentsVerified: Number(verifiedResult[0]?.count || 0),
     totalStudents: Number(totalStudentsResult[0]?.count || 0),
     totalEventEntries: Number(totalEntriesResult[0]?.count || 0),
-    genderBreakdown: genderBreakdownResult.reduce((acc, curr) => {
-      acc[curr.gender] = Number(curr.count);
-      return acc;
-    }, { M: 0, F: 0 }),
-    sportBreakdown: sportBreakdownResult.map((s) => ({
-      sportId: s.sportId,
-      count: Number(s.count),
-    })),
   };
 }

@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import LockedHeader from "./LockedHeader";
+import RegistrationSteps from "./RegistrationSteps";
+import RosterSummary from "./RosterSummary";
+import { GLOBAL_RULES } from "@/lib/sports/config";
+import { SPORTS_CELL_EMAIL, formatRupees } from "@/lib/registration/labels";
 
-export default function LockedRegistration({ iiitCode, registrationData }) {
-  const router = useRouter();
+export default function LockedRegistration({ registrationData }) {
   const [verification, setVerification] = useState({
     status: registrationData.payment?.verificationStatus || "pending",
     verifiedAt: registrationData.payment?.verifiedAt || null,
@@ -38,15 +41,6 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
     };
   }, [verification.status, refreshPaymentStatus]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/");
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
   const { registration, students, entries, payment } = registrationData;
   const isPaymentVerified = verification.status === "verified";
 
@@ -61,19 +55,7 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
 
   return (
     <div className="min-h-screen bg-[#faf6ee] font-sans pb-20">
-      <div className="bg-[#0a2112] text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#c9972f] block">9th All India Inter-IIIT Sports Meet</span>
-              <span className="font-bold text-white text-lg">{registration.iiitName}</span>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="text-sm font-bold hover:text-[#f5c518] transition-colors">
-            Log out
-          </button>
-        </div>
-      </div>
+      <LockedHeader iiitName={registration.iiitName} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-10">
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -83,14 +65,17 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d={isPaymentVerified ? "M5 13l4 4L19 7" : "M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"} />
               </svg>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">{isPaymentVerified ? "Registration & Payment Verified" : "Registration & Payment Proof Submitted"}</h1>
-            <p className={`${isPaymentVerified ? "text-green-800" : "text-amber-900"} font-medium`}>{isPaymentVerified ? "The organizer has confirmed your bank transfer. Your registration is complete and locked." : "Your registration and payment details are locked. The organizers will verify the bank transfer separately."}</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2">{isPaymentVerified ? "Registration complete" : "Payment submitted — awaiting verification"}</h1>
+            <p className={`${isPaymentVerified ? "text-green-800" : "text-amber-900"} font-medium`}>{isPaymentVerified ? "The organizers have confirmed your bank transfer. Your registration is complete and locked." : "Your roster and payment details are locked. The organizers will check the transfer against their bank statement; this page updates when they do."}</p>
+            <div className="mx-auto mt-6 max-w-md">
+              <RegistrationSteps current={isPaymentVerified ? 3 : 2} />
+            </div>
           </div>
 
           <div className="p-8">
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Summary</h3>
+                <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">Summary</h2>
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600 font-medium text-sm">Total Unique Students</span>
@@ -114,7 +99,7 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
               </div>
 
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Contact Details</h3>
+                <h2 className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">Contact Details</h2>
                 <div className="space-y-3">
                   <div>
                     <span className="block text-xs font-bold text-gray-500 uppercase">Faculty In-Charge</span>
@@ -135,20 +120,20 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
             {/* Payment Details Section */}
             {payment && (
               <div className="bg-white rounded-xl p-6 border border-amber-100 mb-8">
-                <h3 className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-4">Payment Details</h3>
+                <h2 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-4">Payment Details</h2>
                 <div className="grid sm:grid-cols-2 gap-4 mb-4">
                   <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Unique Students</span>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Unique Students</span>
                       <span className="font-black text-gray-900">{payment.uniqueStudentCount}</span>
                     </div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Rate</span>
-                      <span className="font-bold text-gray-700">₹2,500</span>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Rate</span>
+                      <span className="font-bold text-gray-700">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</span>
                     </div>
                     <div className="flex justify-between items-center pt-2 border-t border-amber-200">
-                      <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Amount Payable</span>
-                      <span className="font-black text-amber-800 text-lg">₹{payment.amount?.toLocaleString("en-IN")}</span>
+                      <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">Amount paid</span>
+                      <span className="font-black text-amber-900 text-lg">{formatRupees(payment.amount)}</span>
                     </div>
                   </div>
                   <div className="space-y-3">
@@ -208,23 +193,18 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
               </div>
             )}
 
-            <div className="bg-amber-50 rounded-xl p-6 border border-amber-100 mb-8 flex items-start gap-4">
-              <svg className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <div>
-                <h4 className="font-bold text-amber-900">Registration is permanently locked</h4>
-                <p className="text-amber-800 text-sm mt-1">
-                  For any corrections, additions, or modifications, you must officially contact the IIITDM Kancheepuram Sports Cell.
-                </p>
-                <a href="mailto:sports@iiitdm.ac.in" className="inline-block mt-3 text-sm font-bold text-amber-700 hover:underline">
-                  sports@iiitdm.ac.in
-                </a>
-              </div>
-            </div>
+            <section className="mb-8" aria-labelledby="locked-roster-title">
+              <h2 id="locked-roster-title" className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-600">Locked roster</h2>
+              <RosterSummary entries={entries} />
+              <p className="mt-3 text-sm text-gray-700">
+                Need a correction? Email the IIITDM Kancheepuram Sports Cell at{" "}
+                <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-bold text-[#1b5e20] underline underline-offset-2">{SPORTS_CELL_EMAIL}</a>.
+              </p>
+            </section>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button
+                type="button"
                 onClick={downloadCsv}
                 className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-[#1b5e20] text-white rounded-full font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-700"
               >
@@ -239,7 +219,7 @@ export default function LockedRegistration({ iiitCode, registrationData }) {
                   href={`/api/payment/proof?iiitCode=${registration.iiitCode}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-amber-600 text-white rounded-full font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-amber-700 text-white rounded-full font-bold text-sm shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
