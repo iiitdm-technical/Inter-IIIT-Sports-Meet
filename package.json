@@ -14,7 +14,8 @@
     "db:migrate": "node src/db/migrate.js",
     "db:seed": "node src/db/seed.js",
     "db:add-admin": "node src/db/add-admin.js",
-    "env:check": "node src/db/check-env.js"
+    "env:check": "node src/db/check-env.js",
+    "test:smoke": "node tests/smoke-api.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1151.0",

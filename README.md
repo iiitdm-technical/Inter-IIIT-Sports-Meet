@@ -73,7 +73,7 @@ The webpack flag is a supported Next.js build option. It is useful where the def
 To exercise every API route, create a **temporary Neon branch with data and schema** and set `API_TEST_DATABASE_URL` and `API_TEST_AWS_ENDPOINT_URL_S3` to that branch's values. The smoke test refuses to run against the database or storage endpoint in `.env.local`, and uses the credentials in `.private/seed-credentials.json`. Run it after building:
 
 ```bash
-node scratch/smoke-api.mjs
+node tests/smoke-api.mjs
 ```
 
 The test submits one roster and proof on the temporary branch. Use a fresh branch for another run, or set `API_TEST_IIIT_INDEX` to an unused IIIT account index on the same branch.
