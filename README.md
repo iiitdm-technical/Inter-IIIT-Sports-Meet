@@ -23,7 +23,7 @@ Set these server-side variables in `.env.local` and in the deployment environmen
 | Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | Neon pooled PostgreSQL connection string |
-| `SESSION_SECRET` | Random secret of at least 32 characters for signed login cookies |
+| `SESSION_SECRET` | Recommended: random secret of at least 32 characters used as an HMAC key for stored session hashes. Optional; changing it signs everyone out |
 | `AWS_ENDPOINT_URL_S3` | Neon Object Storage S3 endpoint |
 | `AWS_ACCESS_KEY_ID` | Neon storage credential ID |
 | `AWS_SECRET_ACCESS_KEY` | Neon storage credential secret |

@@ -15,7 +15,7 @@ function requireValue(name) {
 function validateSettings() {
   const databaseUrl = new URL(requireValue("DATABASE_URL"));
   if (!["postgres:", "postgresql:"].includes(databaseUrl.protocol)) throw new Error("DATABASE_URL must be a PostgreSQL URL");
-  if (requireValue("SESSION_SECRET").length < 32) throw new Error("SESSION_SECRET must be at least 32 characters");
+  if ((process.env.SESSION_SECRET || "").length < 32) console.warn("WARN SESSION_SECRET is not set to 32+ characters; sessions still work (SHA-256 token hashes) but setting it adds an HMAC key");
 
   const endpoint = new URL(requireValue("AWS_ENDPOINT_URL_S3"));
   if (endpoint.protocol !== "https:") throw new Error("AWS_ENDPOINT_URL_S3 must use HTTPS");

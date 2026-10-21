@@ -7,9 +7,9 @@ import { sessions, users } from "../../db/schema.js";
 /**
  * Server-side sessions.
  *
- * The cookie carries a random 256-bit token. The database stores only
- * HMAC-SHA256(SESSION_SECRET, token), so neither a database leak nor a
- * secret leak alone yields a usable session. Every request re-reads the user,
+ * The cookie carries a random 256-bit token. The database stores only a
+ * hash of it (HMAC with SESSION_SECRET when set), so a database leak does
+ * not yield usable cookies. Every request re-reads the user,
  * so deleting a user or a session takes effect immediately.
  *
  * Sessions slide: each use (at most once an hour) pushes the expiry forward
@@ -34,16 +34,24 @@ function lifetimeSeconds(role) {
   return Math.round(days * DAY_SECONDS);
 }
 
-function getSecret() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("SESSION_SECRET must be set to at least 32 characters");
-  }
-  return secret;
-}
+let warnedNoSecret = false;
 
+/**
+ * Hash stored for a session token. Tokens are 256 random bits, so a plain
+ * SHA-256 is already irreversible; SESSION_SECRET (32+ characters), when
+ * set, adds an HMAC key on top so a database copy alone cannot even be
+ * matched against stolen cookies. Changing SESSION_SECRET signs everyone out.
+ */
 function hashToken(token) {
-  return crypto.createHmac("sha256", getSecret()).update(token).digest("hex");
+  const secret = process.env.SESSION_SECRET;
+  if (secret && secret.length >= 32) {
+    return crypto.createHmac("sha256", secret).update(token).digest("hex");
+  }
+  if (!warnedNoSecret && process.env.NODE_ENV === "production") {
+    warnedNoSecret = true;
+    console.warn("SESSION_SECRET is not set (or shorter than 32 characters); session tokens are stored as SHA-256 hashes.");
+  }
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 async function setCookie(token, maxAge) {
