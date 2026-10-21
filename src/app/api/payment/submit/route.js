@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
+import { getClientIp } from "@/lib/security/request";
+import { audit } from "@/lib/security/audit";
+import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { requireAuth } from "@/lib/auth/session";
 import { submitPayment } from "@/lib/registration/service";
+
+export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
@@ -14,12 +20,14 @@ export async function POST(request) {
       );
     }
 
+    await enforce(`submit:${session.userId}`, LIMITS.submit);
     const body = await request.json();
     const result = await submitPayment(
       session.iiitCode,
       body,
       session.username
     );
+    await audit({ actor: session.username, role: session.role, action: "payment_submitted", target: session.iiitCode, ip: await getClientIp(), details: { amount: result.amountPaid } });
 
     return NextResponse.json({
       success: true,
@@ -28,12 +36,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("Submit payment error:", error);
-    return NextResponse.json(
-      {
-        error: error.message || "Failed to submit payment",
-        details: error.details || undefined,
-      },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to submit payment");
   }
 }

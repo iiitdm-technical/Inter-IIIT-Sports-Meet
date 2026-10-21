@@ -45,3 +45,4 @@ next-env.d.ts
 # local tooling output
 /.playwright-cli/
 /output/
+/tests/e2e/output/

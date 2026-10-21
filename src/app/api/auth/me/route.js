@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { getRegistrationForIIIT } from "@/lib/registration/service";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const session = await getSession();
@@ -30,11 +32,12 @@ export async function GET() {
         iiitCode: session.iiitCode,
       },
       registration: registrationState,
-    });
+      registrationClosesAt: process.env.REGISTRATION_CLOSES_AT || null,
+    }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Session check API error:", error);
     return NextResponse.json(
-      { error: "Internal server error checking session" },
+      { error: "Could not check your session" },
       { status: 500 }
     );
   }

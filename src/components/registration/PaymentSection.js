@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { getRegistrationFee } from "@/lib/registration/labels";
+import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "@/lib/registration/labels";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 import Image from "next/image";
 
-const MAX_FILE_SIZE = 4 * 1024 * 1024;
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 function formatFileSize(bytes) {
@@ -70,9 +69,9 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > MAX_PROOF_BYTES) {
       setUploadStatus("error");
-      setUploadError(`File is ${formatFileSize(file.size)}, exceeding the 4 MB maximum.`);
+      setUploadError(`File is ${formatFileSize(file.size)}, exceeding the ${MAX_PROOF_LABEL} maximum. Compress the image or save the PDF at a smaller size.`);
       onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
       return;
     }
@@ -333,7 +332,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                     </svg>
                     <div>
                       <p className="text-sm font-bold text-ink">Choose a file or drop it here</p>
-                      <p id="payment-proof-help" className="mt-1 text-xs text-ink-muted">Accepted: PDF, JPG, JPEG, PNG — Maximum: 4 MB</p>
+                      <p id="payment-proof-help" className="mt-1 text-xs text-ink-muted">Accepted: PDF, JPG, JPEG, PNG — Maximum: {MAX_PROOF_LABEL}</p>
                     </div>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 // Canvas text can't use CSS variables, so read the family next/font defined
 // for the site's display face and fall back to a condensed system font.
@@ -615,10 +616,12 @@ export default function CircularGallery({
 
             {/* High-res card image */}
             <div className="relative w-full h-64 sm:h-80 overflow-hidden bg-black/40">
-              <img
+              <Image
                 src={zoomedItem.image}
                 alt={zoomedItem.text}
-                className="w-full h-full object-cover"
+                fill
+                sizes="(max-width: 640px) 100vw, 576px"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-brand-dark via-transparent to-transparent" />
             </div>

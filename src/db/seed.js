@@ -25,8 +25,8 @@ async function credentials() {
     if (error.code !== "ENOENT") throw error;
   }
 
+  // IIIT accounts only. The organizer admin is created with `npm run db:set-admin`.
   const accounts = [
-    { username: "admin", role: "admin", iiitName: null, iiitCode: null },
     ...iiits.map(({ name }) => ({ username: slugify(name), role: "iiit", iiitName: name, iiitCode: slugify(name) })),
   ].map((account) => ({ ...account, password: randomBytes(18).toString("base64url") }));
 
@@ -44,7 +44,7 @@ async function seed() {
     const accounts = await credentials();
     const db = drizzle(pool);
     await db.transaction(async (tx) => {
-      for (const account of accounts) {
+      for (const account of accounts.filter((item) => item.role === "iiit")) {
         await tx.insert(users).values({
           username: account.username,
           passwordHash: await bcrypt.hash(account.password, 12),

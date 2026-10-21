@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 let client;
 
@@ -45,4 +45,11 @@ export async function getProof(key) {
 export async function deleteProof(key) {
   const { client, bucket } = storage();
   await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+/** Keys stored under `prefix` (at most 1,000; one IIIT holds only a few). */
+export async function listProofs(prefix) {
+  const { client, bucket } = storage();
+  const result = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, MaxKeys: 1000 }));
+  return (result.Contents || []).map((item) => item.Key).filter(Boolean);
 }

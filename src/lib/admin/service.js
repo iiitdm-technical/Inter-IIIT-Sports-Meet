@@ -1,6 +1,8 @@
 import { eq, and, ilike, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { users, registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
+import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
+import { getSlotKey } from "../registration/client-utils.js";
+import { deleteProof, listProofs } from "../storage/neon.js";
 
 export async function getAdminAccounts() {
   return getDb().select({
@@ -216,4 +218,91 @@ export async function getAdminStats() {
     totalStudents: Number(totalStudentsResult[0]?.count || 0),
     totalEventEntries: Number(totalEntriesResult[0]?.count || 0),
   };
+}
+
+/**
+ * Turns a locked roster back into an editable draft so the IIIT can correct it.
+ *
+ * Allowed until the payment is bank-verified. The roster becomes the IIIT's
+ * cloud draft (same slots, names and contact details); the registration, its
+ * entries and any submitted payment record are deleted, and the payment proof
+ * files are removed from storage. The IIIT then re-submits as normal.
+ */
+export async function reopenRegistration(iiitCode) {
+  const db = getDb();
+  const result = await db.transaction(async (tx) => {
+    const [registration] = await tx.select().from(registrations)
+      .where(eq(registrations.iiitCode, iiitCode)).limit(1).for("update");
+    if (!registration) {
+      const error = new Error("This IIIT has no locked roster to reopen");
+      error.statusCode = 404;
+      throw error;
+    }
+    const [payment] = await tx.select().from(paymentTransactions)
+      .where(eq(paymentTransactions.registrationId, registration.id)).limit(1);
+    if (payment?.verificationStatus === "verified") {
+      const error = new Error("The payment is already bank-verified, so this roster can no longer be reopened");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const rows = await tx.select({
+      id: studentEventParticipations.id,
+      sportId: studentEventParticipations.sportId,
+      eventId: studentEventParticipations.eventId,
+      gender: studentEventParticipations.gender,
+      isReserve: studentEventParticipations.isReserve,
+      rollNumber: students.rollNumber,
+      name: students.name,
+      studentGender: students.gender,
+    })
+      .from(studentEventParticipations)
+      .innerJoin(students, eq(studentEventParticipations.studentId, students.id))
+      .where(eq(studentEventParticipations.registrationId, registration.id))
+      .orderBy(studentEventParticipations.id);
+
+    const slotsMap = {};
+    const nextIndex = new Map();
+    for (const row of rows) {
+      const role = row.isReserve ? "reserve" : "main";
+      const groupKey = `${row.sportId}|${row.eventId}|${row.gender}|${role}`;
+      const index = nextIndex.get(groupKey) || 0;
+      nextIndex.set(groupKey, index + 1);
+      slotsMap[getSlotKey(row.sportId, row.eventId, row.gender, role, index)] = {
+        rollNumber: row.rollNumber,
+        name: row.name,
+        gender: row.studentGender,
+      };
+    }
+    const contactDetails = {
+      contactName: registration.contactName,
+      contactEmail: registration.contactEmail,
+      contactPhone: registration.contactPhone,
+      notes: registration.notes || "",
+    };
+
+    await tx.insert(registrationDrafts)
+      .values({ iiitCode, contactDetails, slotsMap, revision: 1, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: registrationDrafts.iiitCode,
+        set: { contactDetails, slotsMap, revision: sql`${registrationDrafts.revision} + 1`, updatedAt: new Date() },
+      });
+    await tx.delete(registrations).where(eq(registrations.id, registration.id));
+
+    return {
+      iiitCode,
+      students: registration.totalStudentsCount,
+      entries: rows.length,
+      removedPayment: Boolean(payment),
+    };
+  });
+
+  // Storage is outside the transaction; a leftover file is harmless.
+  try {
+    const keys = await listProofs(`payment-proofs/${iiitCode}/`);
+    await Promise.all(keys.map((key) => deleteProof(key)));
+  } catch (error) {
+    console.error("Could not remove payment proofs after reopening:", error.message);
+  }
+  return result;
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { requireAuth } from "@/lib/auth/session";
 import { getAdminAccounts } from "@/lib/admin/service";
 
@@ -9,6 +10,6 @@ export async function GET() {
     await requireAuth(["admin"]);
     return NextResponse.json({ data: await getAdminAccounts() }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    return NextResponse.json({ error: error.statusCode ? error.message : "Unable to load admin accounts" }, { status: error.statusCode || 500 });
+    return errorResponse(error, "Unable to load admin accounts");
   }
 }

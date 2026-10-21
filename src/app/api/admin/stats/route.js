@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { requireAuth } from "@/lib/auth/session";
 import { getAdminStats } from "@/lib/admin/service";
 
@@ -12,9 +13,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Admin stats error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch admin stats" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to fetch admin stats");
   }
 }

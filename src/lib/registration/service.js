@@ -1,5 +1,6 @@
 import { eq, desc } from "drizzle-orm";
-import { getRegistrationFee } from "./labels.js";
+import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "./labels.js";
+import { assertRegistrationOpen, isUniqueViolation } from "./deadline.js";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { headProof } from "../storage/neon.js";
@@ -9,7 +10,7 @@ import { validateRegistrationRules } from "../validation/rules.js";
 /**
  * Fetch submitted registration state and entries for an IIIT.
  * If the IIIT has not submitted, returns an empty non-submitted state.
- * (Unsubmitted drafts exist solely in client browser localStorage)
+ * Unsubmitted drafts are served separately by /api/registration/draft.
  */
 export async function getRegistrationForIIIT(iiitCode) {
   const db = getDb();
@@ -75,6 +76,7 @@ export async function getRegistrationForIIIT(iiitCode) {
 
 export async function submitRegistration(iiitCode, rawPayload, username) {
   const db = getDb();
+  assertRegistrationOpen();
 
   // 1. Zod input validation
   const parsed = registrationSubmitSchema.safeParse(rawPayload);
@@ -122,7 +124,8 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
 
   // 5. Execute atomic database transaction
   const result = await db.transaction(async (tx) => {
-    // Insert new registration in payment_pending state
+    // Insert new registration in payment_pending state. A concurrent
+    // submission for the same IIIT fails on the unique iiit_code index.
     const [insertedReg] = await tx
       .insert(registrations)
       .values({
@@ -191,6 +194,13 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
       totalEntriesCount: payload.entries.length,
       submittedAt: new Date().toISOString(),
     };
+  }).catch((error) => {
+    if (isUniqueViolation(error)) {
+      const conflict = new Error("This roster has already been submitted from another session. Reload the page to see it.");
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw error;
   });
 
   return result;
@@ -267,8 +277,8 @@ export async function submitPayment(iiitCode, rawPayload, username) {
     throw error;
   }
 
-  if (proofDetails.size > 4 * 1024 * 1024) {
-    const error = new Error("Payment proof file size exceeds 4MB limit");
+  if (proofDetails.size > MAX_PROOF_BYTES) {
+    const error = new Error(`Payment proof file size exceeds the ${MAX_PROOF_LABEL} limit`);
     error.statusCode = 400;
     throw error;
   }
@@ -287,7 +297,9 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       .limit(1);
 
     if (existingPayment.length > 0) {
-      throw new Error("Payment has already been processed.");
+      const conflict = new Error("Payment has already been submitted. Reload the page to see it.");
+      conflict.statusCode = 409;
+      throw conflict;
     }
 
     // Insert payment transaction
@@ -317,6 +329,13 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       status: "submitted",
       amountPaid: amount,
     };
+  }).catch((error) => {
+    if (isUniqueViolation(error)) {
+      const conflict = new Error("Payment has already been submitted. Reload the page to see it.");
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw error;
   });
 
   return result;

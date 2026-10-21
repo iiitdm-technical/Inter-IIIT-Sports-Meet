@@ -45,7 +45,7 @@ async function checkDatabase(databaseUrl) {
     const columns = await pool.query(`
       select table_name, column_name from information_schema.columns
       where table_schema = 'public' and table_name = any($1)
-    `, [["users", "registration_drafts", "registrations", "students", "student_event_participations", "payment_transactions"]]);
+    `, [["users", "registration_drafts", "registrations", "students", "student_event_participations", "payment_transactions", "sessions", "rate_limits", "audit_log"]]);
     const found = new Set(columns.rows.map((row) => `${row.table_name}.${row.column_name}`));
     const requiredColumns = [
       "users.username", "users.email", "users.display_name", "users.password_hash", "users.role", "users.iiit_code",
@@ -54,17 +54,20 @@ async function checkDatabase(databaseUrl) {
       "students.registration_id", "students.iiit_code", "students.roll_number", "students.gender",
       "student_event_participations.registration_id", "student_event_participations.student_id", "student_event_participations.sport_id",
       "payment_transactions.registration_id", "payment_transactions.proof_pathname", "payment_transactions.verification_status",
+      "sessions.id", "sessions.user_id", "sessions.expires_at", "rate_limits.key", "rate_limits.count", "audit_log.action",
     ];
     for (const expected of requiredColumns) {
       if (!found.has(expected)) throw new Error(`Database migration missing: ${expected}`);
     }
     const accounts = await pool.query(`
       select count(*) filter (where role = 'iiit')::int as iiits,
-             count(*) filter (where role = 'admin' and email is not null)::int as named_admins
+             count(*) filter (where role = 'admin' and email is not null)::int as named_admins,
+             count(*) filter (where role = 'admin')::int as admins
       from users
     `);
     if (accounts.rows[0].iiits !== iiits.length) throw new Error(`Expected ${iiits.length} IIIT accounts, found ${accounts.rows[0].iiits}`);
-    if (accounts.rows[0].named_admins < 1) throw new Error("Database has no named admin with an email");
+    if (accounts.rows[0].named_admins < 1) throw new Error("Database has no admin with an email; run npm run db:set-admin");
+    if (accounts.rows[0].admins !== 1) console.warn(`WARN ${accounts.rows[0].admins} admin accounts exist; the organizer setup expects exactly one (npm run db:set-admin -- --remove-other-admins)`);
     console.log(`PASS PostgreSQL schema and accounts (${accounts.rows[0].iiits} IIITs, ${accounts.rows[0].named_admins} named admin)`);
   } finally {
     await pool.end();

@@ -1,8 +1,38 @@
 import crypto from "crypto";
 import { cookies } from "next/headers.js";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
+import { getDb } from "../../db/index.js";
+import { sessions, users } from "../../db/schema.js";
 
-export const SESSION_COOKIE_NAME = "inter_iiit_session";
-export const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
+/**
+ * Server-side sessions.
+ *
+ * The cookie carries a random 256-bit token. The database stores only
+ * HMAC-SHA256(SESSION_SECRET, token), so neither a database leak nor a
+ * secret leak alone yields a usable session. Every request re-reads the user,
+ * so deleting a user or a session takes effect immediately.
+ *
+ * Sessions slide: each use (at most once an hour) pushes the expiry forward
+ * by the full lifetime. Several sessions per user are allowed (one per
+ * device); signing in again never signs out other devices.
+ */
+const DAY_SECONDS = 24 * 60 * 60;
+const RENEW_AFTER_MS = 60 * 60 * 1000;
+
+const secureCookies = process.env.COOKIE_SECURE
+  ? process.env.COOKIE_SECURE === "true"
+  : process.env.NODE_ENV === "production";
+
+// __Host- cookies must be Secure, host-only and path=/, which blocks
+// subdomains from setting or overwriting the session cookie.
+export const SESSION_COOKIE_NAME = secureCookies ? "__Host-inter_iiit_session" : "inter_iiit_session";
+
+function lifetimeSeconds(role) {
+  const days = role === "admin"
+    ? Number(process.env.ADMIN_SESSION_DAYS) || 60
+    : Number(process.env.IIIT_SESSION_DAYS) || 30;
+  return Math.round(days * DAY_SECONDS);
+}
 
 function getSecret() {
   const secret = process.env.SESSION_SECRET;
@@ -12,106 +42,117 @@ function getSecret() {
   return secret;
 }
 
-/**
- * Sign a payload and return a secure token: base64(payload).signature
- */
-export function signSessionToken(payload) {
-  const secret = getSecret();
-  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", secret)
-    .update(data)
-    .digest("base64url");
-  return `${data}.${signature}`;
+function hashToken(token) {
+  return crypto.createHmac("sha256", getSecret()).update(token).digest("hex");
 }
 
-/**
- * Verify and decode a session token
- */
-export function verifySessionToken(token) {
-  if (!token || typeof token !== "string") return null;
-
-  const parts = token.split(".");
-  if (parts.length !== 2) return null;
-
-  const [data, signature] = parts;
-  const secret = getSecret();
-
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(data)
-    .digest("base64url");
-
-  // Timing-safe comparison to prevent timing attacks
-  if (
-    signature.length !== expectedSignature.length ||
-    !crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(expectedSignature)
-    )
-  ) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf-8"));
-    if (!Number.isFinite(payload.exp) || Date.now() >= payload.exp) return null;
-    if (!Number.isInteger(payload.userId) || !payload.username || !["iiit", "admin"].includes(payload.role)) return null;
-    if (payload.role === "iiit" && !payload.iiitCode) return null;
-    return payload;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Creates and sets the session HTTP-only cookie on the response
- */
-export async function createSessionCookie(user) {
-  const exp = Date.now() + SESSION_MAX_AGE_SECONDS * 1000;
-  const payload = {
-    userId: user.id,
-    username: user.username,
-    email: user.email || null,
-    displayName: user.displayName || null,
-    role: user.role, // 'iiit' | 'admin'
-    iiitName: user.iiitName || null,
-    iiitCode: user.iiitCode || null,
-    exp,
-  };
-
-  const token = signSessionToken(payload);
+async function setCookie(token, maxAge) {
   const cookieStore = await cookies();
-
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies,
     sameSite: "lax",
     path: "/",
-    maxAge: SESSION_MAX_AGE_SECONDS,
+    maxAge,
   });
+}
 
-  return payload;
+function toSession(row, sessionId) {
+  return {
+    sessionId,
+    userId: row.id,
+    username: row.username,
+    email: row.email || null,
+    displayName: row.displayName || null,
+    role: row.role,
+    iiitName: row.iiitName || null,
+    iiitCode: row.iiitCode || null,
+  };
 }
 
 /**
- * Reads and verifies the current session from incoming request cookies
+ * Creates a session for `user` and sets the cookie.
+ */
+export async function createSession(user, { ip = null, userAgent = null } = {}) {
+  const db = getDb();
+  const token = crypto.randomBytes(32).toString("base64url");
+  const id = hashToken(token);
+  const maxAge = lifetimeSeconds(user.role);
+  const expiresAt = new Date(Date.now() + maxAge * 1000);
+
+  await db.insert(sessions).values({ id, userId: user.id, expiresAt, ip, userAgent });
+  // Housekeeping: drop this user's expired sessions.
+  await db.delete(sessions).where(and(eq(sessions.userId, user.id), lt(sessions.expiresAt, new Date())));
+  await setCookie(token, maxAge);
+  return toSession(user, id);
+}
+
+/**
+ * Reads and validates the current session, or returns null.
  */
 export async function getSession() {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME);
-  if (!sessionCookie?.value) {
-    return null;
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (!token || token.length > 128) return null;
+
+  const id = hashToken(token);
+  const db = getDb();
+  const [row] = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      displayName: users.displayName,
+      role: users.role,
+      iiitName: users.iiitName,
+      iiitCode: users.iiitCode,
+      lastSeenAt: sessions.lastSeenAt,
+    })
+    .from(sessions)
+    .innerJoin(users, eq(sessions.userId, users.id))
+    .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date())))
+    .limit(1);
+
+  if (!row || !["iiit", "admin"].includes(row.role)) return null;
+  if (row.role === "iiit" && !row.iiitCode) return null;
+
+  if (Date.now() - new Date(row.lastSeenAt).getTime() > RENEW_AFTER_MS) {
+    const maxAge = lifetimeSeconds(row.role);
+    await db.update(sessions)
+      .set({ lastSeenAt: new Date(), expiresAt: new Date(Date.now() + maxAge * 1000) })
+      .where(eq(sessions.id, id));
+    try {
+      await setCookie(token, maxAge);
+    } catch {
+      // Cookies are read-only during rendering; the next API call renews it.
+    }
   }
-  return verifySessionToken(sessionCookie.value);
+
+  return toSession(row, id);
 }
 
 /**
- * Clears the session cookie
+ * Ends the current session (this device only) and clears the cookie.
  */
-export async function destroySessionCookie() {
+export async function destroySession() {
   const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  if (token && token.length <= 128) {
+    await getDb().delete(sessions).where(eq(sessions.id, hashToken(token)));
+  }
   cookieStore.delete(SESSION_COOKIE_NAME);
+}
+
+/**
+ * Ends every session for a user, e.g. after a password change.
+ */
+export async function revokeUserSessions(userId) {
+  await getDb().delete(sessions).where(eq(sessions.userId, userId));
+}
+
+/** Removes expired sessions. Cheap; called opportunistically. */
+export async function purgeExpiredSessions() {
+  await getDb().execute(sql`DELETE FROM sessions WHERE expires_at < now()`);
 }
 
 /**
@@ -126,10 +167,7 @@ export async function requireAuth(allowedRoles = []) {
     throw error;
   }
 
-  if (
-    allowedRoles.length > 0 &&
-    !allowedRoles.includes(session.role)
-  ) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(session.role)) {
     const error = new Error("Forbidden. You do not have permission to perform this action.");
     error.statusCode = 403;
     throw error;

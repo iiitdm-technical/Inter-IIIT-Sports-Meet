@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { requireAuth } from "@/lib/auth/session";
 import { getAdminFilteredEntries } from "@/lib/admin/service";
 
@@ -33,9 +34,6 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Admin entries filter error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to search participant entries" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to search participant entries");
   }
 }

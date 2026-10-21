@@ -17,12 +17,15 @@ if (new URL(testDatabaseUrl).hostname === new URL(process.env.DATABASE_URL).host
 
 const credentialsPath = process.env.API_TEST_CREDENTIALS_PATH || ".private/seed-credentials.json";
 const accounts = JSON.parse(readFileSync(credentialsPath, "utf8"));
-const admin = accounts.find((account) => account.role === "admin");
+// The organizer admin is not in the seed file; pass its sign-in for the test branch.
+const admin = process.env.API_TEST_ADMIN_EMAIL && process.env.API_TEST_ADMIN_PASSWORD
+  ? { role: "admin", username: process.env.API_TEST_ADMIN_EMAIL, email: process.env.API_TEST_ADMIN_EMAIL, password: process.env.API_TEST_ADMIN_PASSWORD }
+  : accounts.find((account) => account.role === "admin");
 const allIIITs = accounts.filter((account) => account.role === "iiit");
 const targetIndex = Number(process.env.API_TEST_IIIT_INDEX || 0);
 assert(Number.isInteger(targetIndex) && targetIndex >= 0 && targetIndex < allIIITs.length, "Invalid API_TEST_IIIT_INDEX");
 const iiits = [allIIITs[targetIndex], ...allIIITs.filter((_, index) => index !== targetIndex)];
-assert(admin && iiits.length >= 2, "Admin and two IIIT credentials are required");
+assert(admin && iiits.length >= 2, "Set API_TEST_ADMIN_EMAIL and API_TEST_ADMIN_PASSWORD, and provide two IIIT credentials");
 
 const port = Number(process.env.API_TEST_PORT || 3107);
 const base = `http://127.0.0.1:${port}`;
@@ -73,7 +76,7 @@ async function login(account) {
     body: JSON.stringify({ username: account.username, password: account.password }),
   });
   expectStatus(result, 200, `${account.role} login`);
-  assert.equal(result.body.user.username, account.username);
+  if (!account.email) assert.equal(result.body.user.username, account.username);
   const cookie = result.response.headers.get("set-cookie")?.split(";")[0];
   assert(cookie, "Login did not set a session cookie");
   return cookie;
@@ -194,7 +197,7 @@ try {
   assert(adminOverview.body.data.some((row) => row.iiitCode === iiits[0].iiitCode && row.status === "submitted"));
   const adminAccounts = await request("/api/admin/accounts", { cookie: adminCookie });
   expectStatus(adminAccounts, 200, "admin accounts overview");
-  assert(adminAccounts.body.data.some((row) => row.username === admin.username));
+  assert(adminAccounts.body.data.some((row) => row.username === admin.username || row.email === admin.email));
   assert(adminAccounts.body.data.every((row) => !("passwordHash" in row)));
   const entries = await request(`/api/admin/entries?iiit=${encodeURIComponent(iiits[0].iiitCode)}&name=API%20TEST&page=1&limit=25`, { cookie: adminCookie });
   expectStatus(entries, 200, "admin filtered entries");
@@ -219,6 +222,27 @@ try {
   assert.equal(verifiedStatus.body.data.verificationStatus, "verified");
   expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 409, "duplicate approval rejected");
   expectStatus(await request("/api/auth/logout", { cookie: iiitCookie, method: "POST" }), 200, "logout");
+  const afterLogout = await request("/api/auth/me", { cookie: iiitCookie });
+  assert.equal(afterLogout.body.authenticated, false, "signed-out session cookie must stop working");
+  expectStatus(await request("/api/auth/me", { cookie: otherCookie }), 200, "other device stays signed in");
+
+  expectStatus(await request("/api/registration/draft", {
+    cookie: otherCookie, method: "PUT",
+    headers: { "content-type": "application/json", origin: "https://attacker.example", "sec-fetch-site": "cross-site" },
+    body: JSON.stringify({ ...draft, revision: 0 }),
+  }), 403, "cross-site write blocked");
+
+  const home = await fetch(`${base}/`);
+  for (const header of ["content-security-policy", "x-frame-options", "x-content-type-options", "referrer-policy", "strict-transport-security"]) {
+    assert(home.headers.get(header), `missing security header ${header}`);
+  }
+
+  const fakeAccount = { username: `nobody-${Date.now()}`, password: "wrong-password" };
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 9; attempt += 1) {
+    lastStatus = (await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(fakeAccount) })).response.status;
+  }
+  assert.equal(lastStatus, 429, "repeated failed sign-ins are rate limited");
   console.log("All API route smoke checks passed on the isolated Neon branch.");
 } finally {
   child.kill("SIGTERM");

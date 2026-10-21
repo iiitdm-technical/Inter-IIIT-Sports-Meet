@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
+import { LIMITS, enforce } from "@/lib/security/rate-limit";
+import { assertRegistrationOpen } from "@/lib/registration/deadline";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/session";
@@ -44,13 +47,15 @@ export async function GET() {
     return NextResponse.json({ data: publicDraft(draft) });
   } catch (error) {
     console.error("Get registration draft failed:", error);
-    return NextResponse.json({ error: error.statusCode ? error.message : "Could not load draft" }, { status: error.statusCode || 500 });
+    return errorResponse(error, "Could not load draft");
   }
 }
 
 export async function PUT(request) {
   try {
     const session = await requireAuth(["iiit"]);
+    assertRegistrationOpen();
+    await enforce(`draft:${session.userId}`, LIMITS.draftSave, "Saving too often. Your draft is kept in this browser; it will sync shortly.");
     const contentLength = Number(request.headers.get("content-length"));
     if (contentLength > MAX_DRAFT_BYTES) {
       return NextResponse.json({ error: "Draft is too large" }, { status: 413 });
@@ -100,6 +105,6 @@ export async function PUT(request) {
     return NextResponse.json({ data: publicDraft(saved) });
   } catch (error) {
     console.error("Save registration draft failed:", error);
-    return NextResponse.json({ error: error.statusCode ? error.message : "Could not save draft" }, { status: error.statusCode || 500 });
+    return errorResponse(error, "Could not save draft");
   }
 }

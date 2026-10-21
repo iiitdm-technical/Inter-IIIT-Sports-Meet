@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { getSession } from "@/lib/auth/session";
 import { getRegistrationForIIIT } from "@/lib/registration/service";
 
@@ -43,9 +44,6 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Get registration error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to retrieve registration data" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to retrieve registration data");
   }
 }

@@ -4,11 +4,16 @@ import { getProof } from '@/lib/storage/neon';
 import { getDb } from '@/db/index';
 import { registrations, paymentTransactions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { errorResponse } from '@/lib/security/respond';
+import { LIMITS, enforce } from '@/lib/security/rate-limit';
+
+export const runtime = "nodejs";
 
 export async function GET(request) {
   try {
     // 1. Authenticate user
     const session = await requireAuth(["iiit", "admin"]);
+    await enforce(`download:${session.userId}`, LIMITS.download);
     
     // 2. Determine target IIIT
     const { searchParams } = new URL(request.url);
@@ -65,9 +70,6 @@ export async function GET(request) {
 
   } catch (error) {
     console.error("Proof retrieval error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to retrieve proof" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to retrieve proof");
   }
 }

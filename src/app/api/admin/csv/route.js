@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
+import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { requireAuth } from "@/lib/auth/session";
 import { generateAdminMasterCSV } from "@/lib/csv/generator";
 
+export const runtime = "nodejs";
+
 export async function GET(request) {
   try {
-    await requireAuth(["admin"]);
+    const session = await requireAuth(["admin"]);
+    await enforce(`download:${session.userId}`, LIMITS.download);
 
     const { searchParams } = new URL(request.url);
     const iiit = searchParams.get("iiit") || undefined;
@@ -35,9 +40,6 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Admin CSV export error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate admin CSV export" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to generate admin CSV export");
   }
 }

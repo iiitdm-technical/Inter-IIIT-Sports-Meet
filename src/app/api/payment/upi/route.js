@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { getRegistrationFee } from "@/lib/registration/labels";
 import { eq } from "drizzle-orm";
 import QRCode from "qrcode";
@@ -34,6 +35,6 @@ export async function GET() {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
-    return NextResponse.json({ error: error.statusCode ? error.message : "Unable to load payment QR" }, { status: error.statusCode || 500 });
+    return errorResponse(error, "Unable to load payment QR");
   }
 }

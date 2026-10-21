@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/session";
 import { getDb } from "@/db/index";
@@ -24,6 +25,6 @@ export async function GET() {
     }
     return NextResponse.json({ data: payment }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    return NextResponse.json({ error: error.statusCode ? error.message : "Unable to load payment status" }, { status: error.statusCode || 500 });
+    return errorResponse(error, "Unable to load payment status");
   }
 }

@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/security/respond";
+import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { requireAuth } from "@/lib/auth/session";
 import { generateIIITRegistrationCSV } from "@/lib/csv/generator";
 import { getRegistrationForIIIT } from "@/lib/registration/service";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const session = await requireAuth(["iiit"]);
+    await enforce(`download:${session.userId}`, LIMITS.download);
 
     if (!session.iiitCode) {
       return NextResponse.json(
@@ -37,9 +42,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("IIIT CSV export error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate CSV export" },
-      { status: error.statusCode || 500 }
-    );
+    return errorResponse(error, "Failed to generate CSV export");
   }
 }

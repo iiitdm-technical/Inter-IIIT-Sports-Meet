@@ -17,6 +17,7 @@ export default function RegisterPage() {
   // Auth & API state
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
+  const [closesAt, setClosesAt] = useState(null);
   const [lockedRegistrationData, setLockedRegistrationData] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -67,6 +68,10 @@ export default function RegisterPage() {
           return;
         }
         setUser(authData.user);
+        const deadline = authData.registrationClosesAt ? new Date(authData.registrationClosesAt) : null;
+        setClosesAt(deadline && !Number.isNaN(deadline.getTime())
+          ? { date: deadline, closed: Date.now() > deadline.getTime() }
+          : null);
 
         const regRes = await fetch("/api/registration");
         if (!regRes.ok) {
@@ -344,6 +349,16 @@ export default function RegisterPage() {
         onLogout={handleLogout}
         isLoggingOut={isLoggingOut}
       />
+
+      {closesAt && (
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <p className={`rounded-card border px-4 py-3 text-sm font-semibold ${closesAt.closed ? "border-red-200 bg-red-50 text-red-800" : "border-line bg-gold-wash text-gold-text"}`}>
+            {closesAt.closed ? "Registration closed on " : "Registration closes on "}
+            {closesAt.date.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })} IST.
+            {closesAt.closed && " Contact the Sports Cell if you need help."}
+          </p>
+        </div>
+      )}
 
       {saveError && (
         <div role="alert" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">

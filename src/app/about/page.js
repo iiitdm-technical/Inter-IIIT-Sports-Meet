@@ -2,46 +2,12 @@
 
 import PageHeader from '@/components/PageHeader';
 
-import { useEffect } from 'react';
+import useReveal from '@/components/useReveal';
 import Image from 'next/image';
 import Link from 'next/link';
 import { eventInfo } from '@/data/info';
 import { iiits } from '@/data/iiits';
 import { sports } from '@/data/sports';
-
-/**
- * Hides below-the-fold `[data-reveal]` blocks only after mount, animates them
- * in on scroll, and reveals everything after a short fallback delay so content
- * is never left invisible.
- */
-function useReveal() {
-  useEffect(() => {
-    const items = Array.from(document.querySelectorAll('[data-reveal]'));
-    if (!items.length || !('IntersectionObserver' in window)) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-
-    const show = (element) => element.classList.add('is-visible');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          show(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
-
-    items.forEach((item) => {
-      if (item.getBoundingClientRect().top < window.innerHeight) return;
-      item.classList.add('reveal');
-      observer.observe(item);
-    });
-    const fallback = window.setTimeout(() => items.forEach(show), 2500);
-    return () => {
-      observer.disconnect();
-      window.clearTimeout(fallback);
-    };
-  }, []);
-}
 
 /**
  * About Page Component

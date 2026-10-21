@@ -1,55 +1,74 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { eq, or } from "drizzle-orm";
 import { getDb } from "@/db/index";
 import { users } from "@/db/schema";
 import { verifyPassword } from "@/lib/auth/passwords";
-import { createSessionCookie } from "@/lib/auth/session";
+import { createSession } from "@/lib/auth/session";
 import { loginSchema } from "@/lib/validation/schemas";
+import { getClientIp, getUserAgent } from "@/lib/security/request";
+import { LIMITS, hit, peek, reset } from "@/lib/security/rate-limit";
+import { audit } from "@/lib/security/audit";
+
+export const runtime = "nodejs";
+
+// Compared against when the account does not exist, so a missing account
+// takes as long to reject as a wrong password.
+const dummyHash = bcrypt.hash("not-a-real-password-" + Math.random(), 12);
+
+function tooMany(retryAfter) {
+  const minutes = Math.max(1, Math.ceil(retryAfter / 60));
+  return NextResponse.json(
+    { error: `Too many sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` },
+    { status: 429, headers: { "Retry-After": String(retryAfter) } }
+  );
+}
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-
+    const body = await request.json().catch(() => null);
     const parsed = loginSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid login credentials format",
-          details: parsed.error.issues.map((i) => i.message),
-        },
-        { status: 400 }
-      );
+    if (!parsed.success || parsed.data.username.length > 254 || parsed.data.password.length > 256) {
+      return NextResponse.json({ error: "Enter your IIIT code or email and your password." }, { status: 400 });
     }
 
-    const { username, password } = parsed.data;
-    const identifier = username.trim().toLowerCase();
-    const db = getDb();
+    const identifier = parsed.data.username.trim().toLowerCase();
+    const { password } = parsed.data;
+    const ip = await getClientIp();
+    const userAgent = await getUserAgent();
+    const accountKey = `login:account:${identifier}`;
 
-    const userList = await db
+    const ipCheck = await hit(`login:ip:${ip}`, LIMITS.loginPerIp);
+    if (!ipCheck.ok) {
+      await audit({ actor: identifier, action: "login_rate_limited", ip, details: { scope: "ip" } });
+      return tooMany(ipCheck.retryAfter);
+    }
+    const accountCheck = await peek(accountKey, LIMITS.loginPerAccount);
+    if (!accountCheck.ok) {
+      await audit({ actor: identifier, action: "login_rate_limited", ip, details: { scope: "account" } });
+      return tooMany(accountCheck.retryAfter);
+    }
+
+    const db = getDb();
+    const [user] = await db
       .select()
       .from(users)
       .where(or(eq(users.username, identifier), eq(users.email, identifier)))
       .limit(1);
 
-    if (userList.length === 0) {
-      return NextResponse.json(
-        { error: "Invalid username or password" },
-        { status: 401 }
-      );
-    }
-
-    const user = userList[0];
-    const passwordMatch = await verifyPassword(password, user.passwordHash);
+    const passwordMatch = user
+      ? await verifyPassword(password, user.passwordHash)
+      : (await bcrypt.compare(password, await dummyHash), false);
 
     if (!passwordMatch) {
-      return NextResponse.json(
-        { error: "Invalid username or password" },
-        { status: 401 }
-      );
+      await hit(accountKey, LIMITS.loginPerAccount);
+      await audit({ actor: identifier, action: "login_failed", ip, details: { knownAccount: Boolean(user) } });
+      return NextResponse.json({ error: "Invalid username or password" }, { status: 401 });
     }
 
-    // Set secure HTTP-only session cookie
-    const session = await createSessionCookie(user);
+    await reset(accountKey);
+    const session = await createSession(user, { ip, userAgent });
+    await audit({ actor: user.username, role: user.role, action: "login", ip });
 
     return NextResponse.json({
       success: true,
@@ -65,9 +84,6 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error("Login API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error during login" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Sign-in failed. Please try again." }, { status: 500 });
   }
 }

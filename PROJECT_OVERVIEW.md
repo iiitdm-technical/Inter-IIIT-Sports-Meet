@@ -1,7 +1,7 @@
 # 9th INTER IIIT SPORTS MEET 2026
 ## Digital Registration & Management System
 
-*Status as of 17 October 2026 (commit `80e5029` plus repository cleanup).*
+*Status as of 21 October 2026: security hardening, single organizer admin, typography and card redesign.*
 
 ==================================================
 ## 1. EXECUTIVE OVERVIEW
@@ -23,9 +23,10 @@ One pre-provisioned account per participating IIIT (25 accounts). Each has a uni
 - **Cannot:** see other IIITs' data, or change the roster or payment after locking. Corrections go through the IIITDM Kancheepuram Sports Cell.
 
 ### Administrator
-Named admin accounts (email or username login) plus the legacy seeded `admin` account until it is retired.
+Exactly one organizer admin: `sports@iiitdm.ac.in` (username `sports-sac`). All other accounts are IIIT accounts.
 - **Can:** view statistics, search and filter all locked entries, export all or filtered entries to CSV, view each IIIT's registration and payment status, open private payment proofs, verify a payment by re-entering the UTR and amount and confirming the bank credit, and list admin accounts.
-- **Cannot:** create or edit rosters on behalf of an IIIT, or add admins from the UI. Admins are added with `npm run db:add-admin`.
+- **Can also:** reopen a locked roster that is not yet bank-verified, turning it back into the IIIT's draft for corrections.
+- **Cannot:** create or edit rosters on behalf of an IIIT, or add admins from the UI. The admin is managed with `npm run db:set-admin`.
 
 ==================================================
 ## 3. SYSTEM WORKFLOW
@@ -70,12 +71,12 @@ Admin Accounts (read-only list)
 - **Live validation:** shared client and server rule engine.
 - **Cloud drafts:** saved to Neon about one second after each change. A revision number detects edits from two sessions and asks which version to keep.
 - **Review and lock:** summary of students, entries and contact details before an atomic submission.
-- **Payment:** amount computed on the server from the locked student count; optional UPI QR (`PAYMENT_UPI_ID`, `PAYMENT_PAYEE_NAME`); proof upload (PDF, JPG or PNG up to 4 MB, file signature checked) to a private Neon Object Storage bucket.
+- **Payment:** amount computed on the server from the locked student count; optional UPI QR (`PAYMENT_UPI_ID`, `PAYMENT_PAYEE_NAME`); proof upload (PDF, JPG or PNG up to 2 MB, file signature checked) to a private Neon Object Storage bucket.
 - **Payment verification:** admin re-enters UTR and amount and confirms the bank credit; the coordinator sees "Bank Verified".
 - **CSV export:** IIIT export of its own roster; admin export of all or filtered entries; spreadsheet formula injection is neutralized.
 - **Admin dashboard:** statistics, entries search, IIITs and payments table, admin accounts table.
 - **Public website:** home, about, events, gallery, team, contact, location, sitemap and robots.
-- **Operations scripts:** `db:migrate`, `db:seed`, `db:add-admin`, `env:check` (preflight of secrets, tables, accounts and a storage write-read-delete roundtrip).
+- **Operations scripts:** `db:migrate`, `db:seed`, `db:set-admin`, `env:check` (preflight of secrets, tables, accounts and a storage write-read-delete roundtrip).
 
 ==================================================
 ## 5. REGISTRATION BUSINESS RULES
@@ -101,7 +102,8 @@ Defined in `src/lib/sports/config.js` and enforced by `src/lib/validation/rules.
 - **Lock:** roster submission inserts the registration, students and entries in one transaction and deletes the draft. Status becomes `payment_pending`.
 - **Payment submission:** inserts the payment record and sets the registration to `submitted`. Both are then permanently locked.
 - **Verification:** a separate admin action sets `verification_status` to `verified` with time and admin username.
-- **Corrections:** there is no unlock in the application; changes after locking are handled by the Sports Cell.
+- **Corrections:** the admin can reopen a roster until its payment is bank-verified; the roster becomes the IIIT's draft again and any submitted payment record and proof are removed.
+- **Deadline:** optional `REGISTRATION_CLOSES_AT`; after it, drafts cannot be saved or locked.
 
 ==================================================
 ## 7. PAGES / SCREENS
@@ -117,38 +119,42 @@ Defined in `src/lib/sports/config.js` and enforced by `src/lib/validation/rules.
 ==================================================
 
 - **Next.js 16 / React 19 / Tailwind CSS 4**, JavaScript only. API routes in `src/app/api/*`; services in `src/lib/*`.
-- **Neon PostgreSQL** with **Drizzle ORM** over `pg` (`src/db`, migrations `0000`–`0006`).
+- **Neon PostgreSQL** with **Drizzle ORM** over `pg` (`src/db`, migrations `0000`–`0007`).
 - **Neon Object Storage** (S3-compatible, `@aws-sdk/client-s3`) for private payment proofs.
 - **Zod** validation, **bcryptjs** hashing, **qrcode** for UPI QR images.
-- Tables: `users`, `registration_drafts`, `registrations`, `students`, `student_event_participations`, `payment_transactions`.
+- Tables: `users`, `registration_drafts`, `registrations`, `students`, `student_event_participations`, `payment_transactions`, `sessions`, `rate_limits`, `audit_log`.
+- **Typography:** Barlow Condensed (display) and Manrope (body), self-hosted via `next/font`; shared tokens and components in `src/app/globals.css`.
 
 ==================================================
 ## 9. SECURITY & DATA PROTECTION
 ==================================================
 
-- Session secret required (32+ characters); tokens without valid signature, expiry or required fields are rejected.
+- **Sessions:** server-side (`sessions` table); the cookie holds a random token, the database only its HMAC. Admin sessions last 60 days, IIIT sessions 30 days, both extended while in use. Several devices may be signed in at once; signing out ends only that device; deleting a user ends all of theirs.
+- **Rate limits** in PostgreSQL: sign-in 30 per IP and 8 failed per account per 15 minutes; caps on uploads, submissions, autosave, downloads and admin actions.
+- **Headers:** CSP, HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, COOP; API responses `no-store`; `X-Powered-By` removed.
+- **Cross-site requests:** state-changing API calls must be same-origin (`src/proxy.js`), plus SameSite cookies.
+- **Errors:** generic messages for server failures; duplicate submissions return 409.
+- **Audit log:** sign-ins and failures, lockouts, roster locks, payments, verifications, roster reopenings.
 - Server-side validation of every submission; the client cannot set the amount or the IIIT.
-- Proofs are private; they are streamed only to the owning IIIT or an admin, with `no-store`.
-- Upload checks MIME type, size and file signature; payment submission re-checks the stored object and its IIIT folder.
-- Passwords are random per account and written only to the git-ignored `.private/` folder.
-
-**Known gaps:** no login rate limiting, no server-side session revocation, no security headers or CSP configured.
+- Proofs are private, streamed only to the owning IIIT or the admin; upload checks type, size and file signature; replaced proofs are deleted.
+- IIIT passwords are random and written only to the git-ignored `.private/` folder; the admin password is never stored in the repository.
 
 ==================================================
 ## 10. TESTING
 ==================================================
 
-- `npm run lint`: passes with 5 image and font warnings.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm test`: 36 unit tests for the rules engine, validation-to-slot mapping, schemas and CSV escaping.
+- `npm run test:e2e`: 50 browser checks of the registration, payment, login and admin screens with every API call mocked (needs a running server; `E2E_BASE_URL`).
+- `npm run test:smoke` (`tests/smoke-api.mjs`): every API route plus session revocation, CSRF blocking, headers and login lockout, against an isolated database branch only.
+- `npm run test:db` (`tests/db-integration.mjs`): runs only with a separate `TEST_DATABASE_URL`.
 - `npm run env:check`: deployment preflight.
-- `npm run test:smoke` (`tests/smoke-api.mjs`): exercises every API route against an isolated Neon branch; refuses to run against the `.env.local` database.
-- `tests/test_backend.js`: rule, schema, session and CSV checks plus a database section. **The database section writes to `DATABASE_URL`; do not run it against production.**
-- No unit test runner is configured yet.
 
 ==================================================
 ## 11. DEPLOYMENT
 ==================================================
 
-Deploy on any Node.js 22 host. Set the server variables listed in `README.md`, set `NEXT_PUBLIC_SITE_URL`, run `npm run db:migrate`, then `npm run env:check` in the deployment environment before distributing credentials. Keep `SESSION_SECRET` identical across instances.
+See `HOSTING_REQUIREMENTS.md` for sizes and server requirements. Deploy on any Node.js 22 host. Set the server variables listed in `README.md`, set `NEXT_PUBLIC_SITE_URL`, run `npm run db:migrate`, then `npm run env:check` in the deployment environment before distributing credentials. Keep `SESSION_SECRET` identical across instances.
 
 ==================================================
 ## 12. CURRENT STATUS
@@ -157,12 +163,13 @@ Deploy on any Node.js 22 host. Set the server variables listed in `README.md`, s
 | Area | Status |
 |---|---|
 | Public website | Done |
-| Authentication, roles, named admins | Done |
+| Authentication, server-side sessions, single admin | Done |
+| Security hardening (rate limits, headers, CSRF, audit) | Done |
 | Roster builder, validation, review, lock | Done |
 | Cloud drafts with conflict handling | Done |
 | Payment proof, UPI QR, admin verification | Done (QR needs official UPI details) |
 | Admin dashboard and CSV export | Done |
-| Automated tests | Smoke test only |
+| Automated tests | Unit, browser and API smoke suites |
 | Production deployment | Not yet done |
 
 ==================================================
@@ -180,8 +187,8 @@ Deploy on any Node.js 22 host. Set the server variables listed in `README.md`, s
 ==================================================
 
 1. **Contingent limit:** the rulebook (Table 1) states 130 per IIIT (90 men, 40 women); the code allows 150 with no gender cap. Confirm with the Sports Board.
-2. **Fee:** the rulebook states Rs 2,000 + 18% GST (Rs 2,360) per participant; the code charges Rs 2,500, hard-coded in several files. Confirm and centralize.
+2. **Fee:** the rulebook states Rs 2,000 + 18% GST (Rs 2,360) per participant; the code charges Rs 2,500 (`GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT`). Confirm.
 3. **Not modelled:** Rs 25,000 caution deposit; signed entry form with photo and Dean's endorsement.
-4. **Admin statistics** count only `submitted` registrations, while the entries list also includes `payment_pending`.
-5. **Hardening:** login rate limiting, session revocation, security headers.
-6. **Operations:** registration deadline, admin correction or unlock path, audit log, cleanup of replaced proof files.
+4. **Hosting:** awaiting the institute's reply on PostgreSQL and storage; currently on Neon.
+5. **Content:** 9th-edition logo, Squash vs Handball in the events carousel, sponsor list, Employees' Sports Meet section, higher-resolution gallery photos.
+6. **Faculty/officials registration** (if required) is not a feature yet; one coordinator account per IIIT.

@@ -40,23 +40,32 @@ npm run db:seed
 npm run dev
 ```
 
-The seed creates one admin and 25 IIIT accounts with **different random passwords**. It writes them to `.private/seed-credentials.json` with restricted permissions. This file is ignored by Git. Keep a secure copy and distribute each account password only to its coordinator. Re-running the seed does not overwrite existing accounts or their passwords.
+The seed creates the 25 IIIT accounts with **different random passwords** and writes them to `.private/seed-credentials.json` with restricted permissions. This file is ignored by Git. Keep a secure copy and distribute each account password only to its coordinator. Re-running the seed does not overwrite existing accounts or their passwords.
 
-To add a named admin manually, first apply migrations, then set `ADMIN_EMAIL`, `ADMIN_USERNAME`, and `ADMIN_NAME` for one command:
+There is exactly one organizer admin. Create or update it (and remove any other admin accounts) with:
 
 ```bash
-ADMIN_EMAIL=organizer@example.org ADMIN_USERNAME=organizer ADMIN_NAME="Organizer Name" npm run db:add-admin
+ADMIN_EMAIL=sports@iiitdm.ac.in ADMIN_PASSWORD='…' npm run db:set-admin -- --remove-other-admins
 ```
 
-The command generates a unique random password and saves it in `.private/admin-accounts/<username>.json` with restricted permissions. Give that credential only to its admin. Admins can sign in with their email or username. The faculty contact email entered by a coordinator is registration data and never grants admin access. Existing seeded `admin` access remains until it is explicitly retired.
-
-The admin dashboard's **Admin Accounts** tab lists names, emails, usernames, and creation dates. It never returns password hashes or generated passwords to the browser. Run `npm run env:check` after adding the first named admin.
+The password is read from the environment and never stored in the repository. Changing it signs that admin out everywhere. Admins sign in with their email or username; the faculty contact email entered by a coordinator never grants admin access. The admin dashboard's **Admin Accounts** tab lists admins without exposing password hashes.
 
 Open `http://localhost:3000/login`. Draft registrations are saved to Neon for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in PostgreSQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
 
 When the sports cell supplies its verified UPI ID and payee name, set the two payment variables in the server environment and redeploy. The payment page then generates a UPI QR for the authoritative student count and ₹2,500 per student. Coordinators upload a proof and enter the UTR; an organizer must check the bank statement and mark the payment verified in the admin view.
 
 After approval, the coordinator's locked registration page updates its payment status while open (within about 15 seconds, or immediately with **Check status now**). The approval endpoint requires an admin session, the submitted UTR and amount, and a confirmation that the bank credit was checked.
+
+## Security
+
+- **Sessions** are stored server-side (`sessions` table). The cookie holds a random token and the database only its HMAC. Admin sessions last 60 days and IIIT sessions 30 days, extended while in use; signing in on another device does not sign out the first. Signing out ends only that device's session; deleting a user ends all of theirs.
+- **Rate limits** (stored in PostgreSQL, shared by all instances): sign-in 30 attempts per IP and 8 failed attempts per account per 15 minutes; uploads, roster/payment submissions, autosave, downloads and admin actions are capped per user.
+- **Headers:** Content-Security-Policy, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy and Cross-Origin-Opener-Policy on every response; API responses are `no-store`.
+- **Cross-site requests:** state-changing API calls must come from this site (`src/proxy.js`), on top of SameSite cookies.
+- **Errors:** server failures return a generic message; details stay in the server log.
+- **Audit log:** sign-ins (including failures and lockouts), roster locks, payment submissions, verifications and roster reopenings are recorded in `audit_log`.
+- **Roster correction:** an admin can reopen a roster that is not yet bank-verified from **IIITs & Payments**; it becomes the coordinator's draft again.
+- Behind a reverse proxy, forward `Host`, `X-Forwarded-For` and `X-Forwarded-Proto`, and set `TRUSTED_PROXY_HOPS` to the number of proxies. See `HOSTING_REQUIREMENTS.md`.
 
 ## Verification
 
@@ -66,7 +75,7 @@ npm run lint
 npm run build -- --webpack
 ```
 
-`env:check` validates the session secret and official UPI settings, connects to PostgreSQL, checks the registration, student, draft, and payment tables plus all 25 IIIT accounts and a named admin. It then writes, reads, and deletes a small temporary object in the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
+`env:check` validates the session secret and official UPI settings, connects to PostgreSQL, checks the registration, student, draft, payment, session, rate-limit and audit tables plus all 25 IIIT accounts and the organizer admin. It then writes, reads, and deletes a small temporary object in the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
 
 The webpack flag is a supported Next.js build option. It is useful where the default Turbopack build cannot start its local worker process.
 

@@ -1,3 +1,5 @@
+> **Status note (21 October 2026):** this handoff predates cloud drafts, payments, server-side sessions, the single organizer admin and the redesign. See `README.md`, `PROJECT_OVERVIEW.md` and `HOSTING_REQUIREMENTS.md` for the current system.
+
 # CONTENT REFERENCE GUIDE
 ## 9th Inter-IIIT Sports Meet 2026
 

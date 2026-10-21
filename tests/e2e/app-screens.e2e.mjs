@@ -1,0 +1,151 @@
+/**
+ * Layout, copy and accessibility checks for the registration, payment,
+ * login and admin screens. Every /api call is mocked; nothing reaches the
+ * database or storage. Needs a running server: E2E_BASE_URL
+ * (default http://localhost:3000).
+ */
+import { BASE_URL, blockApi, createReporter, json, launchBrowser, screenshotPath } from "./helpers.mjs";
+
+const browser = await launchBrowser();
+const { check, axe, finish } = createReporter("app-screens");
+const iiitUser = { id: 1, username: "iiit-kota", role: "iiit", iiitName: "IIIT Kota", iiitCode: "iiit-kota" };
+const entries = [
+  { id: 1, sportId: "athletics", eventId: "100m", gender: "M", isReserve: false, studentName: "RAVI", rollNumber: "R1" },
+  { id: 2, sportId: "athletics", eventId: "100m", gender: "M", isReserve: true, studentName: "ARUN", rollNumber: "R2" },
+  { id: 3, sportId: "chess", eventId: "team", gender: "mixed", isReserve: false, studentName: "ANITA", rollNumber: "R3" },
+];
+
+try {
+  // Draft form, mobile
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    await blockApi(page, iiitUser);
+    await page.route("**/api/registration", (r) => json(r, { data: { submitted: false } }));
+    await page.route("**/api/registration/draft", (r) => (r.request().method() === "PUT"
+      ? json(r, { data: { ...r.request().postDataJSON(), revision: 2, updatedAt: new Date().toISOString() } })
+      : json(r, { data: {
+        revision: 1,
+        updatedAt: new Date().toISOString(),
+        contactDetails: { contactName: "Dr A", contactEmail: "a@x.in", contactPhone: "+91 9876543210", notes: "" },
+        slotsMap: { "kabaddi|team|M|main|0": { rollNumber: "K1", name: "ANITA", gender: "F" } },
+      } })));
+    await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
+    await page.waitForSelector("text=Kabaddi");
+    check("site navbar hidden on /register", (await page.locator("nav").count()) === 0 && (await page.locator("footer").count()) === 0);
+    check("home link in registration header", (await page.getByRole("link", { name: /Home/ }).count()) === 1);
+    check("logout has accessible name on mobile", (await page.getByRole("button", { name: "Log out" }).count()) === 1);
+    await page.waitForTimeout(1500);
+    check("save status visible on mobile", await page.locator("header").getByText("Saved", { exact: true }).isVisible());
+    await page.getByRole("button", { name: /Kabaddi/ }).click();
+    await page.screenshot({ path: screenshotPath("draft-mobile") });
+    await axe(page, "draft form");
+    await ctx.close();
+  }
+
+  // Payment pending, mobile
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    await blockApi(page, iiitUser);
+    await page.route("**/api/registration", (r) => json(r, { data: {
+      submitted: true,
+      registration: { status: "payment_pending", iiitName: "IIIT Kota", iiitCode: "iiit-kota", totalStudentsCount: 3 },
+      students: [],
+      entries,
+    } }));
+    await page.route("**/api/payment/upi", (r) => json(r, { configured: false }));
+    await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
+    await page.waitForSelector("text=Roster locked — payment pending");
+    check("steps show roster done", (await page.locator("[aria-current=step]").innerText()).includes("Payment submitted"));
+    await page.getByText(/Check your locked roster/).click();
+    check("roster summary lists names", await page.getByText("ARUN").isVisible() && await page.getByText("Athletics · 100 M").isVisible());
+    check("sports cell email shown", (await page.locator("a[href='mailto:sports@iiitdm.ac.in']").count()) >= 1);
+    await page.getByRole("button", { name: "Submit payment" }).click();
+    await page.waitForTimeout(200);
+    check("submit with errors focuses first invalid field", (await page.evaluate(() => document.activeElement?.getAttribute("aria-invalid"))) === "true");
+    await page.fill("#payment-transaction-id", "AB");
+    check("UTR length error live", await page.getByText("must be 5 to 64 characters").isVisible());
+    await page.fill("#payment-transaction-id", "ABCDEF123");
+    check("UTR error clears when fixed", (await page.getByText("must be 5 to 64 characters").count()) === 0);
+    await page.screenshot({ path: screenshotPath("payment-pending-mobile"), fullPage: true });
+    await axe(page, "payment pending");
+    await ctx.close();
+  }
+
+  // Locked and verified
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage();
+    await blockApi(page, iiitUser);
+    await page.route("**/api/registration", (r) => json(r, { data: {
+      submitted: true,
+      registration: { status: "submitted", iiitName: "IIIT Kota", iiitCode: "iiit-kota", totalStudentsCount: 3, contactName: "Dr A", submittedAt: new Date().toISOString() },
+      students: [{}, {}, {}],
+      entries,
+      payment: { uniqueStudentCount: 3, amount: 7500, transactionId: "UTR1", paymentMode: "UPI", proofPathname: "p", verificationStatus: "verified", verifiedAt: new Date().toISOString() },
+    } }));
+    await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
+    await page.waitForSelector("text=Registration complete");
+    check("amount labelled paid", await page.getByText("Amount paid").isVisible() && (await page.getByText("Amount Payable").count()) === 0);
+    check("locked roster visible", await page.getByText("Locked roster").isVisible() && await page.getByText("ANITA").isVisible());
+    await page.screenshot({ path: screenshotPath("locked-verified"), fullPage: true });
+    await axe(page, "locked");
+    await ctx.close();
+  }
+
+  // Login
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const page = await ctx.newPage();
+    await page.route("**/api/**", (r) => json(r, { error: "unmocked" }, 599));
+    await page.goto(`${BASE_URL}/login`, { waitUntil: "networkidle" });
+    check("login heading", (await page.locator("h1").textContent()).trim() === "Sign in");
+    check("one main landmark", (await page.locator("main").count()) === 1);
+    check("skip link present", (await page.getByRole("link", { name: "Skip to content" }).count()) === 1);
+    await page.screenshot({ path: screenshotPath("login-mobile") });
+    await axe(page, "login");
+    await ctx.close();
+  }
+
+  // Admin
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await ctx.newPage();
+    await blockApi(page, { id: 9, username: "organizer", role: "admin", displayName: "Organizer" });
+    await page.route("**/api/admin/stats", (r) => json(r, { data: { totalIIITs: 25, lockedIIITs: 3, paymentsSubmitted: 2, paymentsVerified: 1, totalStudents: 40, totalEventEntries: 60 } }));
+    await page.route("**/api/admin/accounts", (r) => json(r, { error: "x" }, 500));
+    await page.route("**/api/admin/registrations", (r) => json(r, { data: [
+      { iiitCode: "iiit-kota", iiitName: "IIIT Kota", isSubmitted: true, status: "submitted", totalStudentsCount: 4, contactName: "Dr A", contactEmail: "a@x.in", contactPhone: "123456", paymentAmount: 10000, paymentTransactionId: "UTR1", paymentProofPathname: "p", paymentVerificationStatus: "pending" },
+      { iiitCode: "iiit-una", iiitName: "IIIT Una", isSubmitted: true, status: "submitted", totalStudentsCount: 2, paymentAmount: 5000, paymentProofPathname: "p", paymentVerificationStatus: "verified" },
+      { iiitCode: "iiit-pune", iiitName: "IIIT Pune", isSubmitted: true, status: "payment_pending", totalStudentsCount: 2 },
+      { iiitCode: "iiit-surat", iiitName: "IIIT Surat", isSubmitted: false, status: null },
+    ] }));
+    await page.route("**/api/admin/entries?*", (r) => json(r, { data: { rows: [
+      { id: 1, iiitName: "IIIT Kota", rollNumber: "R1", studentName: "RAVI", studentGender: "M", sportId: "table_tennis", eventId: "team", eventGender: "M", isReserve: false },
+      { id: 2, iiitName: "IIIT Kota", rollNumber: "R2", studentName: "ARUN", studentGender: "M", sportId: "athletics", eventId: "4x100m_relay", eventGender: "M", isReserve: true },
+    ], total: 2, page: 1, totalPages: 1 } }));
+    await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
+    await page.waitForSelector("text=Rosters locked");
+    check("partial load error shown", await page.getByRole("alert").filter({ hasText: "admin accounts" }).isVisible());
+    check("KPI shows awaiting verification", await page.getByText("1 awaiting verification", { exact: false }).isVisible());
+    check("entries use names", await page.getByRole("cell", { name: "Table Tennis" }).isVisible()
+      && await page.getByRole("cell", { name: "4x100 M Relay" }).isVisible()
+      && await page.getByText("Reserve", { exact: true }).first().isVisible());
+    check("filter labels associated", (await page.getByLabel("Roll Number", { exact: false }).count()) === 1);
+    await page.screenshot({ path: screenshotPath("admin-entries") });
+    await page.getByRole("tab", { name: "IIITs & Payments" }).click();
+    await page.selectOption("#payment-filter", "awaiting_verification");
+    const rows = await page.locator("tbody tr").count();
+    check("payment filter narrows rows", rows === 1, String(rows));
+    await page.selectOption("#payment-filter", "not_submitted");
+    check("not-submitted label", await page.getByText("Not submitted", { exact: true }).first().isVisible());
+    await page.selectOption("#payment-filter", "all");
+    await page.screenshot({ path: screenshotPath("admin-payments-all") });
+    await axe(page, "admin payments");
+    await ctx.close();
+  }
+} finally {
+  await browser.close();
+  finish();
+}

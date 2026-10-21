@@ -17,6 +17,11 @@ export default function AdminDashboardPage() {
   const [registrationsOverview, setRegistrationsOverview] = useState([]);
   const [adminAccounts, setAdminAccounts] = useState([]);
   const [verificationTarget, setVerificationTarget] = useState(null);
+  const [reopenTarget, setReopenTarget] = useState(null);
+  const [reopenConfirm, setReopenConfirm] = useState("");
+  const [reopenError, setReopenError] = useState("");
+  const [reopenBusy, setReopenBusy] = useState(false);
+  const [notice, setNotice] = useState("");
   const [verificationUtr, setVerificationUtr] = useState("");
   const [verificationAmount, setVerificationAmount] = useState("");
   const [bankConfirmed, setBankConfirmed] = useState(false);
@@ -171,6 +176,43 @@ export default function AdminDashboardPage() {
   }, [verificationBusy]);
   const verificationPanelRef = useModalFocus(Boolean(verificationTarget), closeVerification);
 
+  const closeReopen = useCallback(() => {
+    if (!reopenBusy) setReopenTarget(null);
+  }, [reopenBusy]);
+  const reopenPanelRef = useModalFocus(Boolean(reopenTarget), closeReopen);
+
+  const openReopen = (row) => {
+    setReopenTarget(row);
+    setReopenConfirm("");
+    setReopenError("");
+  };
+
+  const submitReopen = async (event) => {
+    event.preventDefault();
+    if (!reopenTarget || reopenBusy) return;
+    setReopenBusy(true);
+    setReopenError("");
+    try {
+      const response = await fetch("/api/admin/registrations/reopen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ iiitCode: reopenTarget.iiitCode, confirmIiitCode: reopenConfirm }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Could not reopen the roster");
+      const regRes = await fetch("/api/admin/registrations");
+      if (regRes.ok) setRegistrationsOverview((await regRes.json()).data || []);
+      refreshStats().catch(() => {});
+      loadEntries(1, appliedFilters);
+      setNotice(`${reopenTarget.iiitName}'s roster is open for editing again. Ask the coordinator to review it and lock it again.`);
+      setReopenTarget(null);
+    } catch (error) {
+      setReopenError(error.message || "Could not reopen the roster");
+    } finally {
+      setReopenBusy(false);
+    }
+  };
+
   const viewIiitEntries = (row) => {
     // The IIIT code matches exactly; a name such as "IIIT Kota" would also match "IIIT Kottayam".
     const nextFilters = { iiit: row.iiitCode, sport: "", event: "", gender: "", rollNumber: "", name: "" };
@@ -281,6 +323,12 @@ export default function AdminDashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {loadError && (
           <div role="alert" className="mb-6 rounded-card border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">{loadError}</div>
+        )}
+        {notice && (
+          <div role="status" className="mb-6 flex items-start justify-between gap-4 rounded-card border border-green-200 bg-green-wash px-4 py-3 text-sm font-semibold text-brand-primary">
+            <span>{notice}</span>
+            <button type="button" onClick={() => setNotice("")} className="shrink-0 underline underline-offset-2">Dismiss</button>
+          </div>
         )}
 
         {/* KPI Cards */}
@@ -601,6 +649,11 @@ export default function AdminDashboardPage() {
                             View entries<span className="sr-only"> for {row.iiitName}</span>
                           </button>
                         )}
+                        {row.status && row.paymentVerificationStatus !== "verified" && (
+                          <button type="button" onClick={() => openReopen(row)} className="mt-1 block text-sm font-semibold text-red-700 underline underline-offset-2 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
+                            Reopen for edits<span className="sr-only"> for {row.iiitName}</span>
+                          </button>
+                        )}
                       </td>
                       <td className="px-4 py-3 align-top text-ink-soft">
                         {row.contactName ? (
@@ -704,6 +757,28 @@ export default function AdminDashboardPage() {
               </table>
             </div>
           </section>
+        )}
+        {reopenTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/75 p-4 backdrop-blur-[2px]" onClick={(event) => { if (event.target === event.currentTarget) closeReopen(); }}>
+            <form ref={reopenPanelRef} onSubmit={submitReopen} role="dialog" aria-modal="true" aria-labelledby="reopen-title" tabIndex={-1} className="w-full max-w-lg rounded-card border border-line bg-paper p-6 shadow-lift outline-none">
+              <p className="eyebrow">Roster correction</p>
+              <h2 id="reopen-title" className="heading-section mt-1 text-[2rem]">Reopen {reopenTarget.iiitName}</h2>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+                <li>The locked roster becomes an editable draft for the coordinator, with all students, events and contact details kept.</li>
+                {reopenTarget.paymentProofPathname && <li className="font-semibold text-red-800">The submitted payment details and proof are deleted. The coordinator must submit payment again; refund or adjust any amount already paid outside this system.</li>}
+                <li>The IIIT drops out of the entries list and statistics until it locks the roster again.</li>
+              </ul>
+              <div className="mt-5">
+                <label htmlFor="reopen-confirm" className="block text-sm font-semibold text-ink">Type <span className="font-mono">{reopenTarget.iiitCode}</span> to confirm</label>
+                <input id="reopen-confirm" value={reopenConfirm} onChange={(event) => setReopenConfirm(event.target.value)} autoComplete="off" spellCheck={false} className="mt-1.5 w-full rounded-control border border-line bg-white px-3.5 py-2.5 font-mono text-[15px] text-ink focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" />
+              </div>
+              {reopenError && <p role="alert" className="mt-4 rounded-control border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{reopenError}</p>}
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={closeReopen} disabled={reopenBusy} className="btn btn-outline">Cancel</button>
+                <button type="submit" disabled={reopenBusy || reopenConfirm.trim() !== reopenTarget.iiitCode} className="btn bg-red-700 text-white hover:bg-red-800">{reopenBusy ? "Reopening…" : "Reopen roster"}</button>
+              </div>
+            </form>
+          </div>
         )}
         {verificationTarget && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/75 p-4 backdrop-blur-[2px]" onClick={(event) => { if (event.target === event.currentTarget) closeVerification(); }}>

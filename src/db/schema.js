@@ -109,3 +109,52 @@ export const paymentTransactions = pgTable("payment_transactions", {
   verifiedBy: varchar("verified_by", { length: 64 }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/**
+ * 6. SESSIONS TABLE
+ * Server-side login sessions. The cookie holds a random token; only its
+ * HMAC is stored, so a database leak does not expose usable cookies.
+ * A user may hold several sessions (one per device).
+ */
+export const sessions = pgTable("sessions", {
+  id: varchar("id", { length: 64 }).primaryKey(), // HMAC-SHA256 of the cookie token, hex
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  userAgent: varchar("user_agent", { length: 256 }),
+  ip: varchar("ip", { length: 64 }),
+}, (table) => [
+  index("sessions_user_idx").on(table.userId),
+  index("sessions_expires_idx").on(table.expiresAt),
+]);
+
+/**
+ * 7. RATE LIMITS TABLE
+ * Fixed-window counters shared by every app instance.
+ */
+export const rateLimits = pgTable("rate_limits", {
+  key: varchar("key", { length: 200 }).primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).defaultNow().notNull(),
+  count: integer("count").default(0).notNull(),
+}, (table) => [
+  index("rate_limits_window_idx").on(table.windowStart),
+]);
+
+/**
+ * 8. AUDIT LOG TABLE
+ * Security-relevant actions: logins, submissions, verifications, roster reopen.
+ */
+export const auditLog = pgTable("audit_log", {
+  id: serial("id").primaryKey(),
+  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+  actor: varchar("actor", { length: 254 }),
+  role: varchar("role", { length: 20 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  target: varchar("target", { length: 128 }),
+  ip: varchar("ip", { length: 64 }),
+  details: jsonb("details"),
+}, (table) => [
+  index("audit_log_at_idx").on(table.at),
+  index("audit_log_action_idx").on(table.action),
+]);
