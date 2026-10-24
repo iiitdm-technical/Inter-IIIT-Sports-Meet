@@ -84,7 +84,7 @@ Admin Accounts (read-only list)
 
 Defined in `src/lib/sports/config.js` and enforced by `src/lib/validation/rules.js`:
 
-- **Unique students:** at most 150 per IIIT (see section 14: the rulebook states 130).
+- **Unique students:** at most 150 per IIIT, with at most 100 men and 50 women.
 - **Identity:** a student is identified by roll number; roll numbers and names are trimmed and upper-cased. Conflicting details for one roll number are rejected.
 - **Valid events only:** sport, category and event must exist in the catalogue; team sports use the single `team` event; reserves are allowed only where configured.
 - **Squad and event limits:** per-sport team limits and per-event participant and reserve limits.
@@ -92,6 +92,8 @@ Defined in `src/lib/sports/config.js` and enforced by `src/lib/validation/rules.
 - **Aquatics:** at most 3 individual events per student; relays excluded.
 - **Other sports:** at most 2 per student; athletics and aquatics are exempt.
 - **Gender:** men's events accept male students only and women's events female students only. Chess is a combined (mixed) team of up to 4.
+- **Mixed relays:** athletics 4x100 M and 4x400 M, aquatics 4x50 M Free Style and 4x50 M Medley. Exactly 2 men and 2 women per team (slots are gender-fixed), reserves 1 man and 1 woman; they do not count toward the 3 individual event limit.
+- **One gender per student:** a roll number entered as male cannot fill a female slot anywhere, and vice versa.
 - **No minimum:** an IIIT may enter any number of sports.
 
 ==================================================
@@ -186,7 +188,7 @@ See `HOSTING_REQUIREMENTS.md` for sizes and server requirements. Deploy on any N
 ## 14. OPEN ITEMS
 ==================================================
 
-1. **Contingent limit:** the rulebook (Table 1) states 130 per IIIT (90 men, 40 women); the code allows 150 with no gender cap. Confirm with the Sports Board.
+1. **Contingent limit:** set to 150 per IIIT (100 men, 50 women) as decided by the organisers; the rulebook (Table 1) states 130 (90 men, 40 women).
 2. **Fee:** the rulebook states Rs 2,000 + 18% GST (Rs 2,360) per participant; the code charges Rs 2,500 (`GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT`). Confirm.
 3. **Not modelled:** Rs 25,000 caution deposit; signed entry form with photo and Dean's endorsement.
 4. **Hosting:** awaiting the institute's reply on PostgreSQL and storage; currently on Neon.

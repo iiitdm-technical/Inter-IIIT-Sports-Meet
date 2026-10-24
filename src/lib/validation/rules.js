@@ -1,5 +1,11 @@
 import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
 
+function describeSplit(genders) {
+  const men = genders.filter((g) => g === "M").length;
+  const women = genders.filter((g) => g === "F").length;
+  return `${men} ${men === 1 ? "man" : "men"} and ${women} ${women === 1 ? "woman" : "women"}`;
+}
+
 /**
  * Business Rule Validator for Inter-IIIT Sports Meet Registrations.
  *
@@ -38,6 +44,24 @@ export function validateRegistrationRules({ students, entries }) {
   if (uniqueRollNumbers.size > GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT) {
     fail(
       `Maximum unique students limit exceeded: ${uniqueRollNumbers.size} registered (Maximum allowed is ${GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT} students per IIIT).`
+    );
+  }
+
+  // 1b. Validate per-gender caps (100 men, 50 women)
+  let maleCount = 0;
+  let femaleCount = 0;
+  for (const s of studentMap.values()) {
+    if (s.gender === "M") maleCount++;
+    else if (s.gender === "F") femaleCount++;
+  }
+  if (maleCount > GLOBAL_RULES.MAX_MALE_STUDENTS_PER_IIIT) {
+    fail(
+      `Maximum men limit exceeded: ${maleCount} male students registered (Maximum allowed is ${GLOBAL_RULES.MAX_MALE_STUDENTS_PER_IIIT} per IIIT).`
+    );
+  }
+  if (femaleCount > GLOBAL_RULES.MAX_FEMALE_STUDENTS_PER_IIIT) {
+    fail(
+      `Maximum women limit exceeded: ${femaleCount} female students registered (Maximum allowed is ${GLOBAL_RULES.MAX_FEMALE_STUDENTS_PER_IIIT} per IIIT).`
     );
   }
 
@@ -212,6 +236,20 @@ export function validateRegistrationRules({ students, entries }) {
     }
   }
 
+  // Mixed relays: the number of men and women may not exceed the fixed split.
+  function checkGenderSplit(eventName, sportName, rolls, allowedGenders, noun, eventTarget) {
+    for (const g of ["M", "F"]) {
+      const allowed = allowedGenders.filter((x) => x === g).length;
+      const entered = rolls.filter((roll) => studentMap.get(roll)?.gender === g);
+      if (entered.length > allowed) {
+        fail(
+          `${sportName} ${eventName} allows ${allowed} ${g === "M" ? "male" : "female"} ${noun}, but ${entered.length} are entered. The team must be ${describeSplit(allowedGenders)}.`,
+          { ...eventTarget, rolls: entered }
+        );
+      }
+    }
+  }
+
   // 4. Verify Sport/Event Quotas & Squad Limits
   for (const [, slot] of eventParticipationMap.entries()) {
     const { sportId, gender, eventId, mains, reserves } = slot;
@@ -264,6 +302,18 @@ export function validateRegistrationRules({ students, entries }) {
             `Reserve limit exceeded for ${sportConfig.name} (${gender} - ${ev.name}): ${reserves.length} reserves (Maximum allowed is ${ev.maxReserves}).`,
             eventTarget
           );
+        }
+        if (ev.slotGenders) {
+          checkGenderSplit(ev.name, sportConfig.name, mains, ev.slotGenders, "runners", eventTarget);
+          checkGenderSplit(ev.name, sportConfig.name, reserves, ev.reserveGenders || [], "reserves", eventTarget);
+          // A mixed relay team must be complete: exactly the configured split.
+          if (mains.length > 0 && mains.length < ev.slotGenders.length) {
+            const need = describeSplit(ev.slotGenders);
+            fail(
+              `${sportConfig.name} ${ev.name} needs exactly ${need}: only ${mains.length} entered.`,
+              eventTarget
+            );
+          }
         }
       }
     }

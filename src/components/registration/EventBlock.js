@@ -5,7 +5,9 @@ import { getSlotKey, getSlotInputId } from "@/lib/registration/client-utils";
 
 const GENDER_LABELS = { M: "Men", F: "Women", mixed: "Combined" };
 
-export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, studentRegistry, errorSlotKeys }) {
+const SLOT_GENDER_LABELS = { M: "Man", F: "Woman" };
+
+export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, slotGenders, reserveGenders, studentRegistry, errorSlotKeys }) {
 
   // Is it a combined event like Chess where gender is mixed?
   const isCombined = sportConfig.type === "combined_team" || gender === "mixed";
@@ -17,15 +19,19 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
     const key = getSlotKey(sportConfig.id, eventId, gender, role, i);
     const data = slotsMap[key];
     const knownName = data?.rollNumber ? studentRegistry.get(data.rollNumber.trim().toUpperCase())?.name : null;
+    // Mixed relays fix each slot's gender so only the 2 men + 2 women split is possible.
+    const slotGender = (role === "main" ? slotGenders : reserveGenders)?.[i] || fixedSlotGender;
+    const baseLabel = role === "main" ? `Slot ${i + 1}` : `Reserve ${i + 1}`;
+    const label = slotGenders && slotGender ? `${baseLabel} · ${SLOT_GENDER_LABELS[slotGender]}` : baseLabel;
     return (
       <ParticipantSlot
         key={key}
         inputId={getSlotInputId(key)}
-        label={role === "main" ? `Slot ${i + 1}` : `Reserve ${i + 1}`}
+        label={label}
         context={context}
-        slotData={data}
-        onChange={(val) => onChangeSlot(key, val)}
-        fixedGender={fixedSlotGender}
+        slotData={slotGender && data ? { ...data, gender: slotGender } : data}
+        onChange={(val) => onChangeSlot(key, slotGender ? { ...val, gender: slotGender } : val)}
+        fixedGender={slotGender}
         isReserve={role === "reserve"}
         knownName={knownName}
         hasError={errorSlotKeys.has(key)}
@@ -41,7 +47,9 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h4 className="heading-card">{eventName}</h4>
         <p className="meta">
-          Up to {maxParticipants} {maxParticipants === 1 ? "participant" : "participants"}{maxReserves ? ` + ${maxReserves} ${maxReserves === 1 ? "reserve" : "reserves"}` : ""}
+          {slotGenders
+            ? `Exactly 2 men + 2 women${maxReserves ? ` · reserves: 1 man + 1 woman` : ""}`
+            : <>Up to {maxParticipants} {maxParticipants === 1 ? "participant" : "participants"}{maxReserves ? ` + ${maxReserves} ${maxReserves === 1 ? "reserve" : "reserves"}` : ""}</>}
         </p>
       </div>
       <div className="space-y-2">

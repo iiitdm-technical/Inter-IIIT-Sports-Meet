@@ -196,6 +196,25 @@ export function getLiveValidationErrors(contactDetails, slotsMap) {
     }
   }
 
+  // 2b. One student, one gender: a roll number entered as a woman cannot also
+  // fill a man's slot (e.g. a mixed relay "Man" slot), and vice versa.
+  const genderSlots = new Map(); // roll -> { M: [slotKeys], F: [slotKeys] }
+  for (const [key, slotData] of Object.entries(slotsMap)) {
+    const roll = slotData?.rollNumber?.trim().toUpperCase();
+    if (!roll || (slotData.gender !== "M" && slotData.gender !== "F")) continue;
+    if (!genderSlots.has(roll)) genderSlots.set(roll, { M: [], F: [] });
+    genderSlots.get(roll)[slotData.gender].push(key);
+  }
+  for (const [roll, byGender] of genderSlots) {
+    if (byGender.M.length && byGender.F.length) {
+      issues.push({
+        message: `Roll number ${roll} is entered as male in one slot and female in another. A student cannot be placed in a slot for the other gender.`,
+        slotKeys: [...byGender.M, ...byGender.F],
+        fieldId: null,
+      });
+    }
+  }
+
   // 3. Use the authoritative business rules
   if (payload.entries.length > 0) {
     const ruleResult = validateRegistrationRules(payload);

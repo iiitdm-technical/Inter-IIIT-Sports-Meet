@@ -6,6 +6,8 @@
 
 export const GLOBAL_RULES = {
   MAX_UNIQUE_STUDENTS_PER_IIIT: 150,
+  MAX_MALE_STUDENTS_PER_IIIT: 100,
+  MAX_FEMALE_STUDENTS_PER_IIIT: 50,
   MAX_NORMAL_SPORTS_PER_STUDENT: 2,
   MAX_ATHLETICS_INDIVIDUAL_EVENTS: 3,
   MAX_AQUATICS_INDIVIDUAL_EVENTS: 3,
@@ -14,13 +16,20 @@ export const GLOBAL_RULES = {
   EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics'],
 };
 
+// Mixed relays run with exactly 2 men and 2 women; each slot has a fixed gender.
+// Reserves are one man and one woman, so either can replace a runner of the same gender.
+const MIXED_RELAY_SPLIT = {
+  slotGenders: ['M', 'M', 'F', 'F'],
+  reserveGenders: ['M', 'F'],
+};
+
 export const SPORTS_CONFIG = {
   athletics: {
     id: 'athletics',
     name: 'Athletics',
     type: 'event_based',
     isExemptFromSportLimit: true,
-    genders: ['M', 'F'],
+    genders: ['M', 'F', 'mixed'],
     events: {
       M: [
         { id: '100m', name: '100 M', maxParticipants: 2, maxReserves: 1, isRelay: false },
@@ -53,6 +62,10 @@ export const SPORTS_CONFIG = {
         { id: 'discus_throw', name: 'Discus Throw', maxParticipants: 2, maxReserves: 1, isRelay: false },
         { id: 'hurdles_110m', name: 'Hurdles 110 M', maxParticipants: 2, maxReserves: 1, isRelay: false },
       ],
+      mixed: [
+        { id: 'mixed_4x100m_relay', name: '4x100 M Mixed Relay', maxParticipants: 4, maxReserves: 2, isRelay: true, ...MIXED_RELAY_SPLIT },
+        { id: 'mixed_4x400m_relay', name: '4x400 M Mixed Relay', maxParticipants: 4, maxReserves: 2, isRelay: true, ...MIXED_RELAY_SPLIT },
+      ],
     },
     maxEventsPerStudent: 3, // excluding relays
   },
@@ -62,7 +75,7 @@ export const SPORTS_CONFIG = {
     name: 'Aquatics',
     type: 'event_based',
     isExemptFromSportLimit: true,
-    genders: ['M', 'F'],
+    genders: ['M', 'F', 'mixed'],
     events: {
       M: [
         { id: '50m_freestyle', name: '50 M Free Style', maxParticipants: 2, maxReserves: 0, isRelay: false },
@@ -93,6 +106,10 @@ export const SPORTS_CONFIG = {
         { id: '200m_individual_medley', name: '200 M Individual Medley', maxParticipants: 2, maxReserves: 0, isRelay: false },
         { id: '4x50m_freestyle_relay', name: '4x50 M Free Style Relay', maxParticipants: 4, maxReserves: 2, isRelay: true },
         { id: '4x50m_medley_relay', name: '4x50 M Medley Relay', maxParticipants: 4, maxReserves: 2, isRelay: true },
+      ],
+      mixed: [
+        { id: 'mixed_4x50m_freestyle_relay', name: '4x50 M Mixed Free Style Relay', maxParticipants: 4, maxReserves: 2, isRelay: true, ...MIXED_RELAY_SPLIT },
+        { id: 'mixed_4x50m_medley_relay', name: '4x50 M Mixed Medley Relay', maxParticipants: 4, maxReserves: 2, isRelay: true, ...MIXED_RELAY_SPLIT },
       ],
     },
     maxEventsPerStudent: 3, // excluding relays

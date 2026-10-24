@@ -3,8 +3,8 @@
 import EventBlock from "./EventBlock";
 
 export default function SportSection({ sportConfig, gender, slotsMap, onChangeSlot, studentRegistry, isOpen, onToggle, errorSlotKeys }) {
-  // Each sport appears only in the tab of a category it offers. Chess, the only
-  // combined sport, is listed under 'mixed' and so appears only in Combined.
+  // Each sport appears only in the tab of a category it offers. Chess and the
+  // athletics and aquatics mixed relays are listed under 'mixed' (Combined).
   if (!sportConfig.genders.includes(gender)) {
     return null;
   }
@@ -41,6 +41,8 @@ export default function SportSection({ sportConfig, gender, slotsMap, onChangeSl
         onChangeSlot={onChangeSlot}
         maxParticipants={ev.maxParticipants}
         maxReserves={ev.maxReserves || 0}
+        slotGenders={ev.slotGenders}
+        reserveGenders={ev.reserveGenders}
         studentRegistry={studentRegistry}
         errorSlotKeys={errorSlotKeys}
       />

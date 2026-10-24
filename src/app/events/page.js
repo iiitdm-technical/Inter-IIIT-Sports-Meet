@@ -28,6 +28,9 @@ function describeLimits(sport, gender) {
   }
   const events = sport.events?.[gender] || [];
   const noun = sport.type === 'weight_category_based' ? 'categories' : 'events';
+  if (events.length && events.every((e) => e.slotGenders)) {
+    return { value: events.length, unit: 'mixed relays · 2 men + 2 women per team' };
+  }
   const perEvent = Math.max(...events.filter((e) => !e.isRelay).map((e) => e.maxParticipants));
   const reserves = Math.max(0, ...events.filter((e) => !e.isRelay).map((e) => e.maxReserves || 0));
   return {

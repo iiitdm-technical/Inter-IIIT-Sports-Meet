@@ -19,6 +19,8 @@ const contact = {
 describe("sport catalogue", () => {
   test("matches the rulebook parameters the rules depend on", () => {
     assert.equal(GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT, 150);
+    assert.equal(GLOBAL_RULES.MAX_MALE_STUDENTS_PER_IIIT, 100);
+    assert.equal(GLOBAL_RULES.MAX_FEMALE_STUDENTS_PER_IIIT, 50);
     assert.equal(GLOBAL_RULES.MAX_NORMAL_SPORTS_PER_STUDENT, 2);
     assert.equal(GLOBAL_RULES.MAX_ATHLETICS_INDIVIDUAL_EVENTS, 3);
     assert.equal(GLOBAL_RULES.MAX_AQUATICS_INDIVIDUAL_EVENTS, 3);
@@ -52,21 +54,69 @@ describe("validateRegistrationRules", () => {
     assert.deepEqual(result.issues, []);
   });
 
-  test("accepts 150 unique students and rejects 151", () => {
-    const roster = Array.from({ length: 150 }, (_, i) => student(`R${i + 1}`));
-    assert.equal(hasError(validate(roster, []), "Maximum unique students"), false);
-    const over = validate([...roster, student("R151")], []);
+  test("accepts 100 men and 50 women and rejects a 151st student", () => {
+    const roster = [
+      ...Array.from({ length: 100 }, (_, i) => student(`M${i + 1}`, "M")),
+      ...Array.from({ length: 50 }, (_, i) => student(`F${i + 1}`, "F")),
+    ];
+    const ok = validate(roster, []);
+    assert.equal(ok.isValid, true);
+    const over = validate([...roster, student("X151", "M")], []);
     assert.equal(over.isValid, false);
     assert.ok(hasError(over, "Maximum unique students limit exceeded"));
   });
 
+  test("caps men at 100 and women at 50", () => {
+    const men = Array.from({ length: 101 }, (_, i) => student(`M${i + 1}`, "M"));
+    assert.ok(hasError(validate(men, []), "Maximum men limit exceeded"));
+    assert.equal(hasError(validate(men.slice(0, 100), []), "Maximum men limit exceeded"), false);
+    const women = Array.from({ length: 51 }, (_, i) => student(`F${i + 1}`, "F"));
+    assert.ok(hasError(validate(women, []), "Maximum women limit exceeded"));
+    assert.equal(hasError(validate(women.slice(0, 50), []), "Maximum women limit exceeded"), false);
+  });
+
   test("counts a student entered in several events once", () => {
-    const roster = Array.from({ length: 150 }, (_, i) => student(`R${i + 1}`));
+    const roster = Array.from({ length: 100 }, (_, i) => student(`R${i + 1}`));
     const entries = roster.flatMap(({ rollNumber }) => [
       entry("cricket", "team", "M", rollNumber),
       entry("athletics", "100m", "M", rollNumber),
     ]);
     assert.equal(hasError(validate(roster, entries), "Maximum unique students"), false);
+  });
+
+  test("accepts a mixed relay of exactly 2 men and 2 women", () => {
+    const roster = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F")];
+    for (const [sportId, eventId] of [
+      ["athletics", "mixed_4x100m_relay"],
+      ["athletics", "mixed_4x400m_relay"],
+      ["aquatics", "mixed_4x50m_freestyle_relay"],
+      ["aquatics", "mixed_4x50m_medley_relay"],
+    ]) {
+      const result = validate(roster, roster.map(({ rollNumber }) => entry(sportId, eventId, "mixed", rollNumber)));
+      assert.deepEqual(result.errors, [], `${sportId} ${eventId}`);
+    }
+  });
+
+  test("rejects any other split or an incomplete mixed relay", () => {
+    const threeMen = [student("M1", "M"), student("M2", "M"), student("M3", "M"), student("F1", "F")];
+    const r1 = validate(threeMen, threeMen.map(({ rollNumber }) => entry("athletics", "mixed_4x100m_relay", "mixed", rollNumber)));
+    assert.ok(hasError(r1, "allows 2 male runners"));
+    const partial = [student("M1", "M"), student("F1", "F")];
+    const r2 = validate(partial, partial.map(({ rollNumber }) => entry("aquatics", "mixed_4x50m_medley_relay", "mixed", rollNumber)));
+    assert.ok(hasError(r2, "needs exactly 2 men and 2 women"));
+    const reserves = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F"), student("M3", "M"), student("M4", "M")];
+    const r3 = validate(reserves, reserves.map(({ rollNumber }, i) => entry("athletics", "mixed_4x400m_relay", "mixed", rollNumber, i >= 4)));
+    assert.ok(hasError(r3, "allows 1 male reserves"));
+  });
+
+  test("does not count mixed relays toward the individual event limit", () => {
+    const roster = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F")];
+    const entries = [
+      ...["100m", "200m", "400m"].map((id) => entry("athletics", id, "M", "M1")),
+      ...roster.map(({ rollNumber }) => entry("athletics", "mixed_4x100m_relay", "mixed", rollNumber)),
+      entry("athletics", "4x100m_relay", "M", "M1"),
+    ];
+    assert.deepEqual(validate(roster, entries).errors, []);
   });
 
   test("rejects gender mismatches in men's and women's events", () => {
@@ -102,7 +152,8 @@ describe("validateRegistrationRules", () => {
     assert.ok(hasError(validate([student("R1")], [entry("athletics", "marathon", "M", "R1")]), "Unrecognized event"));
     assert.ok(hasError(validate([student("R1")], [entry("cricket", "bowling", "M", "R1")]), "Unrecognized event"));
     assert.ok(hasError(validate([student("R1", "F")], [entry("cricket", "team", "F", "R1")]), "Unsupported category"));
-    assert.ok(hasError(validate([student("R1")], [entry("athletics", "100m", "mixed", "R1")]), "Unsupported category"));
+    assert.ok(hasError(validate([student("R1")], [entry("cricket", "team", "mixed", "R1")]), "Unsupported category"));
+    assert.ok(hasError(validate([student("R1")], [entry("athletics", "100m", "mixed", "R1")]), "Unrecognized event"));
   });
 
   test("cannot split a team across invented event ids to dodge the squad limit", () => {
@@ -253,6 +304,16 @@ describe("getLiveValidationErrors", () => {
     assert.ok(Array.isArray(result.payload.entryKeys));
     const json = JSON.parse(JSON.stringify(result.payload));
     assert.deepEqual(Object.keys(json).sort(), ["contactDetails", "entries", "students"]);
+  });
+
+  test("blocks a woman in a man's mixed relay slot", () => {
+    const slots = {
+      [getSlotKey("athletics", "100m", "F", "main", 0)]: { rollNumber: "R1", name: "ASHA", gender: "F" },
+      [getSlotKey("athletics", "mixed_4x100m_relay", "mixed", "main", 0)]: { rollNumber: "R1", name: "ASHA", gender: "M" },
+    };
+    const issue = getLiveValidationErrors(contact, slots).issues.find((i) => i.message.includes("slot for the other gender"));
+    assert.ok(issue);
+    assert.equal(issue.slotKeys.length, 2);
   });
 
   test("reports the unique student limit without a slot", () => {
