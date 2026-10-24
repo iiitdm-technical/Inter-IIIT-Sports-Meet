@@ -92,7 +92,8 @@ Defined in `src/lib/sports/config.js` and enforced by `src/lib/validation/rules.
 - **Aquatics:** at most 3 individual events per student; relays excluded.
 - **Other sports:** at most 2 per student; athletics and aquatics are exempt.
 - **Gender:** men's events accept male students only and women's events female students only. Chess is a combined (mixed) team of up to 4.
-- **Mixed relays:** athletics 4x100 M and 4x400 M, aquatics 4x50 M Free Style and 4x50 M Medley. Exactly 2 men and 2 women per team (slots are gender-fixed), reserves 1 man and 1 woman; they do not count toward the 3 individual event limit.
+- **Relays:** every relay needs all 4 runners once entered; the 2 reserves are optional.
+- **Mixed relays:** athletics 4x100 M and 4x400 M, aquatics 4x50 M Free Style and 4x50 M Medley. Exactly 2 men and 2 women per team (runner slots are gender-fixed), plus an optional male reserve and an optional female reserve, each able to replace only a runner of the same gender; they do not count toward the 3 individual event limit.
 - **One gender per student:** a roll number entered as male cannot fill a female slot anywhere, and vice versa.
 - **No minimum:** an IIIT may enter any number of sports.
 

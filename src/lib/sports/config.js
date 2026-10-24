@@ -16,10 +16,10 @@ export const GLOBAL_RULES = {
   EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics'],
 };
 
-// Mixed relays run with exactly 2 men and 2 women; each slot has a fixed gender.
-// Reserves are one man and one woman, so either can replace a runner of the same gender.
+// Mixed relays run with exactly 2 men and 2 women; each runner slot has a fixed gender.
 const MIXED_RELAY_SPLIT = {
   slotGenders: ['M', 'M', 'F', 'F'],
+  // Optional: one male and one female reserve. A reserve may replace only a runner of the same gender.
   reserveGenders: ['M', 'F'],
 };
 

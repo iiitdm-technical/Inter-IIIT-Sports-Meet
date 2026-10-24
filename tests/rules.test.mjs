@@ -9,6 +9,9 @@ const entry = (sportId, eventId, gender, rollNumber, isReserve = false) => ({ sp
 const validate = (students, entries) => validateRegistrationRules({ students, entries });
 const hasError = (result, text) => result.errors.some((message) => message.includes(text));
 
+// A full men's relay team of four, used where a test needs a valid relay entry.
+const menRelay = (eventId, rolls) => rolls.map((roll) => entry("athletics", eventId, "M", roll));
+
 const contact = {
   contactName: "Dr A",
   contactEmail: "sports@iiitkota.ac.in",
@@ -36,14 +39,14 @@ describe("sport catalogue", () => {
 describe("validateRegistrationRules", () => {
   test("accepts a valid roster across team, athletics and aquatics", () => {
     const result = validate(
-      [student("R1"), student("R2", "F")],
+      [student("R1"), student("R2", "F"), student("R3"), student("R4"), student("R5")],
       [
         entry("cricket", "team", "M", "R1"),
         entry("volleyball", "team", "M", "R1"),
         entry("athletics", "100m", "M", "R1"),
         entry("athletics", "200m", "M", "R1"),
         entry("athletics", "long_jump", "M", "R1"),
-        entry("athletics", "4x100m_relay", "M", "R1"),
+        ...menRelay("4x100m_relay", ["R1", "R3", "R4", "R5"]),
         entry("aquatics", "50m_freestyle", "M", "R1"),
         entry("badminton", "team", "F", "R2"),
         entry("table_tennis", "team", "F", "R2"),
@@ -103,18 +106,36 @@ describe("validateRegistrationRules", () => {
     assert.ok(hasError(r1, "allows 2 male runners"));
     const partial = [student("M1", "M"), student("F1", "F")];
     const r2 = validate(partial, partial.map(({ rollNumber }) => entry("aquatics", "mixed_4x50m_medley_relay", "mixed", rollNumber)));
-    assert.ok(hasError(r2, "needs exactly 2 men and 2 women"));
-    const reserves = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F"), student("M3", "M"), student("M4", "M")];
-    const r3 = validate(reserves, reserves.map(({ rollNumber }, i) => entry("athletics", "mixed_4x400m_relay", "mixed", rollNumber, i >= 4)));
+    assert.ok(hasError(r2, "needs all 4 runners (2 men and 2 women)"));
+    const withReserves = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F"), student("M3", "M"), student("M4", "M")];
+    const r3 = validate(withReserves, withReserves.map(({ rollNumber }, i) => entry("athletics", "mixed_4x400m_relay", "mixed", rollNumber, i >= 4)));
     assert.ok(hasError(r3, "allows 1 male reserves"));
+    const oneEach = [...withReserves.slice(0, 5), student("F3", "F")];
+    const r4 = validate(oneEach, oneEach.map(({ rollNumber }, i) => entry("athletics", "mixed_4x400m_relay", "mixed", rollNumber, i >= 4)));
+    assert.deepEqual(r4.errors, []);
+    const noReserves = withReserves.slice(0, 4);
+    const r5 = validate(noReserves, noReserves.map(({ rollNumber }) => entry("athletics", "mixed_4x400m_relay", "mixed", rollNumber)));
+    assert.deepEqual(r5.errors, []);
+  });
+
+  test("requires all 4 runners in every relay, with reserves optional", () => {
+    const three = ["R1", "R2", "R3"].map((roll) => student(roll));
+    assert.ok(hasError(validate(three, menRelay("4x400m_relay", ["R1", "R2", "R3"])), "needs all 4 runners"));
+    const reserveOnly = validate([student("R1")], [entry("athletics", "4x100m_relay", "M", "R1", true)]);
+    assert.ok(hasError(reserveOnly, "needs all 4 runners"));
+    const four = ["R1", "R2", "R3", "R4"].map((roll) => student(roll));
+    assert.deepEqual(validate(four, menRelay("4x100m_relay", ["R1", "R2", "R3", "R4"])).errors, []);
+    const women = ["F1", "F2", "F3", "F4", "F5", "F6"].map((roll) => student(roll, "F"));
+    const swim = women.map(({ rollNumber }, i) => entry("aquatics", "4x50m_medley_relay", "F", rollNumber, i >= 4));
+    assert.deepEqual(validate(women, swim).errors, []);
   });
 
   test("does not count mixed relays toward the individual event limit", () => {
-    const roster = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F")];
+    const roster = [student("M1", "M"), student("M2", "M"), student("F1", "F"), student("F2", "F"), student("M3", "M"), student("M4", "M")];
     const entries = [
       ...["100m", "200m", "400m"].map((id) => entry("athletics", id, "M", "M1")),
-      ...roster.map(({ rollNumber }) => entry("athletics", "mixed_4x100m_relay", "mixed", rollNumber)),
-      entry("athletics", "4x100m_relay", "M", "M1"),
+      ...roster.slice(0, 4).map(({ rollNumber }) => entry("athletics", "mixed_4x100m_relay", "mixed", rollNumber)),
+      ...menRelay("4x100m_relay", ["M1", "M2", "M3", "M4"]),
     ];
     assert.deepEqual(validate(roster, entries).errors, []);
   });
@@ -176,12 +197,13 @@ describe("validateRegistrationRules", () => {
   });
 
   test("rejects a fourth individual athletics event but ignores relays", () => {
-    const relaysOnly = validate([student("R1")], [
+    const team = ["R1", "R2", "R3", "R4"];
+    const relaysOnly = validate(team.map((roll) => student(roll)), [
       entry("athletics", "100m", "M", "R1"),
       entry("athletics", "200m", "M", "R1"),
       entry("athletics", "400m", "M", "R1"),
-      entry("athletics", "4x100m_relay", "M", "R1"),
-      entry("athletics", "4x400m_relay", "M", "R1"),
+      ...menRelay("4x100m_relay", team),
+      ...menRelay("4x400m_relay", team),
     ]);
     assert.equal(relaysOnly.isValid, true);
 

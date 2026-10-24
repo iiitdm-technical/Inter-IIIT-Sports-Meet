@@ -303,17 +303,17 @@ export function validateRegistrationRules({ students, entries }) {
             eventTarget
           );
         }
+        // Relays: all runners are compulsory once a team is entered; reserves are optional.
+        if (ev.isRelay && mains.length < ev.maxParticipants) {
+          const need = ev.slotGenders ? describeSplit(ev.slotGenders) : `${ev.maxParticipants} runners`;
+          fail(
+            `${sportConfig.name} ${ev.name} needs all ${ev.maxParticipants} runners (${need}): only ${mains.length} entered. Reserves are optional.`,
+            eventTarget
+          );
+        }
         if (ev.slotGenders) {
           checkGenderSplit(ev.name, sportConfig.name, mains, ev.slotGenders, "runners", eventTarget);
           checkGenderSplit(ev.name, sportConfig.name, reserves, ev.reserveGenders || [], "reserves", eventTarget);
-          // A mixed relay team must be complete: exactly the configured split.
-          if (mains.length > 0 && mains.length < ev.slotGenders.length) {
-            const need = describeSplit(ev.slotGenders);
-            fail(
-              `${sportConfig.name} ${ev.name} needs exactly ${need}: only ${mains.length} entered.`,
-              eventTarget
-            );
-          }
         }
       }
     }

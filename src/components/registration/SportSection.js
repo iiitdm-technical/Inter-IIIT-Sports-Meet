@@ -43,6 +43,7 @@ export default function SportSection({ sportConfig, gender, slotsMap, onChangeSl
         maxReserves={ev.maxReserves || 0}
         slotGenders={ev.slotGenders}
         reserveGenders={ev.reserveGenders}
+        isRelay={ev.isRelay}
         studentRegistry={studentRegistry}
         errorSlotKeys={errorSlotKeys}
       />

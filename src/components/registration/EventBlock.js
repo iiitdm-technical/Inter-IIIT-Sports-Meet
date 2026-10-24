@@ -7,7 +7,7 @@ const GENDER_LABELS = { M: "Men", F: "Women", mixed: "Combined" };
 
 const SLOT_GENDER_LABELS = { M: "Man", F: "Woman" };
 
-export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, slotGenders, reserveGenders, studentRegistry, errorSlotKeys }) {
+export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, slotGenders, reserveGenders, isRelay, studentRegistry, errorSlotKeys }) {
 
   // Is it a combined event like Chess where gender is mixed?
   const isCombined = sportConfig.type === "combined_team" || gender === "mixed";
@@ -48,7 +48,9 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
         <h4 className="heading-card">{eventName}</h4>
         <p className="meta">
           {slotGenders
-            ? `Exactly 2 men + 2 women${maxReserves ? ` · reserves: 1 man + 1 woman` : ""}`
+            ? "2 men + 2 women required · optional reserves: 1 man, 1 woman"
+            : isRelay
+            ? `${maxParticipants} runners required${maxReserves ? ` · up to ${maxReserves} optional reserves` : ""}`
             : <>Up to {maxParticipants} {maxParticipants === 1 ? "participant" : "participants"}{maxReserves ? ` + ${maxReserves} ${maxReserves === 1 ? "reserve" : "reserves"}` : ""}</>}
         </p>
       </div>
@@ -56,7 +58,10 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
         {mainSlots}
         {reserveSlots.length > 0 && (
           <div className="mt-3 space-y-2 border-t border-dashed border-line pt-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gold-text">Reserves</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-gold-text">Reserves (optional)</p>
+            {reserveGenders && (
+              <p className="text-xs text-ink-soft">The male reserve can replace only a male runner, and the female reserve only a female runner.</p>
+            )}
             {reserveSlots}
           </div>
         )}
