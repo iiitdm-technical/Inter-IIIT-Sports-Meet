@@ -74,71 +74,48 @@ const teamSections = [
   }
 ];
 
-function MemberCard({ member }) {
+function MemberCard({ member, size = "md" }) {
+  const avatar = size === "lg" ? "h-40 w-40 sm:h-44 sm:w-44" : "h-28 w-28 sm:h-32 sm:w-32";
   return (
-    <li className="card card-interactive group overflow-hidden">
-      <div className="relative aspect-[4/5] overflow-hidden bg-ivory-dark">
+    <li className="group flex w-40 flex-col items-center text-center sm:w-48">
+      <div className={`relative ${avatar} overflow-hidden rounded-full border-4 border-white bg-ivory-dark shadow-md ring-2 ring-brand-accent/40 transition-all duration-300 motion-safe:group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-brand-accent`}>
         <Image
           src={member.image}
-          alt=""
+          alt={member.name}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 260px"
-          className="object-cover object-top transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
+          sizes="176px"
+          className="object-cover object-top"
         />
-        <div className="absolute bottom-0 left-0 h-1 w-12 bg-brand-highlight transition-all duration-300 group-hover:w-full" aria-hidden="true" />
       </div>
-      <div className="p-4 sm:p-5">
-        <h3 className="heading-card">{member.name}</h3>
-        <p className="meta mt-1">{member.role}</p>
-      </div>
+      <h3 className="mt-5 text-base font-bold leading-snug text-ink sm:text-lg">{member.name}</h3>
+      <p className="meta mt-1">{member.role}</p>
     </li>
   );
 }
 
 export default function Team() {
-  const [patronSection, ...otherSections] = teamSections;
-  const patron = patronSection.members[0];
-
   return (
     <div className="min-h-screen bg-ivory">
       <PageHeader title="Meet the Team" label="Meet" badgeLabel="Our Team" description="Dedicated individuals working tirelessly to make the 9th Inter-IIIT Sports Meet a reality." />
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 space-y-20">
-
-        {/* Patron: featured profile */}
-        <section aria-labelledby="patron-title">
-          <h2 id="patron-title" className="sr-only">{patronSection.title}</h2>
-          <article className="card card-accent grid overflow-hidden sm:grid-cols-[minmax(0,240px)_1fr]">
-            <div className="relative aspect-[4/5] bg-ivory-dark sm:aspect-auto sm:min-h-[280px]">
-              <Image src={patron.image} alt="" fill sizes="(max-width: 640px) 100vw, 240px" className="object-cover object-top" />
-            </div>
-            <div className="flex flex-col justify-center p-6 sm:p-10">
-              <p className="eyebrow">{patronSection.title}</p>
-              <h3 className="mt-3 font-display text-4xl font-bold uppercase leading-none text-ink sm:text-5xl">{patron.name}</h3>
-              <p className="mt-3 text-base font-semibold text-brand-primary">{patron.role}, IIITDM Kancheepuram</p>
-            </div>
-          </article>
-        </section>
-
-        {otherSections.map((section) => {
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 space-y-24 sm:space-y-32">
+        {teamSections.map((section, idx) => {
           const headingId = `team-${section.title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
           return (
             <section key={section.title} aria-labelledby={headingId}>
-              <div className="mb-8 flex items-end justify-between gap-4 border-b border-line pb-4">
-                <h2 id={headingId} className="font-display text-3xl font-bold uppercase leading-none text-ink sm:text-4xl">
-                  {section.title}
-                </h2>
-                <span className="meta shrink-0">{section.members.length} members</span>
+              <div className="mb-12 flex items-center gap-5 sm:mb-16">
+                <div className="h-px flex-1 bg-line" aria-hidden="true" />
+                <h2 id={headingId} className="eyebrow text-center">{section.title}</h2>
+                <div className="h-px flex-1 bg-line" aria-hidden="true" />
               </div>
-              <ul className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
+              <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
                 {section.members.map((member) => (
-                  <MemberCard key={member.name} member={member} />
+                  <MemberCard key={member.name} member={member} size={idx === 0 ? "lg" : "md"} />
                 ))}
               </ul>
             </section>
           );
         })}
-
       </div>
     </div>
   );
