@@ -32,8 +32,15 @@ export async function POST(request) {
       return NextResponse.json({ error: "Enter your IIIT code or email and your password." }, { status: 400 });
     }
 
-    const identifier = parsed.data.username.trim().toLowerCase();
-    const { password } = parsed.data;
+    // Credentials are often pasted from a message with stray spaces, and IIIT
+    // codes typed as "IIIT Kota". Issued passwords never contain whitespace,
+    // so trimming them is safe.
+    const rawIdentifier = parsed.data.username.trim().toLowerCase();
+    const identifier = rawIdentifier.includes("@") ? rawIdentifier : rawIdentifier.replace(/\s+/g, "-");
+    const password = parsed.data.password.trim();
+    if (!password) {
+      return NextResponse.json({ error: "Enter your IIIT code or email and your password." }, { status: 400 });
+    }
     const ip = await getClientIp();
     const userAgent = await getUserAgent();
     const accountKey = `login:account:${identifier}`;
