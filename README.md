@@ -90,4 +90,6 @@ The test submits one roster and proof on disposable resources. Use fresh test re
 
 ## Deployment
 
+For the existing DreamHost production host, use [`./update.sh`](DEPLOYMENT.md): it pulls `main`, installs/tests/builds a fresh release, verifies it, and switches only PM2's `sports` process. Production settings come from the protected shared MySQL environment, never the historical Neon configuration. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup, migrations and rollback.
+
 Deploy the Next.js app on a Node.js compatible host and set the same server-side variables there. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS website URL for canonical links, then run migrations and `npm run env:check` before accepting registrations. The MySQL database and private Neon bucket are separate services; this project does not use Vercel Blob. Keep `SESSION_SECRET` consistent across instances. Payment confirmation still requires an organizer to reconcile the transfer with bank records.
