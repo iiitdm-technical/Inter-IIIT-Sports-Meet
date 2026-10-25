@@ -195,5 +195,5 @@ See `HOSTING_REQUIREMENTS.md` for sizes and server requirements. Deploy on any N
 2. **Fee:** the rulebook states Rs 2,000 + 18% GST (Rs 2,360) per participant; the code charges Rs 2,500 (`GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT`). Confirm.
 3. **Not modelled:** Rs 25,000 caution deposit; signed entry form with photo and Dean's endorsement.
 4. **Hosting:** awaiting the institute's reply on PostgreSQL and storage; currently on Neon.
-5. **Content:** 9th-edition logo, Squash vs Handball in the events carousel, sponsor list, Employees' Sports Meet section, higher-resolution gallery photos.
+5. **Content:** sponsor list, Employees' Sports Meet section, higher-resolution gallery photos.
 6. **Faculty/officials registration** (if required) is not a feature yet; one coordinator account per IIIT.

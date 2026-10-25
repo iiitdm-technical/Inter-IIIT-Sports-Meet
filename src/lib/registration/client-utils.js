@@ -1,5 +1,5 @@
 import { validateRegistrationRules } from "../validation/rules.js";
-import { GLOBAL_RULES } from "../sports/config.js";
+import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
 import { registrationSubmitSchema } from "../validation/schemas.js";
 
 /**
@@ -16,6 +16,19 @@ export function parseSlotKey(key) {
     role: parts[3], // 'main' or 'reserve'
     index: parseInt(parts[4], 10),
   };
+}
+
+/**
+ * True when a slot still belongs to a sport, category and event in the
+ * catalogue. Drafts saved before a sport or event was removed (in the cloud
+ * or in browser storage) may still hold such slots; they are ignored rather
+ * than submitted, counted for the fee, or shown as errors with no field.
+ */
+export function isKnownSlot(parsed) {
+  const sport = parsed && getSportConfig(parsed.sportId);
+  if (!sport || !sport.genders.includes(parsed.eventGender)) return false;
+  if (sport.type === "team" || sport.type === "combined_team") return parsed.eventId === "team";
+  return (sport.events?.[parsed.eventGender] || []).some((event) => event.id === parsed.eventId);
 }
 
 /**
@@ -43,15 +56,15 @@ export function buildSubmissionPayload(contactDetails, slotsMap) {
     const roll = slotData.rollNumber.trim().toUpperCase();
     if (!roll) continue;
 
+    const parsed = parseSlotKey(key);
+    if (!isKnownSlot(parsed)) continue;
+
     const name = (slotData.name || "").trim().toUpperCase();
     const gender = slotData.gender || "M";
 
     if (!studentsMap.has(roll)) {
       studentsMap.set(roll, { rollNumber: roll, name, gender });
     }
-
-    const parsed = parseSlotKey(key);
-    if (!parsed) continue;
 
     entries.push({
       sportId: parsed.sportId,
@@ -78,8 +91,8 @@ export function buildSubmissionPayload(contactDetails, slotsMap) {
  */
 export function getStudentRegistry(slotsMap) {
   const registry = new Map();
-  for (const slotData of Object.values(slotsMap)) {
-    if (!slotData || !slotData.rollNumber) continue;
+  for (const [key, slotData] of Object.entries(slotsMap)) {
+    if (!slotData || !slotData.rollNumber || !isKnownSlot(parseSlotKey(key))) continue;
     const roll = slotData.rollNumber.trim().toUpperCase();
     if (roll) {
       if (!registry.has(roll)) {
@@ -165,7 +178,9 @@ function describeSchemaIssue(issue, payload, slotsMap) {
  * `issues` carries the same messages with the slot keys or contact field each
  * one refers to, so the form can highlight and jump to them.
  */
-export function getLiveValidationErrors(contactDetails, slotsMap) {
+export function getLiveValidationErrors(contactDetails, allSlots) {
+  // Slots of removed sports or events are inert and never block submission.
+  const slotsMap = Object.fromEntries(Object.entries(allSlots).filter(([key]) => isKnownSlot(parseSlotKey(key))));
   const payload = buildSubmissionPayload(contactDetails, slotsMap);
   const issues = [];
 

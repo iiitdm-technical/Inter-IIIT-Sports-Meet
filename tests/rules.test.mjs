@@ -348,3 +348,34 @@ describe("getLiveValidationErrors", () => {
     assert.deepEqual(limit.slotKeys, []);
   });
 });
+
+describe("sport catalogue changes", () => {
+  test("handball replaces squash with 14-player men's and women's squads", async () => {
+    const { getSportConfig } = await import("../src/lib/sports/config.js");
+    assert.equal(getSportConfig("squash"), null);
+    const handball = getSportConfig("handball");
+    assert.deepEqual(handball.genders, ["M", "F"]);
+    assert.deepEqual(handball.teamLimits, { M: 14, F: 14 });
+  });
+
+  test("mixed relays exist in athletics and aquatics", async () => {
+    const { getSportConfig } = await import("../src/lib/sports/config.js");
+    const ids = (sport) => getSportConfig(sport).events.mixed.map((event) => event.id);
+    assert.deepEqual(ids("athletics"), ["mixed_4x100m_relay", "mixed_4x400m_relay"]);
+    assert.deepEqual(ids("aquatics"), ["mixed_4x50m_freestyle_relay", "mixed_4x50m_medley_relay"]);
+  });
+
+  test("draft slots for a removed sport are ignored, not submitted or charged", async () => {
+    const { buildSubmissionPayload, getLiveValidationErrors, getStudentRegistry } = await import("../src/lib/registration/client-utils.js");
+    const contact = { contactName: "Dr A", contactEmail: "a@example.com", contactPhone: "+91 9876543210", notes: "" };
+    const slots = {
+      "squash|team|M|main|0": { rollNumber: "OLD1", name: "OLD", gender: "M" },
+      "handball|team|M|main|0": { rollNumber: "H1", name: "HANDBALL ONE", gender: "M" },
+    };
+    const payload = buildSubmissionPayload(contact, slots);
+    assert.deepEqual(payload.students.map((s) => s.rollNumber), ["H1"]);
+    assert.deepEqual(payload.entries.map((e) => e.sportId), ["handball"]);
+    assert.equal(getStudentRegistry(slots).has("OLD1"), false);
+    assert.equal(getLiveValidationErrors(contact, slots).issues.some((i) => /squash|OLD1/i.test(i.message)), false);
+  });
+});

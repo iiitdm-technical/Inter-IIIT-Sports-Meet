@@ -218,13 +218,13 @@ export const SPORTS_CONFIG = {
     teamLimits: { M: 12, F: 10 },
   },
 
-  squash: {
-    id: 'squash',
-    name: 'Squash',
+  handball: {
+    id: 'handball',
+    name: 'Handball',
     type: 'team',
     isExemptFromSportLimit: false,
     genders: ['M', 'F'],
-    teamLimits: { M: 3, F: 3 },
+    teamLimits: { M: 14, F: 14 },
   },
 
   tug_of_war: {

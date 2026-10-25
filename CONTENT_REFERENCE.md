@@ -86,7 +86,7 @@ This document helps frontend developers, backend developers, and content editors
 | `table_tennis`| Table Tennis | Team | M, F | 3 | 3 | No |
 | `lawn_tennis` | Lawn Tennis | Team | M, F | 3 | 3 | No |
 | `volleyball`| Volleyball | Team | M, F | 12 | 10 | No |
-| `squash` | Squash | Team | M, F | 3 | 3 | No |
+| `handball` | Handball | Team | M, F | 14 | 14 | No |
 | `tug_of_war`| Tug of War | Team | M, F | 8 | 8 | No |
 | `kho_kho` | Kho-Kho | Team | M, F | 12 | 12 | No |
 | `chess` | Chess | Mixed Team| Mixed| (4 Total)| (4 Total)| No |
