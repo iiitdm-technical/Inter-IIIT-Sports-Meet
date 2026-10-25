@@ -44,7 +44,8 @@ try {
     await tab("Combined Events").click();
     const chessInCombined = await chessHeadings();
     const sectionsInCombined = await page.locator("#category-panel h3").count();
-    check("chess hidden in Men/Women, alone in Combined", chessInMen === 0 && chessInWomen === 0 && chessInCombined === 1 && sectionsInCombined === 1, `${chessInMen}/${chessInWomen}/${chessInCombined}/${sectionsInCombined}`);
+    // Combined holds Chess plus the athletics and aquatics mixed relays.
+    check("chess hidden in Men/Women, shown in Combined with mixed relays", chessInMen === 0 && chessInWomen === 0 && chessInCombined === 1 && sectionsInCombined === 3, `${chessInMen}/${chessInWomen}/${chessInCombined}/${sectionsInCombined}`);
     check("tabs expose aria-selected", (await tab("Combined Events").getAttribute("aria-selected")) === "true");
 
     await tab("Men's Events").click();
