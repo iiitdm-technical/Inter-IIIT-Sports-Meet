@@ -1,8 +1,12 @@
-import { eq, and, ilike, sql, count, inArray } from "drizzle-orm";
+import { eq, and, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSlotKey } from "../registration/client-utils.js";
 import { deleteProof, listProofs } from "../storage/neon.js";
+
+function affectedRows(result) {
+  return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);
+}
 
 export async function getAdminAccounts() {
   return getDb().select({
@@ -25,7 +29,8 @@ export async function getAdminRegistrationsOverview() {
       id: registrations.id,
       iiitCode: users.iiitCode,
       iiitName: users.iiitName,
-      isSubmitted: sql`CASE WHEN ${registrations.id} IS NOT NULL THEN true ELSE false END`,
+      isSubmitted: sql`CASE WHEN ${registrations.id} IS NOT NULL THEN true ELSE false END`
+        .mapWith((value) => Boolean(value)),
       submittedAt: registrations.submittedAt,
       submittedBy: registrations.submittedBy,
       contactName: registrations.contactName,
@@ -84,16 +89,16 @@ export async function verifyPayment(iiitCode, transactionId, amount, adminUserna
     throw error;
   }
 
-  const [verified] = await db.update(paymentTransactions)
-    .set({ verificationStatus: "verified", verifiedAt: new Date(), verifiedBy: adminUsername })
-    .where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.verificationStatus, "pending")))
-    .returning({ verificationStatus: paymentTransactions.verificationStatus, verifiedAt: paymentTransactions.verifiedAt, verifiedBy: paymentTransactions.verifiedBy });
-  if (!verified) {
+  const verifiedAt = new Date();
+  const result = await db.update(paymentTransactions)
+    .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
+    .where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.verificationStatus, "pending")));
+  if (affectedRows(result) === 0) {
     const error = new Error("Payment verification changed; refresh and try again");
     error.statusCode = 409;
     throw error;
   }
-  return verified;
+  return { verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
 }
 
 /**
@@ -115,7 +120,7 @@ export async function getAdminFilteredEntries({
 
   if (iiit) {
     conditions.push(
-      sql`(${registrations.iiitCode} = ${iiit} OR ${registrations.iiitName} ILIKE ${`%${iiit}%`})`
+      sql`(${registrations.iiitCode} = ${iiit} OR LOWER(${registrations.iiitName}) LIKE LOWER(${`%${iiit}%`}))`
     );
   }
 
@@ -132,11 +137,11 @@ export async function getAdminFilteredEntries({
   }
 
   if (rollNumber) {
-    conditions.push(ilike(students.rollNumber, `%${rollNumber.trim()}%`));
+    conditions.push(sql`LOWER(${students.rollNumber}) LIKE LOWER(${`%${rollNumber.trim()}%`})`);
   }
 
   if (name) {
-    conditions.push(ilike(students.name, `%${name.trim()}%`));
+    conditions.push(sql`LOWER(${students.name}) LIKE LOWER(${`%${name.trim()}%`})`);
   }
 
   page = Number.isSafeInteger(page) ? Math.max(1, page) : 1;
@@ -283,8 +288,7 @@ export async function reopenRegistration(iiitCode) {
 
     await tx.insert(registrationDrafts)
       .values({ iiitCode, contactDetails, slotsMap, revision: 1, updatedAt: new Date() })
-      .onConflictDoUpdate({
-        target: registrationDrafts.iiitCode,
+      .onDuplicateKeyUpdate({
         set: { contactDetails, slotsMap, revision: sql`${registrationDrafts.revision} + 1`, updatedAt: new Date() },
       });
     await tx.delete(registrations).where(eq(registrations.id, registration.id));

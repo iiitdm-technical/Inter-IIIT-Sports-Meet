@@ -2,17 +2,18 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import dotenv from "dotenv";
+import { sameDatabase } from "./database-target.mjs";
 
 dotenv.config({ path: ".env.local", quiet: true });
 
 const testDatabaseUrl = process.env.API_TEST_DATABASE_URL;
 const testStorageEndpoint = process.env.API_TEST_AWS_ENDPOINT_URL_S3;
 if (!testDatabaseUrl || !testStorageEndpoint) {
-  throw new Error("Set API_TEST_DATABASE_URL and API_TEST_AWS_ENDPOINT_URL_S3 to an isolated Neon branch");
+  throw new Error("Set API_TEST_DATABASE_URL to an isolated MySQL database and API_TEST_AWS_ENDPOINT_URL_S3 to isolated test storage");
 }
-if (new URL(testDatabaseUrl).hostname === new URL(process.env.DATABASE_URL).hostname ||
-    new URL(testStorageEndpoint).hostname === new URL(process.env.AWS_ENDPOINT_URL_S3).hostname) {
-  throw new Error("API smoke test requires a different database branch and storage endpoint from production");
+if (sameDatabase(testDatabaseUrl, process.env.DATABASE_URL) ||
+    (process.env.AWS_ENDPOINT_URL_S3 && new URL(testStorageEndpoint).hostname === new URL(process.env.AWS_ENDPOINT_URL_S3).hostname)) {
+  throw new Error("API smoke test requires a different database and storage endpoint from production");
 }
 
 const credentialsPath = process.env.API_TEST_CREDENTIALS_PATH || ".private/seed-credentials.json";
@@ -117,7 +118,9 @@ try {
   const draftRequest = { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(draft) };
   expectStatus(await request("/api/registration/draft", draftRequest), 401, "draft save requires login");
   expectStatus(await request("/api/registration/draft", { cookie: adminCookie, ...draftRequest }), 403, "admin cannot save IIIT draft");
-  const savedDraft = await request("/api/registration/draft", { cookie: iiitCookie, ...draftRequest });
+  const firstSaves = await Promise.all(Array.from({ length: 2 }, () => request("/api/registration/draft", { cookie: iiitCookie, ...draftRequest })));
+  assert.deepEqual(firstSaves.map((result) => result.response.status).sort(), [200, 409], "concurrent first saves must not overwrite each other");
+  const savedDraft = firstSaves.find((result) => result.response.status === 200);
   expectStatus(savedDraft, 200, "cloud draft saved");
   assert.equal(savedDraft.body.data.revision, 1);
   const otherDraft = await request("/api/registration/draft", { cookie: otherCookie });
@@ -126,9 +129,14 @@ try {
   const updatedDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 1 }) });
   expectStatus(updatedDraft, 200, "cloud draft updated");
   assert.equal(updatedDraft.body.data.revision, 2);
+  const concurrentUpdates = await Promise.all(Array.from({ length: 2 }, () => request("/api/registration/draft", {
+    cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 2 }),
+  })));
+  assert.deepEqual(concurrentUpdates.map((result) => result.response.status).sort(), [200, 409], "only one concurrent revision update may succeed");
+  assert.equal(concurrentUpdates.find((result) => result.response.status === 200).body.data.revision, 3);
   const staleDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 1 }) });
   expectStatus(staleDraft, 409, "stale cloud draft rejected");
-  assert.equal(staleDraft.body.data.revision, 2);
+  assert.equal(staleDraft.body.data.revision, 3);
   expectStatus(await request("/api/registration/csv", { cookie: iiitCookie }), 400, "CSV unavailable before registration");
   expectStatus(await request("/api/upload", { cookie: iiitCookie, method: "POST", body: new FormData() }), 403, "proof unavailable before roster lock");
 
@@ -221,6 +229,18 @@ try {
   expectStatus(verifiedStatus, 200, "student sees verified payment");
   assert.equal(verifiedStatus.body.data.verificationStatus, "verified");
   expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 409, "duplicate approval rejected");
+  const reopenPath = "/api/admin/registrations/reopen";
+  const reopenOptions = (iiitCode) => ({ cookie: adminCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iiitCode, confirmIiitCode: iiitCode }) });
+  expectStatus(await request(reopenPath, reopenOptions(iiits[0].iiitCode)), 409, "verified roster cannot be reopened");
+  if (iiits.length >= 3) {
+    const correctionCookie = await login(iiits[2]);
+    expectStatus(await request("/api/registration/submit", { cookie: correctionCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 200, "correction roster submitted");
+    expectStatus(await request(reopenPath, reopenOptions(iiits[2].iiitCode)), 200, "unverified roster reopened");
+    const reopenedDraft = await request("/api/registration/draft", { cookie: correctionCookie });
+    expectStatus(reopenedDraft, 200, "reopened roster becomes JSON draft");
+    assert.equal(Object.keys(reopenedDraft.body.data.slotsMap).length, 1);
+    assert.equal(reopenedDraft.body.data.revision, 1);
+  }
   expectStatus(await request("/api/auth/logout", { cookie: iiitCookie, method: "POST" }), 200, "logout");
   const afterLogout = await request("/api/auth/me", { cookie: iiitCookie });
   assert.equal(afterLogout.body.authenticated, false, "signed-out session cookie must stop working");
@@ -243,7 +263,7 @@ try {
     lastStatus = (await request("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(fakeAccount) })).response.status;
   }
   assert.equal(lastStatus, 429, "repeated failed sign-ins are rate limited");
-  console.log("All API route smoke checks passed on the isolated Neon branch.");
+  console.log("All API route smoke checks passed on isolated MySQL and test storage.");
 } finally {
   child.kill("SIGTERM");
 }

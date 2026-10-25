@@ -1,4 +1,4 @@
-import { eq, and, sql, ilike, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
@@ -109,7 +109,7 @@ export async function generateAdminMasterCSV(filters = {}) {
 
   if (filters.iiit) {
     conditions.push(
-      sql`(${registrations.iiitCode} = ${filters.iiit} OR ${registrations.iiitName} ILIKE ${`%${filters.iiit}%`})`
+      sql`(${registrations.iiitCode} = ${filters.iiit} OR LOWER(${registrations.iiitName}) LIKE LOWER(${`%${filters.iiit}%`}))`
     );
   }
   if (filters.sport) {
@@ -122,10 +122,10 @@ export async function generateAdminMasterCSV(filters = {}) {
     conditions.push(eq(students.gender, filters.gender.toUpperCase()));
   }
   if (filters.name) {
-    conditions.push(ilike(students.name, `%${filters.name.trim()}%`));
+    conditions.push(sql`LOWER(${students.name}) LIKE LOWER(${`%${filters.name.trim()}%`})`);
   }
   if (filters.rollNumber) {
-    conditions.push(ilike(students.rollNumber, `%${filters.rollNumber.trim()}%`));
+    conditions.push(sql`LOWER(${students.rollNumber}) LIKE LOWER(${`%${filters.rollNumber.trim()}%`})`);
   }
 
   const entries = await db

@@ -5,13 +5,13 @@ dotenv.config({ quiet: true });
 import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import pg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
+import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
 import bcrypt from "bcryptjs";
+import { createDatabasePool } from "./index.js";
 import { users } from "./schema.js";
 import { iiits } from "../data/iiits.js";
 
-const { Pool } = pg;
 const credentialsPath = process.env.SEED_CREDENTIALS_PATH || ".private/seed-credentials.json";
 
 function slugify(name) {
@@ -37,24 +37,37 @@ async function credentials() {
 
 async function seed() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
-  const url = new URL(process.env.DATABASE_URL);
-  const local = ["localhost", "127.0.0.1"].includes(url.hostname);
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: local ? false : { rejectUnauthorized: true }, max: 2 });
+  const pool = createDatabasePool(process.env.DATABASE_URL);
   try {
     const accounts = await credentials();
-    const db = drizzle(pool);
+    const db = drizzle(pool, { mode: "default" });
+    let inserted = 0;
+    let skipped = 0;
     await db.transaction(async (tx) => {
       for (const account of accounts.filter((item) => item.role === "iiit")) {
+        const [existing] = await tx.select({ role: users.role })
+          .from(users)
+          .where(eq(users.iiitCode, account.iiitCode))
+          .limit(1);
+        if (existing) {
+          if (existing.role !== account.role) {
+            throw new Error(`Existing account for ${account.iiitCode} is not an IIIT account`);
+          }
+          skipped += 1;
+          continue;
+        }
+
         await tx.insert(users).values({
           username: account.username,
           passwordHash: await bcrypt.hash(account.password, 12),
           role: account.role,
           iiitName: account.iiitName,
           iiitCode: account.iiitCode,
-        }).onConflictDoNothing();
+        });
+        inserted += 1;
       }
     });
-    console.log(`Seeded ${accounts.length} unique accounts. Credentials: ${credentialsPath}`);
+    console.log(`Seeded ${inserted} IIIT account${inserted === 1 ? "" : "s"}; skipped ${skipped} existing account${skipped === 1 ? "" : "s"}. Credentials: ${credentialsPath}`);
   } finally {
     await pool.end();
   }

@@ -3,6 +3,8 @@
 
 *Status as of 21 October 2026: security hardening, single organizer admin, typography and card redesign.*
 
+> Database update: the application now targets MySQL 8.0+ through Drizzle/mysql2. Payment proofs remain in Neon Object Storage. See `MYSQL_MIGRATION.md` for PostgreSQL data transfer and cutover; older database descriptions below are historical.
+
 ==================================================
 ## 1. EXECUTIVE OVERVIEW
 ==================================================

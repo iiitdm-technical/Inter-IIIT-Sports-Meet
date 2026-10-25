@@ -1,4 +1,4 @@
-> **Status note (21 October 2026):** this handoff predates cloud drafts, payments, server-side sessions, the single organizer admin and the redesign. See `README.md`, `PROJECT_OVERVIEW.md` and `HOSTING_REQUIREMENTS.md` for the current system.
+> **Historical document:** this handoff predates cloud drafts, payments, server-side sessions, the single organizer admin, the redesign and the MySQL port. Its PostgreSQL/Neon driver descriptions are outdated. See `README.md`, `MYSQL_MIGRATION.md` and `HOSTING_REQUIREMENTS.md` for the current system.
 
 # BACKEND HANDOFF & ARCHITECTURE GUIDE
 ## 9th Inter-IIIT Sports Meet 2026 Registration System

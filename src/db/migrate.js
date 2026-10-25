@@ -1,44 +1,31 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
-import pg from "pg";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import path from "path";
-import { fileURLToPath } from "url";
 
-const { Pool } = pg;
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createDatabasePool } from "./index.js";
+
+const directory = path.dirname(fileURLToPath(import.meta.url));
 
 async function runMigrations() {
   const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    console.error("❌ Error: DATABASE_URL is not set in the environment.");
-    process.exit(1);
-  }
+  if (!databaseUrl) throw new Error("DATABASE_URL is not set in the environment.");
 
-  const hostname = new URL(databaseUrl).hostname;
-  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    ssl: isLocalhost ? false : { rejectUnauthorized: true },
-  });
-
-  const db = drizzle(pool);
-
-  console.log("🚀 Running Drizzle migrations...");
-  const migrationsFolder = path.join(__dirname, "migrations");
-
+  const pool = createDatabasePool(databaseUrl);
   try {
-    await migrate(db, { migrationsFolder });
-    console.log("✅ Migrations applied successfully!");
-  } catch (err) {
-    console.error("❌ Migration failed:", err);
-    process.exit(1);
+    const db = drizzle(pool);
+    console.log("Running MySQL Drizzle migrations...");
+    await migrate(db, { migrationsFolder: path.join(directory, "migrations") });
+    console.log("MySQL migrations applied successfully.");
   } finally {
     await pool.end();
   }
 }
 
-runMigrations();
+runMigrations().catch((error) => {
+  console.error("MySQL migration failed:", error.message);
+  process.exitCode = 1;
+});

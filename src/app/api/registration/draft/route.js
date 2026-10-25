@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/security/respond";
 import { LIMITS, enforce } from "@/lib/security/rate-limit";
-import { assertRegistrationOpen } from "@/lib/registration/deadline";
+import { assertRegistrationOpen, isUniqueViolation } from "@/lib/registration/deadline";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/session";
@@ -39,6 +39,10 @@ function publicDraft(row) {
   };
 }
 
+function affectedRows(result) {
+  return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);
+}
+
 export async function GET() {
   try {
     const session = await requireAuth(["iiit"]);
@@ -71,7 +75,10 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Invalid draft data" }, { status: 400 });
     }
     const parsed = draftSchema.safeParse(input);
-    if (!parsed.success || Object.keys(parsed.data.slotsMap).length > 1200) {
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid draft data" }, { status: 400 });
+    }
+    if (Object.keys(parsed.data.slotsMap).length > 1200) {
       return NextResponse.json({ error: "Invalid draft data" }, { status: 400 });
     }
 
@@ -85,17 +92,32 @@ export async function PUT(request) {
     const { revision, contactDetails, slotsMap } = parsed.data;
     let saved;
     if (revision === 0) {
-      const [row] = await db.insert(registrationDrafts)
-        .values({ iiitCode: session.iiitCode, contactDetails, slotsMap })
-        .onConflictDoNothing()
-        .returning();
-      saved = row;
+      const updatedAt = new Date();
+      try {
+        await db.insert(registrationDrafts)
+          .values({ iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt });
+        // Return the values written by this request rather than doing a
+        // follow-up read that could observe a later concurrent revision.
+        saved = { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt };
+      } catch (error) {
+        // A duplicate on the first save means another session created the
+        // draft. Do not suppress validation or connection errors as if they
+        // were a harmless conflict.
+        if (!isUniqueViolation(error)) throw error;
+        const [latest] = await db.select().from(registrationDrafts)
+          .where(eq(registrationDrafts.iiitCode, session.iiitCode)).limit(1);
+        return NextResponse.json({ error: "A newer draft exists in another session", data: publicDraft(latest) }, { status: 409 });
+      }
     } else {
-      const [row] = await db.update(registrationDrafts)
-        .set({ contactDetails, slotsMap, revision: revision + 1, updatedAt: new Date() })
-        .where(and(eq(registrationDrafts.iiitCode, session.iiitCode), eq(registrationDrafts.revision, revision)))
-        .returning();
-      saved = row;
+      const updatedAt = new Date();
+      const result = await db.update(registrationDrafts)
+        .set({ contactDetails, slotsMap, revision: revision + 1, updatedAt })
+        .where(and(eq(registrationDrafts.iiitCode, session.iiitCode), eq(registrationDrafts.revision, revision)));
+      if (affectedRows(result) > 0) {
+        // Construct the successful response from this write. A later save
+        // must not cause this request to return another request's revision.
+        saved = { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: revision + 1, updatedAt };
+      }
     }
     if (!saved) {
       const [latest] = await db.select().from(registrationDrafts)

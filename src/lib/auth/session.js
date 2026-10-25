@@ -160,7 +160,7 @@ export async function revokeUserSessions(userId) {
 
 /** Removes expired sessions. Cheap; called opportunistically. */
 export async function purgeExpiredSessions() {
-  await getDb().execute(sql`DELETE FROM sessions WHERE expires_at < now()`);
+  await getDb().execute(sql`DELETE FROM sessions WHERE expires_at < UTC_TIMESTAMP(3)`);
 }
 
 /**

@@ -20,7 +20,7 @@ The site's photographs, logos and rulebook PDF are static files shipped with the
 ## What the application is
 
 - One Next.js 16 application (JavaScript, Node.js) serves both the public website and its API from a **single Node.js process**. There is no separate backend server and no background job.
-- Data is stored in **PostgreSQL**. The schema is managed by Drizzle ORM migrations (`npm run db:migrate`).
+- Data is stored in **MySQL 8.0+ (InnoDB)** using mysql2. The schema is managed by Drizzle ORM migrations (`npm run db:migrate`). Dates use UTC. Payment-proof objects remain in Neon S3 storage.
 - Payment proofs (PDF/JPG/PNG, at most 2 MB each) are stored privately in an **S3-compatible object storage bucket**. Files are streamed only to the owning IIIT or to an organizer, after a permission check.
 - **Today:** it runs on Neon PostgreSQL (version 18) and Neon Object Storage. Moving to the Institute's servers needs only new environment variables: database URL, storage endpoint and credentials, and bucket. No code is tied to Neon.
 - **Database SSL:** the app currently requires a verified SSL certificate for any non-localhost database. A database on the same machine works as-is. A remote database with a self-signed certificate would need a small configuration option, which we will add once the setup is confirmed.
@@ -76,7 +76,7 @@ The site's photographs, logos and rulebook PDF are static files shipped with the
 ## Environment variables required (names only)
 
 - **Database and session:**
-  - `DATABASE_URL`: PostgreSQL connection string.
+  - `DATABASE_URL`: MySQL connection string (percent-encode credentials). Remote connections default to verified TLS. The DreamHost target requires the explicitly approved `MYSQL_TLS_MODE=require` (encrypted but certificate authentication disabled); obtain a trusted provider certificate when possible.
   - `SESSION_SECRET`: random secret of at least 32 characters.
 - **Object storage:**
   - `AWS_ENDPOINT_URL_S3`

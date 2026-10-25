@@ -21,5 +21,21 @@ export function assertRegistrationOpen() {
 
 /** True when a database error is a unique-constraint violation. */
 export function isUniqueViolation(error) {
-  return error?.code === "23505" || error?.cause?.code === "23505";
+  const visited = new Set();
+  let current = error;
+
+  while (current && typeof current === "object" && !visited.has(current)) {
+    visited.add(current);
+    if (
+      current.code === "23505" ||
+      current.code === "ER_DUP_ENTRY" ||
+      current.code === 1062 ||
+      Number(current.errno) === 1062
+    ) {
+      return true;
+    }
+    current = current.cause;
+  }
+
+  return false;
 }

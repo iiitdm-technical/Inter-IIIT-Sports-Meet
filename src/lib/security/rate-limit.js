@@ -3,7 +3,7 @@ import { getDb } from "../../db/index.js";
 import { httpError } from "./request.js";
 
 /**
- * Fixed-window rate limiting stored in PostgreSQL so limits hold across
+ * Fixed-window rate limiting stored in MySQL so limits hold across
  * restarts and multiple app instances.
  */
 export const LIMITS = {
@@ -22,41 +22,78 @@ export const LIMITS = {
  */
 export async function hit(key, { limit, windowSeconds }) {
   const db = getDb();
-  const { rows } = await db.execute(sql`
-    INSERT INTO rate_limits (key, window_start, count)
-    VALUES (${key}, now(), 1)
-    ON CONFLICT (key) DO UPDATE SET
-      count = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => ${windowSeconds})
-                   THEN 1 ELSE rate_limits.count + 1 END,
-      window_start = CASE WHEN rate_limits.window_start <= now() - make_interval(secs => ${windowSeconds})
-                          THEN now() ELSE rate_limits.window_start END
-    RETURNING count,
-      GREATEST(1, CEIL(EXTRACT(EPOCH FROM (window_start + make_interval(secs => ${windowSeconds}) - now()))))::int AS retry_after
-  `);
-  const row = rows[0];
+  const result = await db.transaction(async (tx) => {
+    // The upsert serializes first hits and increments on the existing row.
+    // Keep count's CASE before window_start's CASE: MySQL evaluates duplicate
+    // key assignments from left to right, and both conditions must inspect the
+    // old window_start before it is reset.
+    await tx.execute(sql`
+      INSERT INTO rate_limits (\`key\`, window_start, \`count\`)
+      VALUES (${key}, UTC_TIMESTAMP(3), 1)
+      ON DUPLICATE KEY UPDATE
+        \`count\` = CASE
+          WHEN window_start <= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ${windowSeconds} SECOND) THEN 1
+          ELSE \`count\` + 1
+        END,
+        window_start = CASE
+          WHEN window_start <= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ${windowSeconds} SECOND) THEN UTC_TIMESTAMP(3)
+          ELSE window_start
+        END
+    `);
+
+    // The upsert retains its exclusive row lock until this transaction ends,
+    // so this read corresponds to this hit even when other app instances race.
+    const [rows] = await tx.execute(sql`
+      SELECT \`count\`,
+        GREATEST(1, CEIL(
+          TIMESTAMPDIFF(
+            MICROSECOND,
+            UTC_TIMESTAMP(3),
+            DATE_ADD(window_start, INTERVAL ${windowSeconds} SECOND)
+          ) / 1000000
+        )) AS retry_after
+      FROM rate_limits
+      WHERE \`key\` = ${key}
+    `);
+    const row = rows[0];
+    if (!row) throw new Error("Rate limit row disappeared during the hit transaction");
+    return {
+      ok: Number(row.count) <= limit,
+      count: Number(row.count),
+      retryAfter: Number(row.retry_after),
+    };
+  });
+
   // Occasionally clear windows that expired more than a day ago.
   if (Math.random() < 0.01) {
-    db.execute(sql`DELETE FROM rate_limits WHERE window_start < now() - interval '1 day'`).catch(() => {});
+    db.execute(sql`DELETE FROM rate_limits WHERE window_start < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 1 DAY)`).catch(() => {});
   }
-  return { ok: row.count <= limit, count: row.count, retryAfter: row.retry_after };
+  return result;
 }
 
 /** Current count for `key` without adding a hit. */
 export async function peek(key, { limit, windowSeconds }) {
   const db = getDb();
-  const { rows } = await db.execute(sql`
-    SELECT count,
-      GREATEST(1, CEIL(EXTRACT(EPOCH FROM (window_start + make_interval(secs => ${windowSeconds}) - now()))))::int AS retry_after
+  const [rows] = await db.execute(sql`
+    SELECT \`count\`,
+      GREATEST(1, CEIL(
+        TIMESTAMPDIFF(
+          MICROSECOND,
+          UTC_TIMESTAMP(3),
+          DATE_ADD(window_start, INTERVAL ${windowSeconds} SECOND)
+        ) / 1000000
+      )) AS retry_after
     FROM rate_limits
-    WHERE key = ${key} AND window_start > now() - make_interval(secs => ${windowSeconds})
+    WHERE \`key\` = ${key}
+      AND window_start > DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ${windowSeconds} SECOND)
   `);
   const row = rows[0];
   if (!row) return { ok: true, count: 0, retryAfter: 0 };
-  return { ok: row.count < limit, count: row.count, retryAfter: row.retry_after };
+  return { ok: Number(row.count) < limit, count: Number(row.count), retryAfter: Number(row.retry_after) };
 }
 
 export async function reset(key) {
-  await getDb().execute(sql`DELETE FROM rate_limits WHERE key = ${key}`);
+  await getDb().execute(sql`DELETE FROM rate_limits WHERE \`key\` = ${key}`);
 }
 
 /** Adds a hit and throws a 429 error when the limit is exceeded. */

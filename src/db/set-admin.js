@@ -12,11 +12,11 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
 
-import pg from "pg";
 import bcrypt from "bcryptjs";
-import { drizzle } from "drizzle-orm/node-postgres";
+import { drizzle } from "drizzle-orm/mysql2";
 import { and, eq, ne, or } from "drizzle-orm";
 import { z } from "zod";
+import { createDatabasePool } from "./index.js";
 import { auditLog, sessions, users } from "./schema.js";
 
 const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
@@ -38,16 +38,10 @@ if (!/^[a-z][a-z0-9._-]{2,63}$/.test(username) || !displayName || displayName.le
   process.exit(1);
 }
 
-const hostname = new URL(process.env.DATABASE_URL).hostname;
-const local = hostname === "localhost" || hostname === "127.0.0.1";
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: local ? false : { rejectUnauthorized: true },
-  max: 1,
-});
-const db = drizzle(pool);
-
+let pool;
 try {
+  pool = createDatabasePool(process.env.DATABASE_URL);
+  const db = drizzle(pool, { mode: "default" });
   const passwordHash = await bcrypt.hash(password, 12);
   const summary = await db.transaction(async (tx) => {
     const matches = await tx.select().from(users)
@@ -61,22 +55,38 @@ try {
 
     let admin = matches[0];
     if (admin) {
-      [admin] = await tx.update(users)
+      await tx.update(users)
         .set({ email, username, displayName, passwordHash, updatedAt: new Date() })
-        .where(eq(users.id, admin.id))
-        .returning();
+        .where(eq(users.id, admin.id));
+      [admin] = await tx.select().from(users).where(eq(users.id, admin.id)).limit(1);
+      if (!admin) throw new Error("Updated admin account could not be read back");
       await tx.delete(sessions).where(eq(sessions.userId, admin.id));
     } else {
-      [admin] = await tx.insert(users)
-        .values({ username, email, displayName, passwordHash, role: "admin" })
-        .returning();
+      const [insertResult] = await tx.insert(users)
+        .values({ username, email, displayName, passwordHash, role: "admin" });
+      const insertedId = Number(insertResult.insertId);
+      if (!Number.isSafeInteger(insertedId) || insertedId < 1) {
+        throw new Error("MySQL did not return a valid generated admin id");
+      }
+      [admin] = await tx.select().from(users).where(eq(users.id, insertedId)).limit(1);
+      if (!admin) throw new Error("Created admin account could not be read back");
     }
 
     let removed = [];
     if (removeOthers) {
-      removed = await tx.delete(users)
+      const removableAdmins = await tx.select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+      }).from(users)
         .where(and(eq(users.role, "admin"), ne(users.id, admin.id)))
-        .returning({ username: users.username, email: users.email });
+        .for("update");
+      await tx.delete(users)
+        .where(and(eq(users.role, "admin"), ne(users.id, admin.id)));
+      removed = removableAdmins.map(({ username: removedUsername, email: removedEmail }) => ({
+        username: removedUsername,
+        email: removedEmail,
+      }));
     }
 
     await tx.insert(auditLog).values({
@@ -101,5 +111,5 @@ try {
   console.error(`Could not set admin: ${error.message}`);
   process.exitCode = 1;
 } finally {
-  await pool.end();
+  if (pool) await pool.end();
 }
