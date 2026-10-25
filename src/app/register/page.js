@@ -11,6 +11,12 @@ import PaymentPending from "@/components/registration/PaymentPending";
 import { getAllSportsList } from "@/lib/sports/config";
 import { getLiveValidationErrors, getStudentRegistry, getSlotInputId, parseSlotKey } from "@/lib/registration/client-utils";
 
+const EMPTY_CONTACT = { contactName: "", contactEmail: "", contactPhone: "", notes: "" };
+
+function draftContent(contactDetails, slotsMap) {
+  return JSON.stringify({ contactDetails, slotsMap });
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   
@@ -23,20 +29,20 @@ export default function RegisterPage() {
   const [retryCount, setRetryCount] = useState(0);
   
   // Form State
-  const [contactDetails, setContactDetails] = useState({
-    contactName: "",
-    contactEmail: "",
-    contactPhone: "",
-    notes: ""
-  });
+  const [contactDetails, setContactDetails] = useState(EMPTY_CONTACT);
   const [slotsMap, setSlotsMap] = useState({});
   const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [conflictDraft, setConflictDraft] = useState(null);
   const [saveRetryCount, setSaveRetryCount] = useState(0);
   const draftRevisionRef = useRef(0);
   const saveQueueRef = useRef(Promise.resolve());
   const conflictRef = useRef(false);
+  // The draft content the cloud already holds, so opening the page or a
+  // no-op change does not save again. A needless save would bump the
+  // revision and make another open device report a false conflict.
+  const syncedRef = useRef(null);
   
   // UI State
   const [activeTab, setActiveTab] = useState("M");
@@ -108,6 +114,7 @@ export default function RegisterPage() {
         if (draft?.contactDetails) setContactDetails(draft.contactDetails);
         if (draft?.slotsMap) setSlotsMap(draft.slotsMap);
         if (cloudDraft && !localIsNewer) setLastSaved(new Date(cloudDraft.updatedAt));
+        syncedRef.current = draftContent(cloudDraft?.contactDetails || EMPTY_CONTACT, cloudDraft?.slotsMap || {});
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
@@ -122,10 +129,14 @@ export default function RegisterPage() {
   useEffect(() => {
     if (loading || loadError || lockedRegistrationData || !user) return;
     
+    const content = draftContent(contactDetails, slotsMap);
+    if (content === syncedRef.current) return;
+
     const draftKey = `inter_iiit_registration_${user.username}`;
     const snapshot = { contactDetails, slotsMap, updatedAt: new Date().toISOString() };
     const localTimer = setTimeout(() => {
       setLastSaved(null);
+      setHasUnsyncedChanges(true);
       try {
         localStorage.setItem(draftKey, JSON.stringify(snapshot));
       } catch {
@@ -150,6 +161,7 @@ export default function RegisterPage() {
           }
           if (!response.ok) throw new Error(result?.error || "Cloud save failed");
           draftRevisionRef.current = result.data.revision;
+          syncedRef.current = content;
           setLastSaved(new Date(result.data.updatedAt));
           setSaveError("");
         } catch {
@@ -167,6 +179,7 @@ export default function RegisterPage() {
   const handleLoadCloudDraft = () => {
     if (!conflictDraft) return;
     draftRevisionRef.current = conflictDraft.revision;
+    syncedRef.current = draftContent(conflictDraft.contactDetails, conflictDraft.slotsMap);
     setContactDetails(conflictDraft.contactDetails);
     setSlotsMap(conflictDraft.slotsMap);
     conflictRef.current = false;
@@ -177,6 +190,7 @@ export default function RegisterPage() {
   const handleKeepLocalDraft = () => {
     if (!conflictDraft) return;
     draftRevisionRef.current = conflictDraft.revision;
+    syncedRef.current = null; // the cloud holds the other version: save this one
     conflictRef.current = false;
     setConflictDraft(null);
     setSaveError("");
@@ -345,6 +359,7 @@ export default function RegisterPage() {
         iiitName={user.iiitName || user.username}
         uniqueStudentsCount={totalUniqueStudents}
         lastSaved={lastSaved}
+        hasUnsyncedChanges={hasUnsyncedChanges}
         saveFailed={Boolean(saveError)}
         onLogout={handleLogout}
         isLoggingOut={isLoggingOut}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 
-export default function RegistrationHeader({ iiitName, uniqueStudentsCount, lastSaved, saveFailed, onLogout, isLoggingOut }) {
+export default function RegistrationHeader({ iiitName, uniqueStudentsCount, lastSaved, hasUnsyncedChanges, saveFailed, onLogout, isLoggingOut }) {
   const limit = GLOBAL_RULES.MAX_UNIQUE_STUDENTS_PER_IIIT;
   const isOverLimit = uniqueStudentsCount > limit;
   const savedTime = lastSaved?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -33,8 +33,10 @@ export default function RegistrationHeader({ iiitName, uniqueStudentsCount, last
                 </svg>
                 <span className="text-white/80"><span className="sm:hidden">Saved</span><span className="hidden sm:inline">Saved at {savedTime}</span></span>
               </>
-            ) : (
+            ) : hasUnsyncedChanges ? (
               <span className="text-white/75">Saving…</span>
+            ) : (
+              <span className="text-white/75">Saves automatically</span>
             )}
           </div>
 
