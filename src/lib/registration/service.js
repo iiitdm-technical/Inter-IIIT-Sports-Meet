@@ -3,7 +3,7 @@ import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "./labels.j
 import { assertRegistrationOpen, isUniqueViolation } from "./deadline.js";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
-import { headProof } from "../storage/neon.js";
+import { headProof } from "../storage/index.js";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/schemas.js";
 import { validateRegistrationRules } from "../validation/rules.js";
 

@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth/session";
 import { getDb } from "@/db/index";
 import { paymentTransactions, registrations } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { deleteProof, listProofs, putProof } from "@/lib/storage/neon";
+import { deleteProof, listProofs, putProof } from "@/lib/storage";
 import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { MAX_PROOF_BYTES, MAX_PROOF_LABEL } from "@/lib/registration/labels";
 import { PROOF_EXTENSIONS, detectProofType } from "@/lib/registration/proof-file";

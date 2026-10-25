@@ -2,7 +2,7 @@ import { eq, and, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSlotKey } from "../registration/client-utils.js";
-import { deleteProof, listProofs } from "../storage/neon.js";
+import { deleteProof, listProofs } from "../storage/index.js";
 
 function affectedRows(result) {
   return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);

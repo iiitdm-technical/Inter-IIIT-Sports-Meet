@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/session';
-import { getProof } from '@/lib/storage/neon';
+import { getProof } from '@/lib/storage';
 import { getDb } from '@/db/index';
 import { registrations, paymentTransactions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -59,9 +59,9 @@ export async function GET(request) {
 
     // 5. Stream the private object only after the ownership check.
     const proof = await getProof(pathname);
-    return new NextResponse(proof.Body.transformToWebStream(), {
+    return new NextResponse(proof.body, {
       headers: {
-        'Content-Type': proof.ContentType || 'application/octet-stream',
+        'Content-Type': proof.contentType || 'application/octet-stream',
         'Content-Disposition': `inline; filename="${pathname.split('/').pop()}"`,
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',

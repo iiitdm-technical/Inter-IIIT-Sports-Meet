@@ -32,11 +32,12 @@ Build/test failures leave the live process untouched. Startup/health failures re
   shared/.env                   # canonical protected production configuration
   releases/<timestamp>-<sha>/    # code, dependencies, build, copied .env, logs
   current -> releases/...       # last verified active release
+  uploads/                      # payment proofs (PROOF_STORAGE=local), mode 700; back this up
   backups/                      # original migration backup/configuration
   update.lock                   # updater concurrency lock
 ```
 
-The deployment root defaults to `$HOME/.local/share/inter-iiit`. The shared `.env` must already exist and point to **MySQL**; the updater never copies the historical Neon `.env` from the old checkout. Keep session secrets and Neon Object Storage configuration unchanged. Database passwords in URLs must be percent-encoded so Next's `.env` expansion cannot alter `$` characters. Never commit `.env` files or backups.
+The deployment root defaults to `$HOME/.local/share/inter-iiit`. The shared `.env` must already exist and point to **MySQL**; the updater never copies the historical Neon `.env` from the old checkout. Keep session secrets unchanged. Payment proofs live in `uploads/` (`PROOF_STORAGE=local`, `PROOF_STORAGE_DIR` pointing there), outside every release, so deployments and rollbacks keep them. The Neon storage settings remain only as an optional fallback (`PROOF_STORAGE=neon`). Database passwords in URLs must be percent-encoded so Next's `.env` expansion cannot alter `$` characters. Never commit `.env` files or backups.
 
 PM2 uses the release's `ecosystem.config.cjs`: one `sports` process, production mode, automatic restart, and a 700 MB restart threshold. `pm2 save` persists the list; the updater does not install or alter operating-system startup services.
 

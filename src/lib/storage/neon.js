@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand, HeadObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { randomUUID } from "node:crypto";
+import { S3Client, PutObjectCommand, HeadObjectCommand, HeadBucketCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 let client;
 
@@ -37,9 +38,11 @@ export async function headProof(key) {
   return { pathname: key, contentType: result.ContentType, size: result.ContentLength };
 }
 
+/** Returns { body: web ReadableStream, contentType, size }. */
 export async function getProof(key) {
   const { client, bucket } = storage();
-  return client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+  return { body: result.Body.transformToWebStream(), contentType: result.ContentType, size: result.ContentLength };
 }
 
 export async function deleteProof(key) {
@@ -52,4 +55,19 @@ export async function listProofs(prefix) {
   const { client, bucket } = storage();
   const result = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: prefix, MaxKeys: 1000 }));
   return (result.Contents || []).map((item) => item.Key).filter(Boolean);
+}
+
+/** Deployment preflight: write, read back and delete a small object. */
+export async function checkStorage() {
+  const { client, bucket } = storage();
+  const key = `env-check/${randomUUID()}.txt`;
+  await client.send(new HeadBucketCommand({ Bucket: bucket }));
+  try {
+    await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: "storage-ready", ContentType: "text/plain" }));
+    const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+    if ((await object.Body.transformToString()) !== "storage-ready") throw new Error("Neon Object Storage returned unexpected content");
+  } finally {
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+  }
+  return "private Neon Object Storage bucket";
 }

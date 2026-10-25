@@ -2,9 +2,8 @@ import dotenv from "dotenv";
 dotenv.config({ path: ".env.local", quiet: true });
 dotenv.config({ quiet: true });
 
-import { randomUUID } from "node:crypto";
-import { S3Client, HeadBucketCommand, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createDatabasePool } from "./index.js";
+import { checkStorage, storageMode } from "../lib/storage/index.js";
 import { iiits } from "../data/iiits.js";
 
 function requireValue(name) {
@@ -18,12 +17,16 @@ function validateSettings() {
   if (databaseUrl.protocol !== "mysql:") throw new Error("DATABASE_URL must be a MySQL URL using mysql://");
   if ((process.env.SESSION_SECRET || "").length < 32) console.warn("WARN SESSION_SECRET is not set to 32+ characters; sessions still work (SHA-256 token hashes) but setting it adds an HMAC key");
 
-  const endpoint = new URL(requireValue("AWS_ENDPOINT_URL_S3"));
-  if (endpoint.protocol !== "https:") throw new Error("AWS_ENDPOINT_URL_S3 must use HTTPS");
-  requireValue("AWS_ACCESS_KEY_ID");
-  requireValue("AWS_SECRET_ACCESS_KEY");
-  requireValue("AWS_REGION");
-  requireValue("NEON_STORAGE_BUCKET");
+  if (storageMode() === "local") {
+    requireValue("PROOF_STORAGE_DIR");
+  } else {
+    const endpoint = new URL(requireValue("AWS_ENDPOINT_URL_S3"));
+    if (endpoint.protocol !== "https:") throw new Error("AWS_ENDPOINT_URL_S3 must use HTTPS");
+    requireValue("AWS_ACCESS_KEY_ID");
+    requireValue("AWS_SECRET_ACCESS_KEY");
+    requireValue("AWS_REGION");
+    requireValue("NEON_STORAGE_BUCKET");
+  }
 
   if (process.env.PAYMENT_UPI_ID || process.env.PAYMENT_PAYEE_NAME) {
     const upiId = requireValue("PAYMENT_UPI_ID");
@@ -90,39 +93,11 @@ async function checkDatabase(databaseUrl) {
   }
 }
 
-async function checkStorage() {
-  const client = new S3Client({
-    endpoint: process.env.AWS_ENDPOINT_URL_S3,
-    region: process.env.AWS_REGION,
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-  });
-  try {
-    const bucket = process.env.NEON_STORAGE_BUCKET;
-    const key = `env-check/${randomUUID()}.txt`;
-    await client.send(new HeadBucketCommand({ Bucket: bucket }));
-    try {
-      await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: "storage-ready", ContentType: "text/plain" }));
-      const object = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
-      const content = await object.Body.transformToString();
-      if (content !== "storage-ready") throw new Error("Neon Object Storage returned unexpected content");
-      console.log("PASS private Neon Object Storage upload and retrieval");
-    } finally {
-      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
-    }
-  } finally {
-    client.destroy();
-  }
-}
-
 try {
   const databaseUrl = validateSettings();
   console.log("PASS required payment and session settings");
   await checkDatabase(databaseUrl);
-  await checkStorage();
+  console.log(`PASS payment proof storage write, read and delete (${await checkStorage()})`);
   console.log("Environment ready");
 } catch (error) {
   console.error(`Environment check failed: ${error.message}`);

@@ -6,12 +6,12 @@ Student registration for participating IIITs. Coordinators enter students and ev
 
 - Next.js 16, React 19, Tailwind CSS
 - MySQL 8.0+ with Drizzle ORM and mysql2
-- Private Neon Object Storage bucket for payment proofs
+- Payment proofs stored privately on the server (or optionally in a Neon Object Storage bucket)
 - Zod validation and bcrypt password hashes
 
 ## Setup
 
-Use Node.js 22 and npm. The MySQL database and Neon storage bucket must be provisioned before running the application. For existing Neon data, follow [MYSQL_MIGRATION.md](MYSQL_MIGRATION.md) instead of seeding new accounts.
+Use Node.js 22 and npm. The MySQL database and a private folder for payment proofs must be provisioned before running the application. For existing Neon data, follow [MYSQL_MIGRATION.md](MYSQL_MIGRATION.md) instead of seeding new accounts.
 
 ```bash
 npm ci
@@ -25,7 +25,9 @@ Set these server-side variables in `.env.local` and in the deployment environmen
 | `DATABASE_URL` | MySQL connection string; percent-encode password special characters |
 | `MYSQL_TLS_MODE` | `verify` by default; `require` explicitly opts into encrypted but unauthenticated TLS for the approved DreamHost self-signed certificate |
 | `SESSION_SECRET` | Recommended: random secret of at least 32 characters used as an HMAC key for stored session hashes. Optional; changing it signs everyone out |
-| `AWS_ENDPOINT_URL_S3` | Neon Object Storage S3 endpoint |
+| `PROOF_STORAGE` | `local` stores payment proofs on this server; `neon` (default) uses Neon Object Storage |
+| `PROOF_STORAGE_DIR` | With `local`: absolute path of a private folder outside the app folder (`chmod 700`), kept across deployments |
+| `AWS_ENDPOINT_URL_S3` | Neon Object Storage S3 endpoint (only with `PROOF_STORAGE=neon`) |
 | `AWS_ACCESS_KEY_ID` | Neon storage credential ID |
 | `AWS_SECRET_ACCESS_KEY` | Neon storage credential secret |
 | `AWS_REGION` | Region of the Neon storage endpoint |
@@ -33,7 +35,7 @@ Set these server-side variables in `.env.local` and in the deployment environmen
 | `PAYMENT_UPI_ID` | Official organizer UPI ID; enables the payment QR with `PAYMENT_PAYEE_NAME` |
 | `PAYMENT_PAYEE_NAME` | Payee name displayed beside and encoded in the QR |
 
-The storage credential needs access to the private bucket. Do not expose any of these values with a `NEXT_PUBLIC_` prefix or commit `.env.local`.
+With `neon`, the storage credential needs access to the private bucket. Do not expose any of these values with a `NEXT_PUBLIC_` prefix or commit `.env.local`.
 
 ```bash
 npm run db:migrate
@@ -51,7 +53,7 @@ ADMIN_EMAIL=sports@iiitdm.ac.in ADMIN_PASSWORD='…' npm run db:set-admin -- --r
 
 The password is read from the environment and never stored in the repository. Changing it signs that admin out everywhere. Admins sign in with their email or username; the faculty contact email entered by a coordinator never grants admin access. The admin dashboard's **Admin Accounts** tab lists admins without exposing password hashes.
 
-Open `http://localhost:3000/login`. Draft registrations are saved to MySQL for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in MySQL. Payment proofs are stored privately in Neon Object Storage and served through an authenticated endpoint.
+Open `http://localhost:3000/login`. Draft registrations are saved to MySQL for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in MySQL. Payment proofs are stored privately (server folder or Neon bucket) and served only through an authenticated endpoint to the owning IIIT and the admin.
 
 When the sports cell supplies its verified UPI ID and payee name, set the two payment variables in the server environment and redeploy. The payment page then generates a UPI QR for the authoritative student count and ₹2,500 per student. Coordinators upload a proof and enter the UTR; an organizer must check the bank statement and mark the payment verified in the admin view.
 
@@ -76,7 +78,7 @@ npm run lint
 npm run build -- --webpack
 ```
 
-`env:check` validates the session secret and official UPI settings, connects to MySQL, checks the registration, student, draft, payment, session, rate-limit and audit tables plus all 25 IIIT accounts and the organizer admin. It then writes, reads, and deletes a small temporary object in the private Neon storage bucket. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
+`env:check` validates the session secret and official UPI settings, connects to MySQL, checks the registration, student, draft, payment, session, rate-limit and audit tables plus all 25 IIIT accounts and the organizer admin. It then writes, reads, and deletes a small temporary file in the configured proof storage, and refuses a proof folder inside the app folder. It prints no credentials. Run it again in the deployment environment after setting the same variables there.
 
 The webpack flag is a supported Next.js build option. It is useful where the default Turbopack build cannot start its local worker process.
 
@@ -92,4 +94,4 @@ The test submits one roster and proof on disposable resources. Use fresh test re
 
 For the existing DreamHost production host, use [`./update.sh`](DEPLOYMENT.md): it pulls `main`, installs/tests/builds a fresh release, verifies it, and switches only PM2's `sports` process. Production settings come from the protected shared MySQL environment, never the historical Neon configuration. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup, migrations and rollback.
 
-Deploy the Next.js app on a Node.js compatible host and set the same server-side variables there. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS website URL for canonical links, then run migrations and `npm run env:check` before accepting registrations. The MySQL database and private Neon bucket are separate services; this project does not use Vercel Blob. Keep `SESSION_SECRET` consistent across instances. Payment confirmation still requires an organizer to reconcile the transfer with bank records.
+Deploy the Next.js app on a Node.js compatible host and set the same server-side variables there. Set `NEXT_PUBLIC_SITE_URL` to the final HTTPS website URL for canonical links, then run migrations and `npm run env:check` before accepting registrations. The MySQL database and proof storage are separate from the app release; this project does not use Vercel Blob. Keep `SESSION_SECRET` consistent across instances. Payment confirmation still requires an organizer to reconcile the transfer with bank records.
