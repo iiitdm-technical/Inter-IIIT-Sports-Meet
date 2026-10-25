@@ -70,16 +70,20 @@ export const contactDetailsSchema = z.object({
 /**
  * Payment Details Schema
  */
+const IST_OFFSET_MS = 330 * 60 * 1000;
+// Fees for the 2026 meet cannot have been paid before 2026; this catches typos such as 2002.
+const EARLIEST_PAYMENT_DATE = "2026-01-01";
+
 export const paymentDetailsSchema = z.object({
   transactionDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Transaction date must be in YYYY-MM-DD format").refine((val) => {
     const date = new Date(val);
     if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== val) return false;
-    const today = new Date();
-    // Allow dates up to the end of today
-    today.setHours(23, 59, 59, 999);
-    return date <= today;
+    // Compare against today's date in India, not the server's clock: a
+    // payment made just after midnight IST is still "yesterday" in UTC.
+    const todayInIndia = new Date(Date.now() + IST_OFFSET_MS).toISOString().slice(0, 10);
+    return val >= EARLIEST_PAYMENT_DATE && val <= todayInIndia;
   }, "Transaction date cannot be in the future or invalid"),
-  transactionId: z.string().min(5, "Transaction ID/UTR must be at least 5 characters").max(64),
+  transactionId: z.string().trim().min(5, "Transaction ID/UTR must be at least 5 characters").max(64),
   bankName: z.string().max(128).optional().nullable(),
   paymentMode: z.enum(["NEFT", "RTGS", "IMPS", "UPI", "OTHER"], {
     errorMap: () => ({ message: "Payment Mode must be NEFT, RTGS, IMPS, UPI, or OTHER" }),

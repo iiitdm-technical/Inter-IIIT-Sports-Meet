@@ -83,7 +83,7 @@ export async function verifyPayment(iiitCode, transactionId, amount, adminUserna
     error.statusCode = 409;
     throw error;
   }
-  if (payment.transactionId.trim() !== transactionId.trim() || payment.amount !== amount) {
+  if (payment.transactionId.trim().toUpperCase() !== transactionId.trim().toUpperCase() || payment.amount !== amount) {
     const error = new Error("Entered UTR or amount does not match the submitted payment");
     error.statusCode = 422;
     throw error;

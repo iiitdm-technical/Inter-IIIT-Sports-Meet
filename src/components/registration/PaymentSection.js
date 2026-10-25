@@ -3,14 +3,48 @@
 import { useState, useRef, useEffect } from "react";
 import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "@/lib/registration/labels";
 import { GLOBAL_RULES } from "@/lib/sports/config";
+import { guessProofType } from "@/lib/registration/proof-file";
 import Image from "next/image";
-
-const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Re-encodes a photo of a receipt as a smaller JPEG so phone photos over the
+ * limit still upload. Returns null when the browser cannot decode the image
+ * or it cannot be brought under the limit while staying readable.
+ */
+async function shrinkImage(file) {
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return null;
+  }
+  try {
+    let scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height));
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#fff"; // transparent PNG areas become white, not black
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
+      if (blob && blob.size <= MAX_PROOF_BYTES) {
+        const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+        return new File([blob], name, { type: "image/jpeg" });
+      }
+      scale *= 0.8;
+    }
+    return null;
+  } finally {
+    bitmap.close?.();
+  }
 }
 
 function formatCurrency(amount) {
@@ -57,23 +91,37 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
     onChange((current) => ({ ...current, [field]: value }));
   };
 
-  const uploadFile = async (file) => {
-    if (!file) return;
+  const rejectFile = (message) => {
+    setUploadStatus("error");
+    setUploadError(message);
+    onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
+  };
+
+  const uploadFile = async (selected) => {
+    if (!selected) return;
+    let file = selected;
 
     setUploadError("");
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setUploadStatus("error");
-      setUploadError(`Invalid file type. Accepted: PDF, JPG, JPEG, PNG.`);
-      onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
+    const type = guessProofType(file);
+    if (!type) {
+      rejectFile("Upload the receipt as a PDF, JPG or PNG. Screenshots and phone photos work.");
+      return;
+    }
+    if (file.size === 0) {
+      rejectFile("The chosen file is empty. Choose the receipt again.");
       return;
     }
 
     if (file.size > MAX_PROOF_BYTES) {
-      setUploadStatus("error");
-      setUploadError(`File is ${formatFileSize(file.size)}, exceeding the ${MAX_PROOF_LABEL} maximum. Compress the image or save the PDF at a smaller size.`);
-      onChange((current) => ({ ...current, proofPathname: "", proofFileName: "" }));
-      return;
+      const shrunk = type === "application/pdf" ? null : await shrinkImage(file);
+      if (!shrunk) {
+        rejectFile(type === "application/pdf"
+          ? `The PDF is ${formatFileSize(file.size)}, over the ${MAX_PROOF_LABEL} limit. Save or print it again as a smaller PDF, or upload a screenshot of the receipt.`
+          : `File is ${formatFileSize(file.size)}, exceeding the ${MAX_PROOF_LABEL} maximum. Upload a screenshot of the receipt instead.`);
+        return;
+      }
+      file = shrunk;
     }
 
     setLocalFile(file);
@@ -144,7 +192,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
       </dl>
 
       <div className="mb-6 rounded-control border border-[#cfe0c7] bg-green-wash p-4 sm:p-5">
-        <h3 className="heading-card text-brand-deep">Pay by UPI</h3>
+        <h3 className="heading-card text-brand-deep">{upiPayment?.configured ? "Pay by UPI" : "How to pay"}</h3>
         {upiPayment?.configured ? (
           <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
             <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-control border border-line bg-white p-2" />
@@ -157,7 +205,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             </div>
           </div>
         ) : (
-          <p className="mt-1.5 text-sm text-ink-soft">The organizer will publish the official UPI QR here. You can submit a payment made through an approved alternate method.</p>
+          <p className="mt-1.5 text-sm text-ink-soft">Pay the amount above using the payment link or account details shared by the IIITDM Kancheepuram Sports Cell. Then enter the transaction details and upload the payment receipt below. The Sports Cell verifies every payment against its records.</p>
         )}
       </div>
 
@@ -173,6 +221,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             aria-invalid={Boolean(errors.transactionDate) || undefined}
             aria-describedby={errors.transactionDate ? "payment-transaction-date-error" : undefined}
             type="date"
+            min="2026-01-01"
             max={todayStr}
             value={paymentDetails?.transactionDate || ""}
             onChange={(e) => handleFieldChange("transactionDate", e.target.value)}
@@ -190,7 +239,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
         {/* Transaction ID */}
         <div>
           <label htmlFor="payment-transaction-id" className="mb-1.5 block text-sm font-semibold text-ink">
-            Transaction ID / UTR Number <span className="text-red-700" aria-hidden="true">*</span>
+            Transaction ID / UTR / Reference No. <span className="text-red-700" aria-hidden="true">*</span>
           </label>
           <input
             id="payment-transaction-id"
@@ -284,7 +333,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
         {/* Proof Upload */}
         <div className="sm:col-span-2">
           <p id="payment-proof-label" className="mb-1.5 block text-sm font-semibold text-ink">
-            Transaction Proof <span className="text-red-700" aria-hidden="true">*</span>
+            Payment Receipt <span className="text-red-700" aria-hidden="true">*</span>
           </p>
 
           {uploadStatus !== "success" && (
@@ -332,7 +381,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
                     </svg>
                     <div>
                       <p className="text-sm font-bold text-ink">Choose a file or drop it here</p>
-                      <p id="payment-proof-help" className="mt-1 text-xs text-ink-muted">Accepted: PDF, JPG, JPEG, PNG — Maximum: {MAX_PROOF_LABEL}</p>
+                      <p id="payment-proof-help" className="mt-1 text-xs text-ink-muted">PDF, JPG or PNG up to {MAX_PROOF_LABEL}. Larger photos are reduced automatically.</p>
                     </div>
                   </div>
                 )}

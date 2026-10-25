@@ -128,7 +128,7 @@ try {
     // A file over the 2 MB limit is refused in the browser without uploading.
     await page.setInputFiles("#payment-proof-file", { name: "big.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(3 * 1024 * 1024, 0x25) });
     await page.waitForTimeout(200);
-    check("over-2MB proof rejected before upload", uploads === 0 && (await page.getByText(/exceeding the 2 MB maximum/).count()) === 1);
+    check("over-2MB PDF rejected before upload", uploads === 0 && (await page.getByText(/over the 2 MB limit/).count()) === 1);
     await page.focus("#payment-proof-file");
     const [chooser] = await Promise.all([
       page.waitForEvent("filechooser", { timeout: 3000 }).catch(() => null),

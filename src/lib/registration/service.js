@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "./labels.js";
 import { assertRegistrationOpen, isUniqueViolation } from "./deadline.js";
 import { getDb } from "../../db/index.js";
@@ -330,6 +330,23 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       throw conflict;
     }
 
+    // One bank transaction pays for one IIIT. A reference already used by
+    // another IIIT is almost always a copy-paste mistake.
+    const transactionId = payload.paymentDetails.transactionId;
+    const [reused] = await tx
+      .select({ id: paymentTransactions.id })
+      .from(paymentTransactions)
+      .where(and(
+        sql`LOWER(${paymentTransactions.transactionId}) = LOWER(${transactionId})`,
+        ne(paymentTransactions.registrationId, lockedReg.id)
+      ))
+      .limit(1);
+    if (reused) {
+      const conflict = new Error("This transaction ID is already used by another IIIT's payment. Check the reference on your receipt, or contact the Sports Cell.");
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+
     // Insert payment transaction
     // Calculate from the authoritative roster count read while holding the
     // registration lock, rather than trusting the original preflight read.
@@ -340,7 +357,7 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       uniqueStudentCount: uniqueStudentsCount,
       amount,
       transactionDate: new Date(payload.paymentDetails.transactionDate),
-      transactionId: payload.paymentDetails.transactionId,
+      transactionId,
       bankName: payload.paymentDetails.bankName || null,
       paymentMode: payload.paymentDetails.paymentMode,
       otherPaymentMode: payload.paymentDetails.paymentMode === "OTHER" ? payload.paymentDetails.otherPaymentMode : null,

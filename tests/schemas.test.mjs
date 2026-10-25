@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../src/lib/validation/schemas.js";
 import { escapeCsvField, formatCsv } from "../src/lib/csv/generator.js";
 import { hashPassword, verifyPassword } from "../src/lib/auth/passwords.js";
+import { detectProofType, guessProofType } from "../src/lib/registration/proof-file.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const payment = (overrides = {}) => ({
@@ -77,6 +78,25 @@ describe("paymentSubmitSchema", () => {
     assert.equal(accepts(payment({ transactionDate: future })), false);
     assert.equal(accepts(payment({ transactionDate: "2026-99-99" })), false);
     assert.equal(accepts(payment({ transactionDate: "2026-02-30" })), false);
+    assert.equal(accepts(payment({ transactionDate: "2002-10-25" })), false);
+  });
+
+  test("accepts today's date in India even while UTC is still on yesterday", () => {
+    const realNow = Date.now;
+    // 00:30 IST on 26 Oct 2026 is 19:00 UTC on 25 Oct.
+    Date.now = () => Date.parse("2026-10-25T19:00:00Z");
+    try {
+      assert.equal(accepts(payment({ transactionDate: "2026-10-26" })), true);
+      assert.equal(accepts(payment({ transactionDate: "2026-10-27" })), false);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  test("trims the transaction reference", () => {
+    const parsed = paymentSubmitSchema.safeParse(payment({ transactionId: "  UTR987654 \n" }));
+    assert.equal(parsed.success, true);
+    assert.equal(parsed.data.paymentDetails.transactionId, "UTR987654");
   });
 
   test("bounds the UTR length", () => {
@@ -113,5 +133,30 @@ describe("password hashing", () => {
     assert.equal(await verifyPassword("super_secure_pass_123", hash), true);
     assert.equal(await verifyPassword("wrong", hash), false);
     assert.equal(await verifyPassword("", hash), false);
+  });
+});
+
+describe("payment proof file types", () => {
+  const bytes = (text) => new TextEncoder().encode(text);
+
+  test("detects PDF, JPEG and PNG from content", () => {
+    assert.equal(detectProofType(bytes("%PDF-1.7 ...")), "application/pdf");
+    assert.equal(detectProofType(bytes("\n\n  %PDF-1.4 header after junk")), "application/pdf");
+    assert.equal(detectProofType(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0])), "image/jpeg");
+    assert.equal(detectProofType(new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0])), "image/png");
+  });
+
+  test("rejects other content", () => {
+    assert.equal(detectProofType(bytes("<html><script>alert(1)</script>")), null);
+    assert.equal(detectProofType(bytes("GIF89a")), null);
+    assert.equal(detectProofType(new Uint8Array()), null);
+  });
+
+  test("guesses the type when the browser reports it oddly", () => {
+    assert.equal(guessProofType({ type: "", name: "Receipt.PDF" }), "application/pdf");
+    assert.equal(guessProofType({ type: "image/jpg", name: "x" }), "image/jpeg");
+    assert.equal(guessProofType({ type: "application/x-pdf", name: "x" }), "application/pdf");
+    assert.equal(guessProofType({ type: "image/heic", name: "IMG_1.HEIC" }), null);
+    assert.equal(guessProofType({ type: "", name: "receipt.docx" }), null);
   });
 });
