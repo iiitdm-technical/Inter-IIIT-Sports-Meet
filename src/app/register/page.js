@@ -11,7 +11,13 @@ import PaymentPending from "@/components/registration/PaymentPending";
 import { getAllSportsList } from "@/lib/sports/config";
 import { getLiveValidationErrors, getStudentRegistry, getSlotInputId, parseSlotKey } from "@/lib/registration/client-utils";
 
-const EMPTY_CONTACT = { contactName: "", contactEmail: "", contactPhone: "", notes: "" };
+const EMPTY_CONTACT = {
+  contactName: "", contactEmail: "", contactPhone: "",
+  arrivalDate: "", arrivalTime: "", travelMode: "", arrivalPoint: "", departureDate: "", notes: "",
+};
+
+// Drafts saved before a field existed lack it; fill the gaps so every input stays controlled.
+const withContactDefaults = (details) => ({ ...EMPTY_CONTACT, ...(details || {}) });
 
 function draftContent(contactDetails, slotsMap) {
   return JSON.stringify({ contactDetails, slotsMap });
@@ -111,10 +117,10 @@ export default function RegisterPage() {
         const localIsNewer = localDraft?.updatedAt &&
           (!cloudDraft || Date.parse(localDraft.updatedAt) > Date.parse(cloudDraft.updatedAt));
         const draft = localIsNewer ? localDraft : cloudDraft || localDraft;
-        if (draft?.contactDetails) setContactDetails(draft.contactDetails);
+        if (draft?.contactDetails) setContactDetails(withContactDefaults(draft.contactDetails));
         if (draft?.slotsMap) setSlotsMap(draft.slotsMap);
         if (cloudDraft && !localIsNewer) setLastSaved(new Date(cloudDraft.updatedAt));
-        syncedRef.current = draftContent(cloudDraft?.contactDetails || EMPTY_CONTACT, cloudDraft?.slotsMap || {});
+        syncedRef.current = draftContent(withContactDefaults(cloudDraft?.contactDetails), cloudDraft?.slotsMap || {});
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
@@ -179,8 +185,8 @@ export default function RegisterPage() {
   const handleLoadCloudDraft = () => {
     if (!conflictDraft) return;
     draftRevisionRef.current = conflictDraft.revision;
-    syncedRef.current = draftContent(conflictDraft.contactDetails, conflictDraft.slotsMap);
-    setContactDetails(conflictDraft.contactDetails);
+    syncedRef.current = draftContent(withContactDefaults(conflictDraft.contactDetails), conflictDraft.slotsMap);
+    setContactDetails(withContactDefaults(conflictDraft.contactDetails));
     setSlotsMap(conflictDraft.slotsMap);
     conflictRef.current = false;
     setConflictDraft(null);

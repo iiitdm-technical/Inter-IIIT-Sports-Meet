@@ -29,6 +29,9 @@ describe("registrationSubmitSchema", () => {
         contactName: "Prof. Rajesh Sharma",
         contactEmail: "sports@iiitdm.ac.in",
         contactPhone: "9876543210",
+        arrivalDate: "2026-12-18",
+        arrivalTime: "07:30",
+        travelMode: "Train",
         notes: "Arrives 18 December",
       },
       students: [{ rollNumber: "  2023bcs001  ", name: "  rahul sharma  ", gender: "M" }],
@@ -43,7 +46,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires valid contact details and at least one student and entry", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", notes: "Arriving 18 Dec" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", notes: "" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -54,17 +57,44 @@ describe("registrationSubmitSchema", () => {
     assert.equal(registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, contactPhone: "12" } }).success, false);
   });
 
-  test("requires arrival details", () => {
+  test("requires arrival date, time and mode of travel", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", notes: "Arriving 18 Dec" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
-    for (const notes of [undefined, "", "   \n "]) {
-      const parsed = registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, notes } });
-      assert.equal(parsed.success, false, JSON.stringify(notes));
+    const accepts = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, ...changes } }).success;
+    assert.equal(accepts({}), true, "arriving-at, departure and notes are optional");
+    for (const field of ["arrivalDate", "arrivalTime", "travelMode"]) {
+      assert.equal(accepts({ [field]: undefined }), false, `${field} missing`);
+      assert.equal(accepts({ [field]: "" }), false, `${field} empty`);
     }
-    assert.equal(registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, notes: "x".repeat(1001) } }).success, false);
+    assert.equal(accepts({ arrivalDate: "2026-12-14" }), false, "before the arrival window");
+    assert.equal(accepts({ arrivalDate: "2026-12-24" }), false, "after the meet");
+    assert.equal(accepts({ arrivalDate: "2026-12-15" }) && accepts({ arrivalDate: "2026-12-23" }), true, "window edges");
+    assert.equal(accepts({ arrivalDate: "18-12-2026" }), false);
+    assert.equal(accepts({ arrivalTime: "25:00" }), false);
+    assert.equal(accepts({ arrivalTime: "7:30" }), false);
+    assert.equal(accepts({ travelMode: "Rocket" }), false);
+  });
+
+  test("checks departure date and the Other travel mode", () => {
+    const base = {
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
+      students: [{ rollNumber: "R1", name: "A", gender: "M" }],
+      entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
+    };
+    const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, ...changes } });
+    assert.equal(parse({ departureDate: "2026-12-23" }).success, true);
+    assert.equal(parse({ departureDate: "2026-12-27" }).success, false, "after the departure window");
+    const early = parse({ arrivalDate: "2026-12-21", departureDate: "2026-12-20" });
+    assert.equal(early.success, false);
+    assert.deepEqual(early.error.issues[0].path, ["contactDetails", "departureDate"]);
+    assert.equal(parse({ travelMode: "Other" }).success, false, "Other needs a description");
+    assert.equal(parse({ travelMode: "Other", notes: "   " }).success, false);
+    assert.equal(parse({ travelMode: "Other", notes: "Institute bus" }).success, true);
+    assert.equal(parse({ arrivalPoint: "x".repeat(129) }).success, false);
+    assert.equal(parse({ notes: "x".repeat(1001) }).success, false);
   });
 });
 

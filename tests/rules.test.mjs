@@ -16,7 +16,10 @@ const contact = {
   contactName: "Dr A",
   contactEmail: "sports@iiitkota.ac.in",
   contactPhone: "+91 9876543210",
-  notes: "Arriving 18 Dec by train",
+  arrivalDate: "2026-12-18",
+  arrivalTime: "07:30",
+  travelMode: "Train",
+  notes: "",
 };
 
 describe("sport catalogue", () => {
@@ -367,7 +370,7 @@ describe("sport catalogue changes", () => {
 
   test("draft slots for a removed sport are ignored, not submitted or charged", async () => {
     const { buildSubmissionPayload, getLiveValidationErrors, getStudentRegistry } = await import("../src/lib/registration/client-utils.js");
-    const contact = { contactName: "Dr A", contactEmail: "a@example.com", contactPhone: "+91 9876543210", notes: "" };
+    const contact = { contactName: "Dr A", contactEmail: "a@example.com", contactPhone: "+91 9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", notes: "" };
     const slots = {
       "squash|team|M|main|0": { rollNumber: "OLD1", name: "OLD", gender: "M" },
       "handball|team|M|main|0": { rollNumber: "H1", name: "HANDBALL ONE", gender: "M" },

@@ -59,7 +59,7 @@ try {
     const server = draftServer({
       revision: 4,
       updatedAt: new Date().toISOString(),
-      contactDetails: { contactName: "Dr A", contactEmail: "a@iiitkota.ac.in", contactPhone: "+91 9876543210", notes: "Arriving 18 Dec by train" },
+      contactDetails: { contactName: "Dr A", contactEmail: "a@iiitkota.ac.in", contactPhone: "+91 9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", notes: "" },
       slotsMap: { "handball|team|M|main|0": { rollNumber: "H1", name: "ONE", gender: "M" } },
     });
     const laptop = await openDevice(server);

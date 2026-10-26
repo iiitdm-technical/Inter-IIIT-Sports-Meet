@@ -54,7 +54,7 @@ async function step(name, fn) {
 }
 
 const registration = {
-  contactDetails: { contactName: "A", contactEmail: "a@example.org", contactPhone: "123456" },
+  contactDetails: { contactName: "A", contactEmail: "a@example.org", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
   students: [
     { rollNumber: "R1", name: "STUDENT 1", gender: "M" },
     { rollNumber: "R2", name: "STUDENT 2", gender: "M" },

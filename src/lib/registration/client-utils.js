@@ -117,6 +117,11 @@ const CONTACT_FIELD_IDS = {
   contactName: "contact-name",
   contactEmail: "contact-email",
   contactPhone: "contact-phone",
+  arrivalDate: "contact-arrival-date",
+  arrivalTime: "contact-arrival-time",
+  travelMode: "contact-travel-mode",
+  arrivalPoint: "contact-arrival-point",
+  departureDate: "contact-departure-date",
   notes: "contact-notes",
 };
 

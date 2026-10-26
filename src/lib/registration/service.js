@@ -142,6 +142,11 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
         contactName: payload.contactDetails.contactName,
         contactEmail: payload.contactDetails.contactEmail,
         contactPhone: payload.contactDetails.contactPhone,
+        arrivalDate: payload.contactDetails.arrivalDate,
+        arrivalTime: payload.contactDetails.arrivalTime,
+        travelMode: payload.contactDetails.travelMode,
+        arrivalPoint: payload.contactDetails.arrivalPoint || null,
+        departureDate: payload.contactDetails.departureDate || null,
         notes: payload.contactDetails.notes || null,
         totalStudentsCount: payload.students.length,
       })

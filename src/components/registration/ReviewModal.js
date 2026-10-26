@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getSportConfig } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
+import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
 
 /**
  * Cleans up Zod validation error strings into readable labels.
@@ -12,6 +13,11 @@ function formatError(raw) {
     "contactDetails.contactName:": "Contact Form — Name:",
     "contactDetails.contactEmail:": "Contact Form — Email:",
     "contactDetails.contactPhone:": "Contact Form — Phone:",
+    "contactDetails.arrivalDate:": "Travel — Arrival date:",
+    "contactDetails.arrivalTime:": "Travel — Arrival time:",
+    "contactDetails.travelMode:": "Travel — Mode:",
+    "contactDetails.departureDate:": "Travel — Departure date:",
+    "contactDetails.notes:": "Travel — Other notes:",
     "students.": "Student roster —",
     "entries.": "Event entry —",
   };
@@ -125,6 +131,10 @@ export default function ReviewModal({
                     <dt className="text-ink-muted">Name</dt><dd className="font-medium text-ink">{payload?.contactDetails?.contactName || "N/A"}</dd>
                     <dt className="text-ink-muted">Email</dt><dd className="break-all font-medium text-ink">{payload?.contactDetails?.contactEmail || "N/A"}</dd>
                     <dt className="text-ink-muted">Phone</dt><dd className="font-medium text-ink">{payload?.contactDetails?.contactPhone || "N/A"}</dd>
+                    <dt className="text-ink-muted">Arrival</dt><dd className="font-medium text-ink">{formatArrival(payload?.contactDetails) || "N/A"}</dd>
+                    {payload?.contactDetails?.departureDate && (
+                      <><dt className="text-ink-muted">Departure</dt><dd className="font-medium text-ink">{formatTravelDate(payload.contactDetails.departureDate)}</dd></>
+                    )}
                   </dl>
                 </div>
 

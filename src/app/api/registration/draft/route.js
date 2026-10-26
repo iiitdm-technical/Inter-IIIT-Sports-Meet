@@ -18,6 +18,12 @@ const draftSchema = z.object({
     contactEmail: z.string().max(128),
     contactPhone: z.string().max(32),
     notes: z.string().max(1000),
+    // Travel fields arrived later; drafts saved before then lack them.
+    arrivalDate: z.string().max(10).optional(),
+    arrivalTime: z.string().max(5).optional(),
+    travelMode: z.string().max(32).optional(),
+    arrivalPoint: z.string().max(128).optional(),
+    departureDate: z.string().max(10).optional(),
   }),
   slotsMap: z.record(
     z.string().min(1).max(200),

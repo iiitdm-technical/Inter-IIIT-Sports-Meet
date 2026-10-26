@@ -6,6 +6,7 @@ import { getCategoryLabel, getEventName, getRegistrationFee, getSportName } from
 import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
+import { formatTravelDate } from "@/lib/registration/arrival";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -628,6 +629,7 @@ export default function AdminDashboardPage() {
                   <tr>
                     <th scope="col" className={`${tableHead}`}>IIIT</th>
                     <th scope="col" className={`${tableHead}`}>Contact</th>
+                    <th scope="col" className={`${tableHead}`}>Arrival</th>
                     <th scope="col" className={`${tableHead} text-center`}>Status</th>
                     <th scope="col" className={`${tableHead} text-center`}>Students</th>
                     <th scope="col" className={`${tableHead} text-center`}>Amount</th>
@@ -661,6 +663,16 @@ export default function AdminDashboardPage() {
                             <div className="font-semibold text-ink">{row.contactName}</div>
                             {row.contactEmail && <a href={`mailto:${row.contactEmail}`} className="block text-brand-primary underline underline-offset-2">{row.contactEmail}</a>}
                             {row.contactPhone && <a href={`tel:${row.contactPhone.replace(/[^+0-9]/g, "")}`} className="block text-ink-soft underline underline-offset-2">{row.contactPhone}</a>}
+                          </div>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 align-top text-ink-soft">
+                        {row.arrivalDate ? (
+                          <div className="space-y-0.5 whitespace-nowrap">
+                            <div className="font-semibold text-ink">{formatTravelDate(row.arrivalDate)}{row.arrivalTime ? `, ${row.arrivalTime}` : ""}</div>
+                            <div>{row.travelMode}{row.arrivalPoint ? ` · ${row.arrivalPoint}` : ""}</div>
+                            {row.departureDate && <div className="text-xs text-ink-muted">Leaves {formatTravelDate(row.departureDate)}</div>}
+                            {row.notes && <div className="max-w-[14rem] whitespace-normal text-xs text-ink-muted" title={row.notes}>{row.notes.length > 80 ? `${row.notes.slice(0, 80)}…` : row.notes}</div>}
                           </div>
                         ) : "—"}
                       </td>
@@ -725,7 +737,7 @@ export default function AdminDashboardPage() {
                   ))}
                   {filteredRegistrations.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center text-ink-soft">No IIITs match this filter.</td>
+                      <td colSpan={12} className="py-10 text-center text-ink-soft">No IIITs match this filter.</td>
                     </tr>
                   )}
                 </tbody>

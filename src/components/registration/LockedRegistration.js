@@ -7,6 +7,7 @@ import RegistrationSteps from "./RegistrationSteps";
 import RosterSummary from "./RosterSummary";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 import { SPORTS_CELL_EMAIL, formatRupees } from "@/lib/registration/labels";
+import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
 
 export default function LockedRegistration({ registrationData }) {
   const [verification, setVerification] = useState({
@@ -118,6 +119,22 @@ export default function LockedRegistration({ registrationData }) {
                 <dt className={detailLabel}>Phone</dt>
                 <dd className={detailValue}>{registration.contactPhone || "—"}</dd>
               </div>
+              <div>
+                <dt className={detailLabel}>Arrival</dt>
+                <dd className={detailValue}>{formatArrival(registration) || "—"}</dd>
+              </div>
+              {registration.departureDate && (
+                <div>
+                  <dt className={detailLabel}>Departure</dt>
+                  <dd className={detailValue}>{formatTravelDate(registration.departureDate)}</dd>
+                </div>
+              )}
+              {registration.notes && (
+                <div>
+                  <dt className={detailLabel}>Notes</dt>
+                  <dd className={`${detailValue} whitespace-pre-line`}>{registration.notes}</dd>
+                </div>
+              )}
             </dl>
           </section>
         </div>

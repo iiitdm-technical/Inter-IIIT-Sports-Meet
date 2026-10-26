@@ -141,7 +141,7 @@ try {
   expectStatus(await request("/api/upload", { cookie: iiitCookie, method: "POST", body: new FormData() }), 403, "proof unavailable before roster lock");
 
   const payload = {
-    contactDetails: { contactName: "API Test Coordinator", contactEmail: "test@example.org", contactPhone: "9876543210" },
+    contactDetails: { contactName: "API Test Coordinator", contactEmail: "test@example.org", contactPhone: "9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
     students: [{ rollNumber: "API-TEST-001", name: "API TEST STUDENT", gender: "M" }],
     entries: [{ sportId: "athletics", eventId: "100m", gender: "M", rollNumber: "API-TEST-001", isReserve: false }],
   };

@@ -56,6 +56,13 @@ export const registrations = mysqlTable("registrations", {
   contactEmail: varchar("contact_email", { length: 128 }).notNull(),
   contactPhone: varchar("contact_phone", { length: 32 }).notNull(),
   totalStudentsCount: int("total_students_count").default(0).notNull(),
+  // Contingent travel (see src/lib/registration/arrival.js). Dates are
+  // YYYY-MM-DD and the time HH:MM, local time in India.
+  arrivalDate: varchar("arrival_date", { length: 10 }),
+  arrivalTime: varchar("arrival_time", { length: 5 }),
+  travelMode: varchar("travel_mode", { length: 32 }),
+  arrivalPoint: varchar("arrival_point", { length: 128 }),
+  departureDate: varchar("departure_date", { length: 10 }),
   notes: text("notes"),
   createdAt: currentUtcDateTime("created_at").notNull(),
   updatedAt: currentUtcDateTime("updated_at").notNull(),

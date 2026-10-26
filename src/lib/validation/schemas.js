@@ -1,4 +1,7 @@
 import { z } from "zod";
+import {
+  TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX, formatTravelDate,
+} from "../registration/arrival.js";
 
 /**
  * Normalizes roll number to uppercase trimmed string
@@ -60,11 +63,31 @@ export const eventEntrySchema = z.object({
 /**
  * Contact Details Schema
  */
+const isoDate = /^\d{4}-\d{2}-\d{2}$/;
+const inRange = (value, min, max) => isoDate.test(value) && value >= min && value <= max;
+
 export const contactDetailsSchema = z.object({
   contactName: z.string().trim().min(1, "Contact person name is required").max(128),
   contactEmail: z.email("Invalid contact email address").max(128),
   contactPhone: z.string().trim().regex(/^\+?[0-9()\-\s]{6,32}$/, "Valid contact phone is required"),
-  notes: z.string().trim().min(1, "Arrival details are required").max(1000, "Arrival details are too long"),
+  arrivalDate: z.string({ error: "Arrival date is required" }).trim().min(1, "Arrival date is required")
+    .refine((value) => value === "" || inRange(value, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX),
+      `Arrival date must be between ${formatTravelDate(ARRIVAL_DATE_MIN)} and ${formatTravelDate(ARRIVAL_DATE_MAX)}`),
+  arrivalTime: z.string({ error: "Arrival time is required" }).trim()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Arrival time is required"),
+  travelMode: z.enum(TRAVEL_MODES, { error: "Choose the mode of travel" }),
+  arrivalPoint: z.string().trim().max(128, "Arriving at is too long").optional().default(""),
+  departureDate: z.string().trim().optional().default("")
+    .refine((value) => value === "" || inRange(value, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX),
+      `Departure date must be between ${formatTravelDate(DEPARTURE_DATE_MIN)} and ${formatTravelDate(DEPARTURE_DATE_MAX)}`),
+  notes: z.string().trim().max(1000, "Other notes are too long").optional().default(""),
+}).superRefine((details, ctx) => {
+  if (details.departureDate && details.arrivalDate && details.departureDate < details.arrivalDate) {
+    ctx.addIssue({ code: "custom", path: ["departureDate"], message: "Departure date cannot be before the arrival date" });
+  }
+  if (details.travelMode === "Other" && !details.notes) {
+    ctx.addIssue({ code: "custom", path: ["notes"], message: "Describe the mode of travel in Other notes" });
+  }
 });
 
 /**
