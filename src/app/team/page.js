@@ -33,7 +33,7 @@ const studentMembers = [
   { name: "Vijay", role: "Student Member" },
   { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
   { name: "Arshith", role: "Student Member" },
-  { name: "Bhargav", role: "Student Member" },
+  { name: "Bhargav Sai", role: "Student Member", image: "/assets/team/bhargav-sai.jpg" },
   { name: "Sainatha", role: "Student Member", image: "/assets/team/sainath.jpg" },
   { name: "Sriram", role: "Student Member" },
 ];
