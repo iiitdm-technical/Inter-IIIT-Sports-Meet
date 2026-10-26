@@ -201,16 +201,16 @@ describe("arrival point by mode of travel", () => {
   const base = { students: [{ rollNumber: "R1", name: "A", gender: "M" }], entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }] };
   const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...contact, ...changes } });
 
-  test("train needs a station; listed or typed", () => {
+  test("train needs a station: listed, or typed under Other", () => {
     assert.equal(parse({ travelMode: "Train" }).success, false);
-    assert.equal(parse({ travelMode: "Train", arrivalPoint: "  " }).success, false);
-    assert.equal(parse({ travelMode: "Train", arrivalPoint: "Chennai Egmore (MS)" }).success, true);
+    assert.equal(parse({ travelMode: "Train", arrivalPoint: "   " }).success, false);
     assert.equal(parse({ travelMode: "Train", arrivalPoint: "Katpadi Junction" }).success, true);
+    for (const station of RAILWAY_STATIONS) assert.equal(parse({ travelMode: "Train", arrivalPoint: station }).success, true, station);
   });
 
-  test("bus must arrive at Kilambakkam or CMBT", () => {
+  test("bus needs a terminus: Kilambakkam, CMBT, or typed under Other", () => {
     assert.equal(parse({ travelMode: "Bus" }).success, false);
-    assert.equal(parse({ travelMode: "Bus", arrivalPoint: "Madurai" }).success, false);
+    assert.equal(parse({ travelMode: "Bus", arrivalPoint: "Tambaram bus stand" }).success, true);
     for (const terminus of BUS_TERMINALS) assert.equal(parse({ travelMode: "Bus", arrivalPoint: terminus }).success, true);
   });
 
@@ -232,10 +232,9 @@ describe("arrival point by mode of travel", () => {
     assert.equal(arrivalPointForMode("Train", "Tambaram (TBM)"), "Tambaram (TBM)");
     assert.equal(arrivalPointForMode("Own vehicle", BUS_TERMINALS[1]), "");
     assert.equal(arrivalPointForMode("Own vehicle", "Main gate"), "Main gate");
-    assert.equal(RAILWAY_STATIONS[0], "Chennai Beach (MSB)");
-    assert.equal(RAILWAY_STATIONS[RAILWAY_STATIONS.indexOf("Chengalpattu Junction (CGL)") - 1], "Paranur");
-    for (const station of ["Chennai Park", "Chennai Egmore (MS)", "Tambaram (TBM)", "Vandalur", "Chennai Central (MAS)"]) assert.ok(RAILWAY_STATIONS.includes(station), station);
-    assert.equal(new Set(RAILWAY_STATIONS).size, RAILWAY_STATIONS.length, "no duplicates");
+    assert.deepEqual(RAILWAY_STATIONS, ["Chennai Central (MAS)", "Chennai Egmore (MS)", "Chennai Beach (MSB)", "Chennai Park", "Tambaram (TBM)", "Chengalpattu Junction (CGL)"]);
+    assert.equal(arrivalPointForMode("Train", "Vandalur"), "");
+    assert.equal(arrivalPointForMode("Own vehicle", "Tambaram (TBM)"), "");
   });
 });
 

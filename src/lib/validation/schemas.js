@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX, formatTravelDate,
-  BUS_TERMINALS, CHENNAI_AIRPORT,
+  CHENNAI_AIRPORT,
 } from "../registration/arrival.js";
 import { STAFF_MIN, STAFF_MAX, isPersonalEmail } from "../registration/contingent.js";
 
@@ -113,11 +113,12 @@ export const contactDetailsSchema = z.object({
   if (details.travelMode === "Other" && !details.notes) {
     ctx.addIssue({ code: "custom", path: ["notes"], message: "Describe the mode of travel in Other notes" });
   }
+  // Listed stations and termini, or any other place typed under "Other".
   if (details.travelMode === "Train" && !details.arrivalPoint) {
-    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival railway station" });
+    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival railway station, or type it under Other" });
   }
-  if (details.travelMode === "Bus" && !BUS_TERMINALS.includes(details.arrivalPoint)) {
-    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival bus terminus: Kilambakkam or CMBT" });
+  if (details.travelMode === "Bus" && !details.arrivalPoint) {
+    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival bus terminus, or type it under Other" });
   }
 }).transform((details) => (details.travelMode === "Flight" ? { ...details, arrivalPoint: CHENNAI_AIRPORT } : details));
 

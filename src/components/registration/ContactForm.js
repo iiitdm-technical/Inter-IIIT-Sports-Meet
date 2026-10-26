@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX,
   RAILWAY_STATIONS, BUS_TERMINALS, CHENNAI_AIRPORT, arrivalPointForMode,
@@ -10,6 +12,54 @@ const fieldClass = "w-full rounded-control border border-line bg-white px-3.5 py
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink";
 const required = <span className="text-red-700" aria-hidden="true">*</span>;
 const optional = <span className="font-normal text-ink-muted">(optional)</span>;
+
+const OTHER = "__other__";
+
+/**
+ * A list of known arrival points plus "Other", which opens a box to type
+ * any other place. Remounted (by key) when the mode of travel changes.
+ */
+function PointPicker({ label, noun, options, value, onChange }) {
+  const [typing, setTyping] = useState(() => Boolean(value) && !options.includes(value));
+  const selected = typing ? OTHER : options.includes(value) ? value : "";
+  return (
+    <>
+      <label htmlFor="contact-arrival-point" className={labelClass}>{label} {required}</label>
+      <select
+        id="contact-arrival-point"
+        required
+        value={selected}
+        onChange={(e) => {
+          const choice = e.target.value;
+          setTyping(choice === OTHER);
+          onChange(choice === OTHER ? "" : choice);
+          // Move to the new box only when the user picks Other, never on page load.
+          if (choice === OTHER) requestAnimationFrame(() => document.getElementById("contact-arrival-point-other")?.focus());
+        }}
+        className={fieldClass}
+      >
+        <option value="" disabled>Select {noun}</option>
+        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        <option value={OTHER}>Other (type the {noun})</option>
+      </select>
+      {typing && (
+        <div className="mt-3">
+          <label htmlFor="contact-arrival-point-other" className={labelClass}>Other {noun} {required}</label>
+          <input
+            id="contact-arrival-point-other"
+            type="text"
+            required
+            maxLength={128}
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            className={fieldClass}
+            placeholder={`Type the ${noun}`}
+          />
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function ContactForm({ contactDetails, onChange, studentCounts = { boys: 0, girls: 0 } }) {
   const handleChange = (field, value) => {
@@ -113,40 +163,23 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
           </div>
           <div className="sm:col-span-2 md:col-span-2">
             {mode === "Train" ? (
-              <>
-                <label htmlFor="contact-arrival-point" className={labelClass}>Arrival railway station {required}</label>
-                <input
-                  id="contact-arrival-point"
-                  type="text"
-                  list="chennai-railway-stations"
-                  required
-                  maxLength={128}
-                  autoComplete="off"
-                  value={contactDetails.arrivalPoint || ""}
-                  onChange={(e) => handleChange("arrivalPoint", e.target.value)}
-                  className={fieldClass}
-                  placeholder="Search: Tambaram, Vandalur, Central, Egmore, Park…"
-                  aria-describedby="contact-arrival-point-help"
-                />
-                <datalist id="chennai-railway-stations">
-                  {RAILWAY_STATIONS.map((station) => <option key={station} value={station} />)}
-                </datalist>
-                <p id="contact-arrival-point-help" className="meta mt-1.5">Vandalur, Urapakkam, Guduvancheri and Tambaram are nearest the campus. Type another station if yours is not listed.</p>
-              </>
+              <PointPicker
+                key="train"
+                label="Arrival railway station"
+                noun="railway station"
+                options={RAILWAY_STATIONS}
+                value={contactDetails.arrivalPoint}
+                onChange={(value) => handleChange("arrivalPoint", value)}
+              />
             ) : mode === "Bus" ? (
-              <>
-                <label htmlFor="contact-arrival-point" className={labelClass}>Arrival bus terminus {required}</label>
-                <select
-                  id="contact-arrival-point"
-                  required
-                  value={contactDetails.arrivalPoint || ""}
-                  onChange={(e) => handleChange("arrivalPoint", e.target.value)}
-                  className={fieldClass}
-                >
-                  <option value="" disabled>Select bus terminus</option>
-                  {BUS_TERMINALS.map((terminus) => <option key={terminus} value={terminus}>{terminus}</option>)}
-                </select>
-              </>
+              <PointPicker
+                key="bus"
+                label="Arrival bus terminus"
+                noun="bus terminus"
+                options={BUS_TERMINALS}
+                value={contactDetails.arrivalPoint}
+                onChange={(value) => handleChange("arrivalPoint", value)}
+              />
             ) : mode === "Flight" ? (
               <>
                 <p id="contact-arrival-point-label" className={labelClass}>Arrival airport {required}</p>

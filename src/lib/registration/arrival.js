@@ -10,47 +10,15 @@ export const ARRIVAL_DATE_MAX = "2026-12-23";
 export const DEPARTURE_DATE_MIN = "2026-12-19";
 export const DEPARTURE_DATE_MAX = "2026-12-26";
 
-// Railway stations: every stop on the Beach-Tambaram-Chengalpattu suburban
-// line in order (Vandalur, Urapakkam and Guduvancheri are nearest the
-// campus), then the other main Chennai stations. The form offers them as
-// searchable suggestions; a contingent arriving elsewhere can type its station.
+// Railway stations the organizers receive contingents at; any other
+// station or bus stop can be typed under "Other".
 export const RAILWAY_STATIONS = [
-  "Chennai Beach (MSB)",
-  "Chennai Fort",
-  "Chennai Park",
-  "Chennai Egmore (MS)",
-  "Chetpet",
-  "Nungambakkam",
-  "Kodambakkam",
-  "Mambalam (MBM)",
-  "Saidapet",
-  "Guindy (GDY)",
-  "St. Thomas Mount (STM)",
-  "Pazhavanthangal",
-  "Meenambakkam",
-  "Tirusulam (Chennai Airport)",
-  "Pallavaram",
-  "Chromepet",
-  "Tambaram Sanatorium",
-  "Tambaram (TBM)",
-  "Perungalathur",
-  "Vandalur",
-  "Urapakkam",
-  "Guduvancheri",
-  "Potheri",
-  "Kattankulathur",
-  "Maraimalai Nagar",
-  "Singaperumal Koil",
-  "Paranur",
-  "Chengalpattu Junction (CGL)",
   "Chennai Central (MAS)",
-  "Chennai Park Town",
-  "Perambur",
-  "Velachery",
-  "Avadi",
-  "Tiruvallur",
-  "Arakkonam Junction (AJJ)",
-  "Kanchipuram",
+  "Chennai Egmore (MS)",
+  "Chennai Beach (MSB)",
+  "Chennai Park",
+  "Tambaram (TBM)",
+  "Chengalpattu Junction (CGL)",
 ];
 
 export const BUS_TERMINALS = [
@@ -64,8 +32,8 @@ export const CHENNAI_AIRPORT = "Chennai International Airport (MAA)";
 export function arrivalPointForMode(mode, current = "") {
   if (mode === "Flight") return CHENNAI_AIRPORT;
   if (mode === "Bus") return BUS_TERMINALS.includes(current) ? current : "";
-  if (mode === "Train") return current && !BUS_TERMINALS.includes(current) && current !== CHENNAI_AIRPORT ? current : "";
-  return current === CHENNAI_AIRPORT || BUS_TERMINALS.includes(current) ? "" : current;
+  if (mode === "Train") return RAILWAY_STATIONS.includes(current) ? current : "";
+  return current === CHENNAI_AIRPORT || BUS_TERMINALS.includes(current) || RAILWAY_STATIONS.includes(current) ? "" : current;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
