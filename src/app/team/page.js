@@ -21,9 +21,9 @@ const boardSections = [
     title: "Sports Secretaries",
     members: [
       { name: "Tarun Mamillapalli", role: "Sports Secretary (Boys)", image: "/assets/team/Sports Affairs Secretary(Boys)_Tarun Mamillapalli.jpeg" },
-      { name: "Akshita Singh", role: "Sports Secretary (Girls)", image: "/assets/team/Sports Affairs Secretary(Girls)_Akshita Singh.jpeg" },
+      { name: "Akshita Singh", role: "Sports Secretary (Girls)", image: "/assets/team/akshita-singh.jpg" },
       { name: "P. Sri Charan Reddy", role: "Joint Sports Secretary (Boys)", image: "/assets/team/Sports Affairs Joint Secretary(Boys)_P.Sri Charan Reddy.jpeg" },
-      { name: "Parinitha S", role: "Joint Sports Secretary (Girls)", image: "/assets/team/Sports Affairs Joint Secretary(Girls)_Parinitha S.jpeg" },
+      { name: "Parinitha S", role: "Joint Sports Secretary (Girls)", image: "/assets/team/parinitha-s.jpg" },
     ],
   },
 ];
@@ -31,10 +31,10 @@ const boardSections = [
 const studentMembers = [
   { name: "Sunny", role: "Student Member" },
   { name: "Vijay", role: "Student Member" },
-  { name: "Varshini", role: "Student Member" },
+  { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
   { name: "Arshith", role: "Student Member" },
   { name: "Bhargav", role: "Student Member" },
-  { name: "Sainath", role: "Student Member" },
+  { name: "Sainatha", role: "Student Member", image: "/assets/team/sainath.jpg" },
   { name: "Sriram", role: "Student Member" },
 ];
 
