@@ -64,7 +64,7 @@ export const contactDetailsSchema = z.object({
   contactName: z.string().trim().min(1, "Contact person name is required").max(128),
   contactEmail: z.email("Invalid contact email address").max(128),
   contactPhone: z.string().trim().regex(/^\+?[0-9()\-\s]{6,32}$/, "Valid contact phone is required"),
-  notes: z.string().max(1000).optional().default(""),
+  notes: z.string().trim().min(1, "Arrival details are required").max(1000, "Arrival details are too long"),
 });
 
 /**

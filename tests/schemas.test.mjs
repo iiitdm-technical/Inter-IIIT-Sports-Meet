@@ -43,7 +43,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires valid contact details and at least one student and entry", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", notes: "Arriving 18 Dec" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -52,6 +52,19 @@ describe("registrationSubmitSchema", () => {
     assert.equal(registrationSubmitSchema.safeParse({ ...base, entries: [] }).success, false);
     assert.equal(registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, contactEmail: "nope" } }).success, false);
     assert.equal(registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, contactPhone: "12" } }).success, false);
+  });
+
+  test("requires arrival details", () => {
+    const base = {
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", notes: "Arriving 18 Dec" },
+      students: [{ rollNumber: "R1", name: "A", gender: "M" }],
+      entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
+    };
+    for (const notes of [undefined, "", "   \n "]) {
+      const parsed = registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, notes } });
+      assert.equal(parsed.success, false, JSON.stringify(notes));
+    }
+    assert.equal(registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, notes: "x".repeat(1001) } }).success, false);
   });
 });
 

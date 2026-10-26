@@ -27,7 +27,7 @@ try {
       : json(r, { data: {
         revision: 1,
         updatedAt: new Date().toISOString(),
-        contactDetails: { contactName: "Dr A", contactEmail: "a@x.in", contactPhone: "+91 9876543210", notes: "" },
+        contactDetails: { contactName: "Dr A", contactEmail: "a@x.in", contactPhone: "+91 9876543210", notes: "Arriving 18 Dec by train" },
         slotsMap: { "kabaddi|team|M|main|0": { rollNumber: "K1", name: "ANITA", gender: "F" } },
       } })));
     await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });

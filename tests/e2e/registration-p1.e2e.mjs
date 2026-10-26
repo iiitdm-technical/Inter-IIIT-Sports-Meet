@@ -26,7 +26,7 @@ try {
       return json(r, { data: {
         revision: 3,
         updatedAt: new Date().toISOString(),
-        contactDetails: { contactName: "Dr A", contactEmail: "a@iiitkota.ac.in", contactPhone: "+91 9876543210", notes: "" },
+        contactDetails: { contactName: "Dr A", contactEmail: "a@iiitkota.ac.in", contactPhone: "+91 9876543210", notes: "Arriving 18 Dec by train" },
         slotsMap: {
           "kabaddi|team|M|main|0": { rollNumber: "K1", name: "ANITA", gender: "F" },
           "chess|team|mixed|main|0": { rollNumber: "C1", name: "RAVI", gender: "M" },

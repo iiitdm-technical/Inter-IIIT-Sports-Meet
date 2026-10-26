@@ -58,13 +58,15 @@ export default function ContactForm({ contactDetails, onChange }) {
           />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="contact-notes" className={labelClass}>Arrival notes <span className="font-normal text-ink-muted">(optional)</span></label>
+          <label htmlFor="contact-notes" className={labelClass}>Arrival details <span className="text-red-700" aria-hidden="true">*</span></label>
           <textarea
             id="contact-notes"
+            required
+            maxLength={1000}
             value={contactDetails.notes}
             onChange={(e) => handleChange("notes", e.target.value)}
             className={`${fieldClass} min-h-[84px]`}
-            placeholder="E.g., Contingent arrives on 18th Dec morning via train..."
+            placeholder="Arrival date and time, and mode of travel. E.g., Contingent arrives on 18th Dec morning via train..."
           />
         </div>
       </div>

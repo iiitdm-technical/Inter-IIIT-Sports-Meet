@@ -16,7 +16,7 @@ const contact = {
   contactName: "Dr A",
   contactEmail: "sports@iiitkota.ac.in",
   contactPhone: "+91 9876543210",
-  notes: "",
+  notes: "Arriving 18 Dec by train",
 };
 
 describe("sport catalogue", () => {
