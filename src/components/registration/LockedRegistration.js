@@ -8,6 +8,7 @@ import RosterSummary from "./RosterSummary";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 import { SPORTS_CELL_EMAIL, formatRupees } from "@/lib/registration/labels";
 import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
+import { describeContingent } from "@/lib/registration/contingent";
 
 export default function LockedRegistration({ registrationData }) {
   const [verification, setVerification] = useState({
@@ -125,8 +126,26 @@ export default function LockedRegistration({ registrationData }) {
               </div>
               {registration.departureDate && (
                 <div>
-                  <dt className={detailLabel}>Departure</dt>
+                  <dt className={detailLabel}>Exit date</dt>
                   <dd className={detailValue}>{formatTravelDate(registration.departureDate)}</dd>
+                </div>
+              )}
+              {registration.boysSecretaryName && (
+                <div>
+                  <dt className={detailLabel}>Boys&apos; sports secretary</dt>
+                  <dd className={`${detailValue} break-words`}>{[registration.boysSecretaryName, registration.boysSecretaryPhone, registration.boysSecretaryEmail].filter(Boolean).join(" · ")}</dd>
+                </div>
+              )}
+              {registration.girlsSecretaryName && (
+                <div>
+                  <dt className={detailLabel}>Girls&apos; sports secretary</dt>
+                  <dd className={`${detailValue} break-words`}>{[registration.girlsSecretaryName, registration.girlsSecretaryPhone, registration.girlsSecretaryEmail].filter(Boolean).join(" · ")}</dd>
+                </div>
+              )}
+              {registration.staffCount != null && (
+                <div>
+                  <dt className={detailLabel}>Contingent</dt>
+                  <dd className={detailValue}>{describeContingent(registration.boysCount ?? 0, registration.girlsCount ?? 0, registration.staffCount)}</dd>
                 </div>
               )}
               {registration.notes && (

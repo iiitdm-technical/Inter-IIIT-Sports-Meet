@@ -24,6 +24,13 @@ const draftSchema = z.object({
     travelMode: z.string().max(32).optional(),
     arrivalPoint: z.string().max(128).optional(),
     departureDate: z.string().max(10).optional(),
+    boysSecretaryName: z.string().max(128).optional(),
+    boysSecretaryPhone: z.string().max(32).optional(),
+    boysSecretaryEmail: z.string().max(128).optional(),
+    girlsSecretaryName: z.string().max(128).optional(),
+    girlsSecretaryPhone: z.string().max(32).optional(),
+    girlsSecretaryEmail: z.string().max(128).optional(),
+    staffCount: z.union([z.string().max(3), z.number().int().min(0).max(99)]).optional(),
   }),
   slotsMap: z.record(
     z.string().min(1).max(200),

@@ -122,6 +122,13 @@ const CONTACT_FIELD_IDS = {
   travelMode: "contact-travel-mode",
   arrivalPoint: "contact-arrival-point",
   departureDate: "contact-departure-date",
+  boysSecretaryName: "contact-boys-secretary-name",
+  boysSecretaryPhone: "contact-boys-secretary-phone",
+  boysSecretaryEmail: "contact-boys-secretary-email",
+  girlsSecretaryName: "contact-girls-secretary-name",
+  girlsSecretaryPhone: "contact-girls-secretary-phone",
+  girlsSecretaryEmail: "contact-girls-secretary-email",
+  staffCount: "contact-staff-count",
   notes: "contact-notes",
 };
 

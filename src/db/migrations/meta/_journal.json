@@ -15,6 +15,13 @@
       "when": 1793015552493,
       "tag": "0001_arrival_details",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1793016871028,
+      "tag": "0002_contingent_details",
+      "breakpoints": true
     }
   ]
 }

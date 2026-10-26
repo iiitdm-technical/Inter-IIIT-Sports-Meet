@@ -63,6 +63,17 @@ export const registrations = mysqlTable("registrations", {
   travelMode: varchar("travel_mode", { length: 32 }),
   arrivalPoint: varchar("arrival_point", { length: 128 }),
   departureDate: varchar("departure_date", { length: 10 }),
+  // Contingent: the IIIT's sports secretaries, students by gender (counted
+  // from the roster at lock time) and accompanying staff.
+  boysSecretaryName: varchar("boys_secretary_name", { length: 128 }),
+  boysSecretaryPhone: varchar("boys_secretary_phone", { length: 32 }),
+  boysSecretaryEmail: varchar("boys_secretary_email", { length: 128 }),
+  girlsSecretaryName: varchar("girls_secretary_name", { length: 128 }),
+  girlsSecretaryPhone: varchar("girls_secretary_phone", { length: 32 }),
+  girlsSecretaryEmail: varchar("girls_secretary_email", { length: 128 }),
+  boysCount: int("boys_count"),
+  girlsCount: int("girls_count"),
+  staffCount: int("staff_count"),
   notes: text("notes"),
   createdAt: currentUtcDateTime("created_at").notNull(),
   updatedAt: currentUtcDateTime("updated_at").notNull(),

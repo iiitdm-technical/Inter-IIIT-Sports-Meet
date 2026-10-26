@@ -630,6 +630,8 @@ export default function AdminDashboardPage() {
                     <th scope="col" className={`${tableHead}`}>IIIT</th>
                     <th scope="col" className={`${tableHead}`}>Contact</th>
                     <th scope="col" className={`${tableHead}`}>Arrival</th>
+                    <th scope="col" className={`${tableHead}`}>Sports secretaries</th>
+                    <th scope="col" className={`${tableHead} text-center`}>Contingent</th>
                     <th scope="col" className={`${tableHead} text-center`}>Status</th>
                     <th scope="col" className={`${tableHead} text-center`}>Students</th>
                     <th scope="col" className={`${tableHead} text-center`}>Amount</th>
@@ -673,6 +675,29 @@ export default function AdminDashboardPage() {
                             <div>{row.travelMode}{row.arrivalPoint ? ` · ${row.arrivalPoint}` : ""}</div>
                             {row.departureDate && <div className="text-xs text-ink-muted">Leaves {formatTravelDate(row.departureDate)}</div>}
                             {row.notes && <div className="max-w-[14rem] whitespace-normal text-xs text-ink-muted" title={row.notes}>{row.notes.length > 80 ? `${row.notes.slice(0, 80)}…` : row.notes}</div>}
+                          </div>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 align-top text-ink-soft">
+                        {row.boysSecretaryName || row.girlsSecretaryName ? (
+                          <div className="space-y-2">
+                            {[["Boys", "boys"], ["Girls", "girls"]].map(([label, key]) => row[`${key}SecretaryName`] && (
+                              <div key={key} className="space-y-0.5">
+                                <div className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">{label}</div>
+                                <div className="font-semibold text-ink">{row[`${key}SecretaryName`]}</div>
+                                {row[`${key}SecretaryPhone`] && <a href={`tel:${row[`${key}SecretaryPhone`].replace(/[^+0-9]/g, "")}`} className="block underline underline-offset-2">{row[`${key}SecretaryPhone`]}</a>}
+                                {row[`${key}SecretaryEmail`] && <a href={`mailto:${row[`${key}SecretaryEmail`]}`} className="block text-brand-primary underline underline-offset-2">{row[`${key}SecretaryEmail`]}</a>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-center align-top text-ink-soft">
+                        {row.staffCount != null ? (
+                          <div className="whitespace-nowrap text-sm">
+                            <div><span className="font-semibold text-ink">{row.boysCount ?? 0}</span> {row.boysCount === 1 ? "boy" : "boys"}</div>
+                            <div><span className="font-semibold text-ink">{row.girlsCount ?? 0}</span> {row.girlsCount === 1 ? "girl" : "girls"}</div>
+                            <div><span className="font-semibold text-ink">{row.staffCount}</span> staff</div>
                           </div>
                         ) : "—"}
                       </td>
@@ -737,7 +762,7 @@ export default function AdminDashboardPage() {
                   ))}
                   {filteredRegistrations.length === 0 && (
                     <tr>
-                      <td colSpan={12} className="py-10 text-center text-ink-soft">No IIITs match this filter.</td>
+                      <td colSpan={14} className="py-10 text-center text-ink-soft">No IIITs match this filter.</td>
                     </tr>
                   )}
                 </tbody>

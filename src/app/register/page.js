@@ -14,6 +14,9 @@ import { getLiveValidationErrors, getStudentRegistry, getSlotInputId, parseSlotK
 const EMPTY_CONTACT = {
   contactName: "", contactEmail: "", contactPhone: "",
   arrivalDate: "", arrivalTime: "", travelMode: "", arrivalPoint: "", departureDate: "", notes: "",
+  boysSecretaryName: "", boysSecretaryPhone: "", boysSecretaryEmail: "",
+  girlsSecretaryName: "", girlsSecretaryPhone: "", girlsSecretaryEmail: "",
+  staffCount: "",
 };
 
 // Drafts saved before a field existed lack it; fill the gaps so every input stays controlled.
@@ -358,6 +361,11 @@ export default function RegisterPage() {
   const canShowFirstIssue = firstIssue && (firstIssue.slotKeys.length > 0 || firstIssue.fieldId);
 
   const studentRegistry = getStudentRegistry(slotsMap);
+  const studentCounts = { boys: 0, girls: 0 };
+  for (const student of studentRegistry.values()) {
+    if (student.gender === "M") studentCounts.boys++;
+    else if (student.gender === "F") studentCounts.girls++;
+  }
 
   return (
     <div className="min-h-screen bg-ivory pb-48 sm:pb-32">
@@ -409,6 +417,7 @@ export default function RegisterPage() {
         <ContactForm
           contactDetails={contactDetails}
           onChange={setContactDetails}
+          studentCounts={studentCounts}
         />
 
         {/* Navigation Tabs for Gender Sections */}

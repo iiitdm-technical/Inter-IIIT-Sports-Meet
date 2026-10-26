@@ -5,6 +5,7 @@ import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { headProof } from "../storage/index.js";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/schemas.js";
+import { countByGender } from "./contingent.js";
 import { validateRegistrationRules } from "../validation/rules.js";
 
 function affectedRows(result) {
@@ -147,6 +148,15 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
         travelMode: payload.contactDetails.travelMode,
         arrivalPoint: payload.contactDetails.arrivalPoint || null,
         departureDate: payload.contactDetails.departureDate || null,
+        boysSecretaryName: payload.contactDetails.boysSecretaryName,
+        boysSecretaryPhone: payload.contactDetails.boysSecretaryPhone,
+        boysSecretaryEmail: payload.contactDetails.boysSecretaryEmail,
+        girlsSecretaryName: payload.contactDetails.girlsSecretaryName,
+        girlsSecretaryPhone: payload.contactDetails.girlsSecretaryPhone,
+        girlsSecretaryEmail: payload.contactDetails.girlsSecretaryEmail,
+        boysCount: countByGender(payload.students).boys,
+        girlsCount: countByGender(payload.students).girls,
+        staffCount: payload.contactDetails.staffCount,
         notes: payload.contactDetails.notes || null,
         totalStudentsCount: payload.students.length,
       })

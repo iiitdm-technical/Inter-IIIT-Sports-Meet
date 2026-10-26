@@ -19,6 +19,14 @@ const contact = {
   arrivalDate: "2026-12-18",
   arrivalTime: "07:30",
   travelMode: "Train",
+  departureDate: "2026-12-23",
+  boysSecretaryName: "Ravi Kumar",
+  boysSecretaryPhone: "+91 9000000011",
+  boysSecretaryEmail: "ravi@iiitkota.ac.in",
+  girlsSecretaryName: "Anita Rao",
+  girlsSecretaryPhone: "+91 9000000012",
+  girlsSecretaryEmail: "anita@iiitkota.ac.in",
+  staffCount: 2,
   notes: "",
 };
 
@@ -370,7 +378,7 @@ describe("sport catalogue changes", () => {
 
   test("draft slots for a removed sport are ignored, not submitted or charged", async () => {
     const { buildSubmissionPayload, getLiveValidationErrors, getStudentRegistry } = await import("../src/lib/registration/client-utils.js");
-    const contact = { contactName: "Dr A", contactEmail: "a@example.com", contactPhone: "+91 9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", notes: "" };
+    const contact = { contactName: "Dr A", contactEmail: "a@example.com", contactPhone: "+91 9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" };
     const slots = {
       "squash|team|M|main|0": { rollNumber: "OLD1", name: "OLD", gender: "M" },
       "handball|team|M|main|0": { rollNumber: "H1", name: "HANDBALL ONE", gender: "M" },
@@ -380,5 +388,24 @@ describe("sport catalogue changes", () => {
     assert.deepEqual(payload.entries.map((e) => e.sportId), ["handball"]);
     assert.equal(getStudentRegistry(slots).has("OLD1"), false);
     assert.equal(getLiveValidationErrors(contact, slots).issues.some((i) => /squash|OLD1/i.test(i.message)), false);
+  });
+});
+
+describe("fee and contingent counts", () => {
+  test("a student in several events is counted, and charged, once", async () => {
+    const { buildSubmissionPayload } = await import("../src/lib/registration/client-utils.js");
+    const { getRegistrationFee } = await import("../src/lib/registration/labels.js");
+    const { countByGender } = await import("../src/lib/registration/contingent.js");
+    const slots = {
+      "athletics|100m|M|main|0": { rollNumber: "cs21b001", name: "Ravi", gender: "M" },
+      "athletics|200m|M|main|0": { rollNumber: " CS21B001 ", name: "RAVI", gender: "M" },
+      "handball|team|M|main|0": { rollNumber: "CS21B001", name: "Ravi", gender: "M" },
+      "handball|team|F|main|0": { rollNumber: "CS21B002", name: "Anita", gender: "F" },
+    };
+    const payload = buildSubmissionPayload(contact, slots);
+    assert.equal(payload.entries.length, 4);
+    assert.equal(payload.students.length, 2);
+    assert.deepEqual(countByGender(payload.students), { boys: 1, girls: 1 });
+    assert.equal(getRegistrationFee(payload.students.length), 2 * 2500);
   });
 });

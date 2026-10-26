@@ -4,6 +4,7 @@ import { registrationSubmitSchema, paymentSubmitSchema } from "../src/lib/valida
 import { escapeCsvField, formatCsv } from "../src/lib/csv/generator.js";
 import { hashPassword, verifyPassword } from "../src/lib/auth/passwords.js";
 import { detectProofType, guessProofType } from "../src/lib/registration/proof-file.js";
+import { countByGender, isPersonalEmail } from "../src/lib/registration/contingent.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const payment = (overrides = {}) => ({
@@ -32,6 +33,14 @@ describe("registrationSubmitSchema", () => {
         arrivalDate: "2026-12-18",
         arrivalTime: "07:30",
         travelMode: "Train",
+        departureDate: "2026-12-23",
+        boysSecretaryName: "Ravi Kumar",
+        boysSecretaryPhone: "+91 9000000011",
+        boysSecretaryEmail: "ravi@iiitkota.ac.in",
+        girlsSecretaryName: "Anita Rao",
+        girlsSecretaryPhone: "+91 9000000012",
+        girlsSecretaryEmail: "anita@iiitkota.ac.in",
+        staffCount: 2,
         notes: "Arrives 18 December",
       },
       students: [{ rollNumber: "  2023bcs001  ", name: "  rahul sharma  ", gender: "M" }],
@@ -46,7 +55,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires valid contact details and at least one student and entry", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", notes: "" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -59,13 +68,13 @@ describe("registrationSubmitSchema", () => {
 
   test("requires arrival date, time and mode of travel", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
     const accepts = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...base.contactDetails, ...changes } }).success;
-    assert.equal(accepts({}), true, "arriving-at, departure and notes are optional");
-    for (const field of ["arrivalDate", "arrivalTime", "travelMode"]) {
+    assert.equal(accepts({}), true, "arriving-at and notes are optional");
+    for (const field of ["arrivalDate", "arrivalTime", "travelMode", "departureDate"]) {
       assert.equal(accepts({ [field]: undefined }), false, `${field} missing`);
       assert.equal(accepts({ [field]: "" }), false, `${field} empty`);
     }
@@ -80,7 +89,7 @@ describe("registrationSubmitSchema", () => {
 
   test("checks departure date and the Other travel mode", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -176,6 +185,46 @@ describe("password hashing", () => {
     assert.equal(await verifyPassword("super_secure_pass_123", hash), true);
     assert.equal(await verifyPassword("wrong", hash), false);
     assert.equal(await verifyPassword("", hash), false);
+  });
+});
+
+describe("sports secretaries and contingent", () => {
+  const contact = {
+    contactName: "A", contactEmail: "a@b.in", contactPhone: "123456",
+    arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23",
+    boysSecretaryName: "Ravi", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in",
+    girlsSecretaryName: "Anita", girlsSecretaryPhone: "9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in",
+    staffCount: "2",
+  };
+  const base = { students: [{ rollNumber: "R1", name: "A", gender: "M" }], entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }] };
+  const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...contact, ...changes } });
+
+  test("every secretary field and the staff count are required", () => {
+    assert.equal(parse({}).success, true);
+    for (const field of ["boysSecretaryName", "boysSecretaryPhone", "boysSecretaryEmail", "girlsSecretaryName", "girlsSecretaryPhone", "girlsSecretaryEmail", "staffCount"]) {
+      assert.equal(parse({ [field]: "" }).success, false, `${field} empty`);
+      assert.equal(parse({ [field]: undefined }).success, false, `${field} missing`);
+    }
+  });
+
+  test("secretaries must give an institute email and a phone number", () => {
+    assert.equal(parse({ boysSecretaryEmail: "ravi@gmail.com" }).success, false);
+    assert.equal(parse({ girlsSecretaryEmail: "anita@Yahoo.co.in" }).success, false);
+    assert.equal(parse({ boysSecretaryEmail: "not-an-email" }).success, false);
+    assert.equal(parse({ girlsSecretaryPhone: "12" }).success, false);
+    assert.equal(isPersonalEmail("x@iiitdm.ac.in"), false);
+    assert.equal(isPersonalEmail(" X@GMAIL.COM "), true);
+  });
+
+  test("accompanying staff is a whole number from 1 to 3", () => {
+    assert.equal(parse({ staffCount: "1" }).data?.contactDetails.staffCount, 1);
+    assert.equal(parse({ staffCount: 3 }).success, true);
+    for (const bad of ["0", "4", "1.5", "two", -1]) assert.equal(parse({ staffCount: bad }).success, false, String(bad));
+  });
+
+  test("boys and girls are counted once per student", () => {
+    assert.deepEqual(countByGender([{ gender: "M" }, { gender: "F" }, { gender: "M" }]), { boys: 2, girls: 1 });
+    assert.deepEqual(countByGender([]), { boys: 0, girls: 0 });
   });
 });
 

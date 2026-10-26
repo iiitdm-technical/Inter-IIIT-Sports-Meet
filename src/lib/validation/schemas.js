@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX, formatTravelDate,
 } from "../registration/arrival.js";
+import { STAFF_MIN, STAFF_MAX, isPersonalEmail } from "../registration/contingent.js";
 
 /**
  * Normalizes roll number to uppercase trimmed string
@@ -65,11 +66,25 @@ export const eventEntrySchema = z.object({
  */
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const inRange = (value, min, max) => isoDate.test(value) && value >= min && value <= max;
+const PHONE = /^\+?[0-9()\-\s]{6,32}$/;
+
+/** Name, phone and institute email of one sports secretary ("Boys" or "Girls"). */
+function secretaryFields(prefix, label) {
+  return {
+    [`${prefix}SecretaryName`]: z.string({ error: `${label} sports secretary's name is required` }).trim()
+      .min(1, `${label} sports secretary's name is required`).max(128),
+    [`${prefix}SecretaryPhone`]: z.string({ error: `${label} sports secretary's phone is required` }).trim()
+      .regex(PHONE, `${label} sports secretary's phone number is required`),
+    [`${prefix}SecretaryEmail`]: z.string({ error: `${label} sports secretary's institute email is required` }).trim()
+      .pipe(z.email(`${label} sports secretary's institute email is required`).max(128))
+      .refine((email) => !isPersonalEmail(email), `${label} sports secretary's email must be the institute email, not a personal one`),
+  };
+}
 
 export const contactDetailsSchema = z.object({
   contactName: z.string().trim().min(1, "Contact person name is required").max(128),
   contactEmail: z.email("Invalid contact email address").max(128),
-  contactPhone: z.string().trim().regex(/^\+?[0-9()\-\s]{6,32}$/, "Valid contact phone is required"),
+  contactPhone: z.string().trim().regex(PHONE, "Valid contact phone is required"),
   arrivalDate: z.string({ error: "Arrival date is required" }).trim().min(1, "Arrival date is required")
     .refine((value) => value === "" || inRange(value, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX),
       `Arrival date must be between ${formatTravelDate(ARRIVAL_DATE_MIN)} and ${formatTravelDate(ARRIVAL_DATE_MAX)}`),
@@ -77,13 +92,22 @@ export const contactDetailsSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Arrival time is required"),
   travelMode: z.enum(TRAVEL_MODES, { error: "Choose the mode of travel" }),
   arrivalPoint: z.string().trim().max(128, "Arriving at is too long").optional().default(""),
-  departureDate: z.string().trim().optional().default("")
+  departureDate: z.string({ error: "Exit date is required" }).trim().min(1, "Exit date is required")
     .refine((value) => value === "" || inRange(value, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX),
-      `Departure date must be between ${formatTravelDate(DEPARTURE_DATE_MIN)} and ${formatTravelDate(DEPARTURE_DATE_MAX)}`),
+      `Exit date must be between ${formatTravelDate(DEPARTURE_DATE_MIN)} and ${formatTravelDate(DEPARTURE_DATE_MAX)}`),
+  ...secretaryFields("boys", "Boys'"),
+  ...secretaryFields("girls", "Girls'"),
+  // Typed into a number field, so it may arrive as a string.
+  staffCount: z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ error: "Number of accompanying staff is required" }).int("Number of accompanying staff must be a whole number")
+      .min(STAFF_MIN, `At least ${STAFF_MIN} accompanying staff member is required`)
+      .max(STAFF_MAX, `At most ${STAFF_MAX} accompanying staff are allowed (2 officials and 1 supporting staff)`),
+  ),
   notes: z.string().trim().max(1000, "Other notes are too long").optional().default(""),
 }).superRefine((details, ctx) => {
   if (details.departureDate && details.arrivalDate && details.departureDate < details.arrivalDate) {
-    ctx.addIssue({ code: "custom", path: ["departureDate"], message: "Departure date cannot be before the arrival date" });
+    ctx.addIssue({ code: "custom", path: ["departureDate"], message: "Exit date cannot be before the arrival date" });
   }
   if (details.travelMode === "Other" && !details.notes) {
     ctx.addIssue({ code: "custom", path: ["notes"], message: "Describe the mode of travel in Other notes" });

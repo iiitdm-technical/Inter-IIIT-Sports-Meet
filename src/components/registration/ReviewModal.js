@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getSportConfig } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
+import { countByGender, describeContingent } from "@/lib/registration/contingent";
 
 /**
  * Cleans up Zod validation error strings into readable labels.
@@ -16,7 +17,10 @@ function formatError(raw) {
     "contactDetails.arrivalDate:": "Travel — Arrival date:",
     "contactDetails.arrivalTime:": "Travel — Arrival time:",
     "contactDetails.travelMode:": "Travel — Mode:",
-    "contactDetails.departureDate:": "Travel — Departure date:",
+    "contactDetails.departureDate:": "Travel — Exit date:",
+    "contactDetails.boysSecretary": "Boys' sports secretary —",
+    "contactDetails.girlsSecretary": "Girls' sports secretary —",
+    "contactDetails.staffCount:": "Contingent — Accompanying staff:",
     "contactDetails.notes:": "Travel — Other notes:",
     "students.": "Student roster —",
     "entries.": "Event entry —",
@@ -127,14 +131,15 @@ export default function ReviewModal({
 
                 <div className="mt-4 rounded-control border border-line p-4">
                   <h4 className="heading-card text-sm">Contact details</h4>
-                  <dl className="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-3 gap-y-1 text-sm">
+                  <dl className="mt-2 grid grid-cols-[5.5rem_1fr] gap-x-3 gap-y-1 text-sm">
                     <dt className="text-ink-muted">Name</dt><dd className="font-medium text-ink">{payload?.contactDetails?.contactName || "N/A"}</dd>
                     <dt className="text-ink-muted">Email</dt><dd className="break-all font-medium text-ink">{payload?.contactDetails?.contactEmail || "N/A"}</dd>
                     <dt className="text-ink-muted">Phone</dt><dd className="font-medium text-ink">{payload?.contactDetails?.contactPhone || "N/A"}</dd>
                     <dt className="text-ink-muted">Arrival</dt><dd className="font-medium text-ink">{formatArrival(payload?.contactDetails) || "N/A"}</dd>
-                    {payload?.contactDetails?.departureDate && (
-                      <><dt className="text-ink-muted">Departure</dt><dd className="font-medium text-ink">{formatTravelDate(payload.contactDetails.departureDate)}</dd></>
-                    )}
+                    <dt className="text-ink-muted">Exit</dt><dd className="font-medium text-ink">{formatTravelDate(payload?.contactDetails?.departureDate) || "N/A"}</dd>
+                    <dt className="text-ink-muted">Boys&apos; sec.</dt><dd className="font-medium text-ink">{[payload?.contactDetails?.boysSecretaryName, payload?.contactDetails?.boysSecretaryPhone, payload?.contactDetails?.boysSecretaryEmail].filter(Boolean).join(" · ") || "N/A"}</dd>
+                    <dt className="text-ink-muted">Girls&apos; sec.</dt><dd className="font-medium text-ink">{[payload?.contactDetails?.girlsSecretaryName, payload?.contactDetails?.girlsSecretaryPhone, payload?.contactDetails?.girlsSecretaryEmail].filter(Boolean).join(" · ") || "N/A"}</dd>
+                    <dt className="text-ink-muted">Contingent</dt><dd className="font-medium text-ink">{describeContingent(countByGender(payload?.students).boys, countByGender(payload?.students).girls, payload?.contactDetails?.staffCount || 0)}</dd>
                   </dl>
                 </div>
 

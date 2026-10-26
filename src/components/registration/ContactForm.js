@@ -1,13 +1,14 @@
 "use client";
 
 import { TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX } from "@/lib/registration/arrival";
+import { STAFF_MIN, STAFF_MAX } from "@/lib/registration/contingent";
 
 const fieldClass = "w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-muted/70 transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20";
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink";
 const required = <span className="text-red-700" aria-hidden="true">*</span>;
 const optional = <span className="font-normal text-ink-muted">(optional)</span>;
 
-export default function ContactForm({ contactDetails, onChange }) {
+export default function ContactForm({ contactDetails, onChange, studentCounts = { boys: 0, girls: 0 } }) {
   const handleChange = (field, value) => {
     onChange({
       ...contactDetails,
@@ -117,10 +118,11 @@ export default function ContactForm({ contactDetails, onChange }) {
             />
           </div>
           <div>
-            <label htmlFor="contact-departure-date" className={labelClass}>Departure date {optional}</label>
+            <label htmlFor="contact-departure-date" className={labelClass}>Exit date {required}</label>
             <input
               id="contact-departure-date"
               type="date"
+              required
               min={contactDetails.arrivalDate > DEPARTURE_DATE_MIN ? contactDetails.arrivalDate : DEPARTURE_DATE_MIN}
               max={DEPARTURE_DATE_MAX}
               value={contactDetails.departureDate || ""}
@@ -143,6 +145,131 @@ export default function ContactForm({ contactDetails, onChange }) {
                 ? "Describe how the contingent is travelling."
                 : "E.g., Train number, number of people arriving, anything the organizers should know."}
             />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-6 border-t border-line pt-5">
+        <legend className="heading-card float-left mb-1 w-full text-base">Sports secretaries</legend>
+        <p className="meta clear-left mb-4">Your institute&apos;s student sports secretaries, for coordination during the meet.</p>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="rounded-control border border-line bg-white/60 p-4">
+            <p className="mb-3 text-sm font-bold text-ink">Boys&apos; sports secretary</p>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="contact-boys-secretary-name" className={labelClass}>Name {required}</label>
+                <input
+                  id="contact-boys-secretary-name"
+                  type="text"
+                  required
+                  maxLength={128}
+                  value={contactDetails.boysSecretaryName || ""}
+                  onChange={(e) => handleChange("boysSecretaryName", e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="contact-boys-secretary-phone" className={labelClass}>Phone number {required}</label>
+                <input
+                  id="contact-boys-secretary-phone"
+                  type="tel"
+                  required
+                  maxLength={32}
+                  value={contactDetails.boysSecretaryPhone || ""}
+                  onChange={(e) => handleChange("boysSecretaryPhone", e.target.value)}
+                  className={fieldClass}
+                  placeholder="+91 9876543210"
+                />
+              </div>
+              <div>
+                <label htmlFor="contact-boys-secretary-email" className={labelClass}>Institute email {required}</label>
+                <input
+                  id="contact-boys-secretary-email"
+                  type="email"
+                  required
+                  maxLength={128}
+                  value={contactDetails.boysSecretaryEmail || ""}
+                  onChange={(e) => handleChange("boysSecretaryEmail", e.target.value)}
+                  className={fieldClass}
+                  placeholder="name@iiit.ac.in"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-control border border-line bg-white/60 p-4">
+            <p className="mb-3 text-sm font-bold text-ink">Girls&apos; sports secretary</p>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="contact-girls-secretary-name" className={labelClass}>Name {required}</label>
+                <input
+                  id="contact-girls-secretary-name"
+                  type="text"
+                  required
+                  maxLength={128}
+                  value={contactDetails.girlsSecretaryName || ""}
+                  onChange={(e) => handleChange("girlsSecretaryName", e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label htmlFor="contact-girls-secretary-phone" className={labelClass}>Phone number {required}</label>
+                <input
+                  id="contact-girls-secretary-phone"
+                  type="tel"
+                  required
+                  maxLength={32}
+                  value={contactDetails.girlsSecretaryPhone || ""}
+                  onChange={(e) => handleChange("girlsSecretaryPhone", e.target.value)}
+                  className={fieldClass}
+                  placeholder="+91 9876543210"
+                />
+              </div>
+              <div>
+                <label htmlFor="contact-girls-secretary-email" className={labelClass}>Institute email {required}</label>
+                <input
+                  id="contact-girls-secretary-email"
+                  type="email"
+                  required
+                  maxLength={128}
+                  value={contactDetails.girlsSecretaryEmail || ""}
+                  onChange={(e) => handleChange("girlsSecretaryEmail", e.target.value)}
+                  className={fieldClass}
+                  placeholder="name@iiit.ac.in"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="mt-6 border-t border-line pt-5">
+        <legend className="heading-card float-left mb-1 w-full text-base">Contingent strength</legend>
+        <p className="meta clear-left mb-4">Boys and girls are counted from the students entered below; a student in several events counts once.</p>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div>
+            <p id="contact-boys-count-label" className={labelClass}>No. of boys {required}</p>
+            <output aria-labelledby="contact-boys-count-label" className="flex h-[46px] items-center rounded-control border border-line bg-ivory px-3.5 font-semibold text-ink">{studentCounts.boys}</output>
+          </div>
+          <div>
+            <p id="contact-girls-count-label" className={labelClass}>No. of girls {required}</p>
+            <output aria-labelledby="contact-girls-count-label" className="flex h-[46px] items-center rounded-control border border-line bg-ivory px-3.5 font-semibold text-ink">{studentCounts.girls}</output>
+          </div>
+          <div>
+            <label htmlFor="contact-staff-count" className={labelClass}>No. of accompanying staff {required}</label>
+            <input
+              id="contact-staff-count"
+              type="number"
+              inputMode="numeric"
+              required
+              min={STAFF_MIN}
+              max={STAFF_MAX}
+              step={1}
+              value={contactDetails.staffCount ?? ""}
+              onChange={(e) => handleChange("staffCount", e.target.value)}
+              className={fieldClass}
+              aria-describedby="contact-staff-count-help"
+            />
+            <p id="contact-staff-count-help" className="meta mt-1.5">{STAFF_MIN} to {STAFF_MAX}: up to 2 officials and 1 supporting staff, including a permanent staff member.</p>
           </div>
         </div>
       </fieldset>
