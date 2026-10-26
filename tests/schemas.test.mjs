@@ -5,6 +5,7 @@ import { escapeCsvField, formatCsv } from "../src/lib/csv/generator.js";
 import { hashPassword, verifyPassword } from "../src/lib/auth/passwords.js";
 import { detectProofType, guessProofType } from "../src/lib/registration/proof-file.js";
 import { countByGender, isPersonalEmail } from "../src/lib/registration/contingent.js";
+import { BUS_TERMINALS, CHENNAI_AIRPORT, RAILWAY_STATIONS, arrivalPointForMode } from "../src/lib/registration/arrival.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const payment = (overrides = {}) => ({
@@ -33,6 +34,7 @@ describe("registrationSubmitSchema", () => {
         arrivalDate: "2026-12-18",
         arrivalTime: "07:30",
         travelMode: "Train",
+        arrivalPoint: "Tambaram (TBM)",
         departureDate: "2026-12-23",
         boysSecretaryName: "Ravi Kumar",
         boysSecretaryPhone: "+91 9000000011",
@@ -55,7 +57,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires valid contact details and at least one student and entry", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -68,7 +70,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires arrival date, time and mode of travel", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -89,7 +91,7 @@ describe("registrationSubmitSchema", () => {
 
   test("checks departure date and the Other travel mode", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -188,10 +190,59 @@ describe("password hashing", () => {
   });
 });
 
+describe("arrival point by mode of travel", () => {
+  const contact = {
+    contactName: "A", contactEmail: "a@b.in", contactPhone: "123456",
+    arrivalDate: "2026-12-18", arrivalTime: "07:30", departureDate: "2026-12-23",
+    boysSecretaryName: "Ravi", boysSecretaryPhone: "9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in",
+    girlsSecretaryName: "Anita", girlsSecretaryPhone: "9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in",
+    staffCount: 2,
+  };
+  const base = { students: [{ rollNumber: "R1", name: "A", gender: "M" }], entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }] };
+  const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...contact, ...changes } });
+
+  test("train needs a station; listed or typed", () => {
+    assert.equal(parse({ travelMode: "Train" }).success, false);
+    assert.equal(parse({ travelMode: "Train", arrivalPoint: "  " }).success, false);
+    assert.equal(parse({ travelMode: "Train", arrivalPoint: "Chennai Egmore (MS)" }).success, true);
+    assert.equal(parse({ travelMode: "Train", arrivalPoint: "Katpadi Junction" }).success, true);
+  });
+
+  test("bus must arrive at Kilambakkam or CMBT", () => {
+    assert.equal(parse({ travelMode: "Bus" }).success, false);
+    assert.equal(parse({ travelMode: "Bus", arrivalPoint: "Madurai" }).success, false);
+    for (const terminus of BUS_TERMINALS) assert.equal(parse({ travelMode: "Bus", arrivalPoint: terminus }).success, true);
+  });
+
+  test("flight always arrives at Chennai airport (MAA)", () => {
+    assert.equal(parse({ travelMode: "Flight" }).data.contactDetails.arrivalPoint, CHENNAI_AIRPORT);
+    assert.equal(parse({ travelMode: "Flight", arrivalPoint: "Bengaluru" }).data.contactDetails.arrivalPoint, CHENNAI_AIRPORT);
+  });
+
+  test("own vehicle keeps an optional free-text point", () => {
+    assert.equal(parse({ travelMode: "Own vehicle" }).success, true);
+    assert.equal(parse({ travelMode: "Own vehicle", arrivalPoint: "Main gate" }).data.contactDetails.arrivalPoint, "Main gate");
+  });
+
+  test("changing the mode keeps only a point that still fits", () => {
+    assert.equal(arrivalPointForMode("Flight", "Tambaram (TBM)"), CHENNAI_AIRPORT);
+    assert.equal(arrivalPointForMode("Bus", "Tambaram (TBM)"), "");
+    assert.equal(arrivalPointForMode("Bus", BUS_TERMINALS[0]), BUS_TERMINALS[0]);
+    assert.equal(arrivalPointForMode("Train", CHENNAI_AIRPORT), "");
+    assert.equal(arrivalPointForMode("Train", "Tambaram (TBM)"), "Tambaram (TBM)");
+    assert.equal(arrivalPointForMode("Own vehicle", BUS_TERMINALS[1]), "");
+    assert.equal(arrivalPointForMode("Own vehicle", "Main gate"), "Main gate");
+    assert.equal(RAILWAY_STATIONS[0], "Chennai Beach (MSB)");
+    assert.equal(RAILWAY_STATIONS[RAILWAY_STATIONS.indexOf("Chengalpattu Junction (CGL)") - 1], "Paranur");
+    for (const station of ["Chennai Park", "Chennai Egmore (MS)", "Tambaram (TBM)", "Vandalur", "Chennai Central (MAS)"]) assert.ok(RAILWAY_STATIONS.includes(station), station);
+    assert.equal(new Set(RAILWAY_STATIONS).size, RAILWAY_STATIONS.length, "no duplicates");
+  });
+});
+
 describe("sports secretaries and contingent", () => {
   const contact = {
     contactName: "A", contactEmail: "a@b.in", contactPhone: "123456",
-    arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", departureDate: "2026-12-23",
+    arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23",
     boysSecretaryName: "Ravi", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in",
     girlsSecretaryName: "Anita", girlsSecretaryPhone: "9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in",
     staffCount: "2",

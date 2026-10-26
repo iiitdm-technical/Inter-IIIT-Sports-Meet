@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX, formatTravelDate,
+  BUS_TERMINALS, CHENNAI_AIRPORT,
 } from "../registration/arrival.js";
 import { STAFF_MIN, STAFF_MAX, isPersonalEmail } from "../registration/contingent.js";
 
@@ -112,7 +113,13 @@ export const contactDetailsSchema = z.object({
   if (details.travelMode === "Other" && !details.notes) {
     ctx.addIssue({ code: "custom", path: ["notes"], message: "Describe the mode of travel in Other notes" });
   }
-});
+  if (details.travelMode === "Train" && !details.arrivalPoint) {
+    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival railway station" });
+  }
+  if (details.travelMode === "Bus" && !BUS_TERMINALS.includes(details.arrivalPoint)) {
+    ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival bus terminus: Kilambakkam or CMBT" });
+  }
+}).transform((details) => (details.travelMode === "Flight" ? { ...details, arrivalPoint: CHENNAI_AIRPORT } : details));
 
 /**
  * Payment Details Schema

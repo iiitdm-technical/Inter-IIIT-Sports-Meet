@@ -1,6 +1,9 @@
 "use client";
 
-import { TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX } from "@/lib/registration/arrival";
+import {
+  TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX,
+  RAILWAY_STATIONS, BUS_TERMINALS, CHENNAI_AIRPORT, arrivalPointForMode,
+} from "@/lib/registration/arrival";
 import { STAFF_MIN, STAFF_MAX } from "@/lib/registration/contingent";
 
 const fieldClass = "w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-muted/70 transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20";
@@ -13,8 +16,11 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
     onChange({
       ...contactDetails,
       [field]: value,
+      // The arrival point depends on the mode: keep it only when it still fits.
+      ...(field === "travelMode" ? { arrivalPoint: arrivalPointForMode(value, contactDetails.arrivalPoint) } : {}),
     });
   };
+  const mode = contactDetails.travelMode;
 
   return (
     <section className="card card-accent mb-8 p-5 sm:p-6" aria-labelledby="contact-details-title">
@@ -106,16 +112,62 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
             </select>
           </div>
           <div className="sm:col-span-2 md:col-span-2">
-            <label htmlFor="contact-arrival-point" className={labelClass}>Arriving at {optional}</label>
-            <input
-              id="contact-arrival-point"
-              type="text"
-              maxLength={128}
-              value={contactDetails.arrivalPoint || ""}
-              onChange={(e) => handleChange("arrivalPoint", e.target.value)}
-              className={fieldClass}
-              placeholder="E.g., Chennai Central, Chennai Airport, Tambaram"
-            />
+            {mode === "Train" ? (
+              <>
+                <label htmlFor="contact-arrival-point" className={labelClass}>Arrival railway station {required}</label>
+                <input
+                  id="contact-arrival-point"
+                  type="text"
+                  list="chennai-railway-stations"
+                  required
+                  maxLength={128}
+                  autoComplete="off"
+                  value={contactDetails.arrivalPoint || ""}
+                  onChange={(e) => handleChange("arrivalPoint", e.target.value)}
+                  className={fieldClass}
+                  placeholder="Search: Tambaram, Vandalur, Central, Egmore, Park…"
+                  aria-describedby="contact-arrival-point-help"
+                />
+                <datalist id="chennai-railway-stations">
+                  {RAILWAY_STATIONS.map((station) => <option key={station} value={station} />)}
+                </datalist>
+                <p id="contact-arrival-point-help" className="meta mt-1.5">Vandalur, Urapakkam, Guduvancheri and Tambaram are nearest the campus. Type another station if yours is not listed.</p>
+              </>
+            ) : mode === "Bus" ? (
+              <>
+                <label htmlFor="contact-arrival-point" className={labelClass}>Arrival bus terminus {required}</label>
+                <select
+                  id="contact-arrival-point"
+                  required
+                  value={contactDetails.arrivalPoint || ""}
+                  onChange={(e) => handleChange("arrivalPoint", e.target.value)}
+                  className={fieldClass}
+                >
+                  <option value="" disabled>Select bus terminus</option>
+                  {BUS_TERMINALS.map((terminus) => <option key={terminus} value={terminus}>{terminus}</option>)}
+                </select>
+              </>
+            ) : mode === "Flight" ? (
+              <>
+                <p id="contact-arrival-point-label" className={labelClass}>Arrival airport {required}</p>
+                <output id="contact-arrival-point" aria-labelledby="contact-arrival-point-label" className="flex min-h-[46px] items-center rounded-control border border-line bg-ivory px-3.5 font-semibold text-ink">
+                  {CHENNAI_AIRPORT}
+                </output>
+              </>
+            ) : (
+              <>
+                <label htmlFor="contact-arrival-point" className={labelClass}>Arriving at {optional}</label>
+                <input
+                  id="contact-arrival-point"
+                  type="text"
+                  maxLength={128}
+                  value={contactDetails.arrivalPoint || ""}
+                  onChange={(e) => handleChange("arrivalPoint", e.target.value)}
+                  className={fieldClass}
+                  placeholder={mode ? "E.g., IIITDM Kancheepuram main gate" : "Choose the mode of travel first"}
+                />
+              </>
+            )}
           </div>
           <div>
             <label htmlFor="contact-departure-date" className={labelClass}>Exit date {required}</label>
