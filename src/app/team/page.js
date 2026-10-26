@@ -22,7 +22,7 @@ const boardSections = [
     members: [
       { name: "Tarun Mamillapalli", role: "Sports Secretary (Boys)", image: "/assets/team/Sports Affairs Secretary(Boys)_Tarun Mamillapalli.jpeg" },
       { name: "Akshita Singh", role: "Sports Secretary (Girls)", image: "/assets/team/akshita-singh.jpg" },
-      { name: "P. Sri Charan Reddy", role: "Joint Sports Secretary (Boys)", image: "/assets/team/Sports Affairs Joint Secretary(Boys)_P.Sri Charan Reddy.jpeg" },
+      { name: "P. Sri Charan Reddy", role: "Joint Sports Secretary (Boys)", image: "/assets/team/sri-charan-reddy.jpg" },
       { name: "Parinitha S", role: "Joint Sports Secretary (Girls)", image: "/assets/team/parinitha-s.jpg" },
     ],
   },
