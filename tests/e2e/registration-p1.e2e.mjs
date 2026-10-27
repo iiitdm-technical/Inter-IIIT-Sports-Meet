@@ -153,10 +153,10 @@ try {
     await page.keyboard.press("Tab");
     const focusedProof = await page.evaluate(() => document.activeElement?.id);
     check("proof file input reachable with Tab", focusedProof === "payment-proof-file", focusedProof);
-    // A file over the 2 MB limit is refused in the browser without uploading.
+    // A PDF over the 1 MB limit is refused in the browser without uploading.
     await page.setInputFiles("#payment-proof-file", { name: "big.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(3 * 1024 * 1024, 0x25) });
     await page.waitForTimeout(200);
-    check("over-2MB PDF rejected before upload", uploads === 0 && (await page.getByText(/over the 2 MB limit/).count()) === 1);
+    check("over-1MB PDF rejected before upload", uploads === 0 && (await page.getByText(/over the 1 MB limit/).count()) === 1);
     await page.focus("#payment-proof-file");
     const [chooser] = await Promise.all([
       page.waitForEvent("filechooser", { timeout: 3000 }).catch(() => null),

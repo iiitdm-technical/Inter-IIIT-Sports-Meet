@@ -14,6 +14,11 @@ Migrations are never run by default. --migrate explicitly runs
 `npm run db:migrate`; database DDL changes are not rolled back with code.
 Set UPDATE_PUBLIC_URL= to skip the public health check, or override the
 default candidate port 18010 with UPDATE_CANDIDATE_PORT.
+
+Storage (institute limit: 3 GB for the whole website): each release drops
+its build-only dependencies and caches, and after a successful deployment
+only the active and the previous release are kept. The npm cache is cleared
+and `npm run storage:check` reports the total.
 HELP
 }
 
@@ -102,6 +107,11 @@ if (( do_migrate )); then
   run_step npm --prefix "$release" run db:migrate
 fi
 run_step npm --prefix "$release" run env:check
+
+# Keep the release small: build tools, caches and non-runtime folders are
+# not needed to serve the site (or to roll back to it later).
+run_step npm --prefix "$release" prune --omit=dev
+rm -rf -- "$release/.next/cache" "$release/reference" "$release/tests"
 
 candidate_port=${UPDATE_CANDIDATE_PORT:-18010}
 [[ "$candidate_port" =~ ^[0-9]{1,5}$ ]] || die "UPDATE_CANDIDATE_PORT must be an integer from 1024 to 65535 other than 8010"
@@ -247,3 +257,15 @@ current_switched=1
 run_step pm2 save
 deployment_committed=1
 printf '\nDeployment successful: %s\n' "$release"
+
+# Storage: keep only the active release and the previous one (for rollback).
+removed=0
+for entry in "$deploy_root"/releases/*; do
+  [[ -d "$entry" && ! -L "$entry" ]] || continue
+  resolved=$(readlink -f -- "$entry") || continue
+  [[ "$resolved" == "$release" || "$resolved" == "$old_release" ]] && continue
+  rm -rf -- "$resolved" && removed=$((removed + 1))
+done
+printf 'Removed %d older release(s); kept the active and previous releases.\n' "$removed"
+npm cache clean --force >/dev/null 2>&1 || printf 'WARNING: could not clear the npm cache.\n' >&2
+run_step npm --prefix "$release" run storage:check || printf 'WARNING: storage check failed; run npm run storage:check manually.\n' >&2

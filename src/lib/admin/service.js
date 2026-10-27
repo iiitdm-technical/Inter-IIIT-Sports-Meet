@@ -3,6 +3,7 @@ import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSlotKey } from "../registration/client-utils.js";
 import { deleteProof, listProofs } from "../storage/index.js";
+import { getStorageSummary } from "../storage/usage.js";
 
 function affectedRows(result) {
   return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);
@@ -214,7 +215,7 @@ export async function getAdminStats() {
   // entries list; payment progress is reported separately.
   const lockedStatuses = inArray(registrations.status, ["payment_pending", "submitted"]);
 
-  const [totalIIITsResult, registrationCounts, totalStudentsResult, totalEntriesResult, verifiedResult] = await Promise.all([
+  const [totalIIITsResult, registrationCounts, totalStudentsResult, totalEntriesResult, verifiedResult, storage] = await Promise.all([
     db.select({ count: count() }).from(users).where(eq(users.role, "iiit")),
     db.select({ status: registrations.status, count: count() }).from(registrations).where(lockedStatuses).groupBy(registrations.status),
     db.select({ count: count() }).from(students)
@@ -225,6 +226,7 @@ export async function getAdminStats() {
       .where(lockedStatuses),
     db.select({ count: count() }).from(paymentTransactions)
       .where(eq(paymentTransactions.verificationStatus, "verified")),
+    getStorageSummary(),
   ]);
 
   const byStatus = Object.fromEntries(registrationCounts.map((row) => [row.status, Number(row.count)]));
@@ -237,6 +239,7 @@ export async function getAdminStats() {
     paymentsVerified: Number(verifiedResult[0]?.count || 0),
     totalStudents: Number(totalStudentsResult[0]?.count || 0),
     totalEventEntries: Number(totalEntriesResult[0]?.count || 0),
+    storage,
   };
 }
 

@@ -22,7 +22,17 @@ The checkout is the **deployment control repository**, not PM2's runtime directo
 6. Replaces **only** PM2's `sports` process with the new release. Explicit replacement avoids PM2 retaining the old absolute script path.
 7. Verifies the PM2 working directory, script path, local and public HTTP checks; updates `current` and saves the PM2 process list.
 
-Build/test failures leave the live process untouched. Startup/health failures restore the previous MySQL app release. There is a brief interruption during the single-process PM2 switch; this is not a zero-downtime clustered deployment. Old/failed releases and logs are retained for diagnosis; no automatic pruning is performed.
+## Storage limit (3 GB)
+
+The institute allows **3 GB in total** for the website: application files, uploaded documents and the database. Uploads are limited to **1 MB per file** and payment receipts to **200 MB in total** (`PROOF_STORAGE_MAX_MB`); an upload that would pass the cap is refused with HTTP 507. To stay well inside the limit the updater:
+
+- removes build-only dependencies (`npm prune --omit=dev`), the Next build cache and non-runtime folders from each release before it starts (about 450 MB per release instead of 960 MB);
+- after a successful deployment, deletes every release except the active one and the previous one, and clears the npm cache;
+- runs `npm run storage:check`, which measures the deployment folder, the Git checkout and the MySQL database against `STORAGE_LIMIT_MB` (default 3072), warns at 80%, and writes `storage-usage.json` next to `uploads/`. The admin dashboard shows that total plus live receipt and database sizes. Run `npm run storage:check -- --strict` to exit non-zero when over the limit.
+
+Never keep `node_modules` or `.next` in the Git checkout; it is only the deployment control repository.
+
+Build/test failures leave the live process untouched. Startup/health failures restore the previous MySQL app release. There is a brief interruption during the single-process PM2 switch; this is not a zero-downtime clustered deployment. Failed releases are kept until the next successful deployment, which removes all but the active and previous releases.
 
 ## Files and configuration
 

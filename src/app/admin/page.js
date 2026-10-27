@@ -8,6 +8,53 @@ import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatTravelDate } from "@/lib/registration/arrival";
 
+const formatMB = (bytes) => {
+  const mb = bytes / 1024 / 1024;
+  if (mb >= 1024) return `${Number((mb / 1024).toFixed(2))} GB`;
+  return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+};
+
+/** Usage against the institute's 3 GB allocation (website files, uploads and database). */
+function StorageCard({ storage }) {
+  const { limitBytes, proofLimitBytes, proofs, databaseBytes, report } = storage;
+  const total = report?.totalBytes;
+  const percent = total ? Math.min(100, Math.round((total / limitBytes) * 100)) : null;
+  const tone = percent >= 90 ? "bg-red-600" : percent >= 80 ? "bg-amber-500" : "bg-brand-primary";
+  return (
+    <section className="card mb-8 p-5" aria-labelledby="storage-title">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="storage-title" className="heading-card">Storage</h2>
+        <p className="meta">Institute limit: {formatMB(limitBytes)} for the whole website</p>
+      </div>
+      {total ? (
+        <>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="stat-number text-3xl text-ink">{formatMB(total)}</span>
+            <span className="text-sm text-ink-muted">used ({percent}%)</span>
+            {percent >= 80 && <span className="chip chip-gold">Near the limit</span>}
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-ivory-dark" role="progressbar" aria-label="Storage used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+            <div className={`h-full ${tone}`} style={{ width: `${percent}%` }} />
+          </div>
+          <p className="meta mt-1.5">Measured {new Date(report.measuredAt).toLocaleString()} (after each deployment).</p>
+        </>
+      ) : (
+        <p className="meta mt-2">The full measurement appears after the next deployment.</p>
+      )}
+      <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+        <div className="card-tint rounded-control p-3">
+          <dt className="text-ink-muted">Payment receipts</dt>
+          <dd className="font-semibold text-ink">{proofs ? `${formatMB(proofs.bytes)} · ${proofs.files} ${proofs.files === 1 ? "file" : "files"}` : "—"} <span className="font-normal text-ink-muted">(cap {formatMB(proofLimitBytes)}, 1 MB per file)</span></dd>
+        </div>
+        <div className="card-tint rounded-control p-3">
+          <dt className="text-ink-muted">Database</dt>
+          <dd className="font-semibold text-ink">{databaseBytes == null ? "—" : formatMB(databaseBytes)}</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState(null);
@@ -362,6 +409,8 @@ export default function AdminDashboardPage() {
             </div>
           </dl>
         )}
+
+        {stats?.storage && <StorageCard storage={stats.storage} />}
 
         {/* Tab Nav */}
         <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">

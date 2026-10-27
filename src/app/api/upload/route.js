@@ -6,6 +6,7 @@ import { getDb } from "@/db/index";
 import { paymentTransactions, registrations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { deleteProof, listProofs, putProof } from "@/lib/storage";
+import { PROOF_STORAGE_MAX_BYTES, proofStorageUsage } from "@/lib/storage/usage";
 import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { MAX_PROOF_BYTES, MAX_PROOF_LABEL } from "@/lib/registration/labels";
 import { PROOF_EXTENSIONS, detectProofType } from "@/lib/registration/proof-file";
@@ -96,6 +97,13 @@ export async function POST(request) {
     const contentType = detectProofType(bytes);
     if (!contentType) {
       return NextResponse.json({ error: `Upload the receipt as a PDF, JPG or PNG of up to ${MAX_PROOF_LABEL}` }, { status: 400 });
+    }
+
+    // Keep uploads well inside the institute's storage allocation.
+    const used = await proofStorageUsage();
+    if (used && used.bytes + bytes.length > PROOF_STORAGE_MAX_BYTES) {
+      console.error(`Proof storage cap reached: ${used.bytes} bytes used of ${PROOF_STORAGE_MAX_BYTES}`);
+      return NextResponse.json({ error: "Upload storage is full. Please contact the IIITDM Kancheepuram Sports Cell." }, { status: 507 });
     }
 
     const key = `payment-proofs/${session.iiitCode}/${randomUUID()}.${PROOF_EXTENSIONS[contentType]}`;

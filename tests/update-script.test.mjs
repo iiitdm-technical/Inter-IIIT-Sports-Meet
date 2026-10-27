@@ -350,3 +350,48 @@ test("failed active health check restores PM2 and keeps current on the old relea
     await cleanup(fixture);
   }
 });
+
+test("successful deploy slims the release and keeps only the active and previous releases", async () => {
+  const fixture = await createFixture();
+  try {
+    const releases = path.join(fixture.deployRoot, "releases");
+    for (const name of ["20260101T000000Z-older1", "20260102T000000Z-older2"]) {
+      await mkdir(path.join(releases, name, "node_modules"), { recursive: true });
+      await writeFile(path.join(releases, name, "ecosystem.config.cjs"), "module.exports = {};\n");
+    }
+    const outside = path.join(fixture.sandbox, "outside-release");
+    await mkdir(outside, { recursive: true });
+    await symlink(outside, path.join(releases, "link-to-outside"));
+
+    const result = deploy(fixture);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    const activeRelease = await realpath(path.join(fixture.deployRoot, "current"));
+    const remaining = (await readdir(releases)).sort();
+    assert.deepEqual(remaining, ["link-to-outside", "mysql-active", path.basename(activeRelease)].sort());
+    assert.equal((await stat(outside)).isDirectory(), true, "symlinked folders outside releases are never followed");
+    assert.match(result.stdout, /Removed 2 older release\(s\)/);
+
+    const npmCalls = await readFile(fixture.npmLog, "utf8");
+    assert.match(npmCalls, /prune --omit=dev/);
+    assert.match(npmCalls, /cache clean --force/);
+    assert.match(npmCalls, /run storage:check/);
+    const order = ["run env:check", "prune --omit=dev", "cache clean --force", "run storage:check"].map((call) => npmCalls.indexOf(call));
+    assert.deepEqual([...order].sort((a, b) => a - b), order, "prune before the candidate starts; cleanup and report after success");
+  } finally {
+    await cleanup(fixture);
+  }
+});
+
+test("a failed deployment removes no releases", async () => {
+  const fixture = await createFixture();
+  try {
+    const older = path.join(fixture.deployRoot, "releases", "20260101T000000Z-older1");
+    await mkdir(older, { recursive: true });
+    const result = deploy(fixture, [], { FAIL_NPM_STEP: "build" });
+    assert.notEqual(result.status, 0);
+    assert.equal((await stat(older)).isDirectory(), true);
+    assert.doesNotMatch(await readFile(fixture.npmLog, "utf8"), /cache clean|storage:check|prune/);
+  } finally {
+    await cleanup(fixture);
+  }
+});

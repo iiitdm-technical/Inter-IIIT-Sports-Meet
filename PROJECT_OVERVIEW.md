@@ -73,7 +73,7 @@ Admin Accounts (read-only list)
 - **Live validation:** shared client and server rule engine.
 - **Cloud drafts:** saved to Neon about one second after each change. A revision number detects edits from two sessions and asks which version to keep.
 - **Review and lock:** summary of students, entries and contact details before an atomic submission.
-- **Payment:** amount computed on the server from the locked student count; optional UPI QR (`PAYMENT_UPI_ID`, `PAYMENT_PAYEE_NAME`); proof upload (PDF, JPG or PNG up to 2 MB, file signature checked) to a private Neon Object Storage bucket.
+- **Payment:** amount computed on the server from the locked student count; optional UPI QR (`PAYMENT_UPI_ID`, `PAYMENT_PAYEE_NAME`); proof upload (PDF, JPG or PNG up to 1 MB, file signature checked; larger photos are shrunk in the browser) to a private folder on the server.
 - **Payment verification:** admin re-enters UTR and amount and confirms the bank credit; the coordinator sees "Bank Verified".
 - **CSV export:** IIIT export of its own roster; admin export of all or filtered entries; spreadsheet formula injection is neutralized.
 - **Admin dashboard:** statistics, entries search, IIITs and payments table, admin accounts table.

@@ -21,7 +21,7 @@ The site's photographs, logos and rulebook PDF are static files shipped with the
 
 - One Next.js 16 application (JavaScript, Node.js) serves both the public website and its API from a **single Node.js process**. There is no separate backend server and no background job.
 - Data is stored in **MySQL 8.0+ (InnoDB)** using mysql2. The schema is managed by Drizzle ORM migrations (`npm run db:migrate`). Dates use UTC. Payment-proof objects remain in Neon S3 storage.
-- Payment proofs (PDF/JPG/PNG, at most 2 MB each) are stored privately in an **S3-compatible object storage bucket**. Files are streamed only to the owning IIIT or to an organizer, after a permission check.
+- Payment proofs (PDF/JPG/PNG, at most 1 MB each) are stored privately in an **S3-compatible object storage bucket**. Files are streamed only to the owning IIIT or to an organizer, after a permission check.
 - **Today:** it runs on Neon PostgreSQL (version 18) and Neon Object Storage. Moving to the Institute's servers needs only new environment variables: database URL, storage endpoint and credentials, and bucket. No code is tied to Neon.
 - **Database SSL:** the app currently requires a verified SSL certificate for any non-localhost database. A database on the same machine works as-is. A remote database with a self-signed certificate would need a small configuration option, which we will add once the setup is confirmed.
 
@@ -56,7 +56,7 @@ The site's photographs, logos and rulebook PDF are static files shipped with the
 
 - **Preferred:** an S3-compatible bucket (for example MinIO) with an access key that can read, write and delete objects in that bucket. The bucket must be **private**, with no public read access.
 - **Alternative:** if no S3 service is available, the app can keep using Neon Object Storage, or we can add an option to store proofs in a private directory on the server's disk.
-- **Volume:** one active proof per IIIT, at most 2 MB each, so **up to about 50 MB**. Replaced proofs are deleted.
+- **Volume:** one active proof per IIIT, at most 1 MB each, so **up to about 25 MB** (capped at 200 MB). Replaced proofs are deleted.
 - **Backups:** daily, together with the database.
 
 ## Server requirements
@@ -68,7 +68,7 @@ The site's photographs, logos and rulebook PDF are static files shipped with the
 - **Node.js 22 LTS** (declared in `package.json`).
 - **A process manager** such as systemd or pm2, to keep `npm start` running and restart it on reboot.
 - **HTTPS through a reverse proxy** such as nginx, with a TLS certificate for the college subdomain. The proxy must:
-  - allow request bodies of **at least 3 MB**, for 2 MB proof uploads;
+  - allow request bodies of **at least 2 MB**, for 1 MB proof uploads;
   - forward the `Host`, `X-Forwarded-For` and `X-Forwarded-Proto` headers.
 - **Outbound internet** is not needed at runtime. Fonts and images are self-hosted. The only external resource is the Google Maps embed on the Location page, which visitors' browsers load directly.
 - **Optional, deployment size:** building with Next.js `output: 'standalone'` would produce a much smaller self-contained deployable than the full 350 MB `node_modules`. It is not enabled yet and could be turned on for the Institute deployment.
@@ -111,7 +111,7 @@ Application: a single Next.js (Node.js 22) application serving both the website 
 Source code: ~43 MB (application code under 1 MB; site images/PDFs ~7 MB; reference documents ~35 MB).
 Build and runtime dependencies: ~6 MB build output plus ~350 MB Node.js packages (about 2 GB free space if the build is done on the server).
 Database: PostgreSQL 15 or newer (16 recommended), one database and one user that can create tables, about 10 connections. Expected size 30–100 MB for 25 IIITs (about 3,750 students and 30,000 event entries); 1 GB allocation recommended.
-Uploaded files: payment proofs only (PDF/JPG/PNG, max 2 MB each, one per IIIT), up to about 50 MB; a private S3-compatible bucket (e.g. MinIO), 1 GB recommended (we can add storage in a private server directory if a bucket is not available).
+Uploaded files: payment proofs only (PDF/JPG/PNG, max 1 MB each, one per IIIT), up to about 25 MB; a private S3-compatible bucket (e.g. MinIO), 1 GB recommended (we can add storage in a private server directory if a bucket is not available).
 Server: Linux VM with 2 vCPU, 2–4 GB RAM and about 5 GB disk plus backups; TLS certificate for the subdomain; upload size limit of at least 3 MB; daily database and file backups.
 Traffic is low: about 25 coordinators and the organizers at peak, plus public visitors.
 
@@ -120,3 +120,8 @@ A detailed requirements note can be shared if needed. Please let us know if any 
 Regards,
 Sports-SAC, IIITDM Kancheepuram
 ```
+
+## Institute storage allocation (27 Oct 2026)
+
+The institute limits the website to **3 GB in total** (application files, uploads and database) and **1 MB per uploaded file**. Both are enforced: see "Storage limit (3 GB)" in `DEPLOYMENT.md`. Expected use is about 1.2 GB: two slimmed releases (~0.45 GB each), the Git checkout (~0.1 GB), Node.js (~0.25 GB), receipts (<25 MB) and the database (~10 MB).
+

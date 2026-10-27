@@ -2,9 +2,9 @@ import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
 
 export const SPORTS_CELL_EMAIL = "sports@iiitdm.ac.in";
 
-/** Largest payment proof accepted, in bytes (2 MB). */
-export const MAX_PROOF_BYTES = 2 * 1024 * 1024;
-export const MAX_PROOF_LABEL = "2 MB";
+/** Largest payment proof accepted, in bytes. */
+export const MAX_PROOF_BYTES = 1024 * 1024; // institute limit: 1 MB per uploaded file
+export const MAX_PROOF_LABEL = "1 MB";
 
 const CATEGORY_LABELS = { M: "Men", F: "Women", mixed: "Combined" };
 
