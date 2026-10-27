@@ -149,7 +149,8 @@ try {
     await page.waitForSelector("#payment-transaction-id");
     await page.fill("#payment-transaction-id", "UTR123456");
 
-    await page.focus("#payment-mode");
+    // The receipt upload follows the transaction ID field in keyboard order.
+    await page.focus("#payment-transaction-id");
     await page.keyboard.press("Tab");
     const focusedProof = await page.evaluate(() => document.activeElement?.id);
     check("proof file input reachable with Tab", focusedProof === "payment-proof-file", focusedProof);
