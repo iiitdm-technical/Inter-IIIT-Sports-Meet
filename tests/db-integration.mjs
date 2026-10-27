@@ -96,7 +96,6 @@ try {
       paymentDetails: {
         transactionDate: new Date().toISOString().slice(0, 10),
         transactionId: "TX12345",
-        paymentMode: "UPI",
         proofPathname: `payment-proofs/${IIIT}/missing.pdf`,
       },
     }, IIIT), (error) => error.statusCode >= 400 && error.statusCode < 500);

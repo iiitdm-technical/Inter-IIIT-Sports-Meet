@@ -373,9 +373,10 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       amount,
       transactionDate: new Date(payload.paymentDetails.transactionDate),
       transactionId,
-      bankName: payload.paymentDetails.bankName || null,
-      paymentMode: payload.paymentDetails.paymentMode,
-      otherPaymentMode: payload.paymentDetails.paymentMode === "OTHER" ? payload.paymentDetails.otherPaymentMode : null,
+      // Payment methods and bank details are handled entirely by the portal.
+      bankName: null,
+      paymentMode: "CCAvenue",
+      otherPaymentMode: null,
       proofPathname: proofDetails.pathname,
       proofFileName: proofDetails.pathname.split('/').pop(),
       proofContentType: proofDetails.contentType,

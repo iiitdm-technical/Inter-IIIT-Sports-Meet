@@ -407,6 +407,6 @@ describe("fee and contingent counts", () => {
     assert.equal(payload.entries.length, 4);
     assert.equal(payload.students.length, 2);
     assert.deepEqual(countByGender(payload.students), { boys: 1, girls: 1 });
-    assert.equal(getRegistrationFee(payload.students.length), 2 * 2500);
+    assert.equal(getRegistrationFee(payload.students.length), 2 * 2500 * 1.18 + 25000);
   });
 });

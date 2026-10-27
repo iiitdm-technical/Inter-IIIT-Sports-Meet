@@ -6,27 +6,38 @@ import LockedHeader from "./LockedHeader";
 import RegistrationSteps from "./RegistrationSteps";
 import RosterSummary from "./RosterSummary";
 import { SPORTS_CELL_EMAIL, formatRupees, getRegistrationFee } from "@/lib/registration/labels";
+import { GLOBAL_RULES } from "@/lib/sports/config";
 
 const EMPTY_PAYMENT_DETAILS = {
   transactionDate: "",
   transactionId: "",
-  bankName: "",
   proofPathname: "",
   proofFileName: "",
 };
+
+function getStoredPaymentDetails(storageKey) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) {
+      return { ...EMPTY_PAYMENT_DETAILS };
+    }
+
+    return {
+      transactionDate: typeof saved.transactionDate === "string" ? saved.transactionDate : "",
+      transactionId: typeof saved.transactionId === "string" ? saved.transactionId : "",
+      proofPathname: typeof saved.proofPathname === "string" ? saved.proofPathname : "",
+      proofFileName: typeof saved.proofFileName === "string" ? saved.proofFileName : "",
+    };
+  } catch {
+    return { ...EMPTY_PAYMENT_DETAILS };
+  }
+}
 
 export default function PaymentPending({ iiitCode, registrationData }) {
   // Keep entered details and the uploaded proof reference in this browser so a
   // reload or expired session does not lose them before submission.
   const storageKey = `inter_iiit_payment_${iiitCode}`;
-  const [paymentDetails, setPaymentDetails] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "null");
-      return saved && typeof saved === "object" ? { ...EMPTY_PAYMENT_DETAILS, ...saved } : EMPTY_PAYMENT_DETAILS;
-    } catch {
-      return EMPTY_PAYMENT_DETAILS;
-    }
-  });
+  const [paymentDetails, setPaymentDetails] = useState(() => getStoredPaymentDetails(storageKey));
   const [attempted, setAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -42,6 +53,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
 
   const { registration, entries } = registrationData;
   const uniqueStudentsCount = registration.totalStudentsCount;
+  const totalPayable = getRegistrationFee(uniqueStudentsCount);
 
   const validatePayment = () => {
     const errors = {};
@@ -58,11 +70,6 @@ export default function PaymentPending({ iiitCode, registrationData }) {
       errors.transactionId = "Transaction ID / UTR is required.";
     } else if (transactionId.length < 5 || transactionId.length > 64) {
       errors.transactionId = "Transaction ID / UTR must be 5 to 64 characters.";
-    }
-    if (!paymentDetails?.paymentMode) {
-      errors.paymentMode = "Payment Mode is required.";
-    } else if (paymentDetails.paymentMode === "OTHER" && !paymentDetails?.otherPaymentMode?.trim()) {
-      errors.otherPaymentMode = "Please specify the payment mode.";
     }
     if (!paymentDetails?.proofPathname) {
       errors.proof = "Transaction proof is required.";
@@ -85,7 +92,13 @@ export default function PaymentPending({ iiitCode, registrationData }) {
       const res = await fetch("/api/payment/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentDetails }),
+        body: JSON.stringify({
+          paymentDetails: {
+            transactionDate: paymentDetails.transactionDate,
+            transactionId: paymentDetails.transactionId,
+            proofPathname: paymentDetails.proofPathname,
+          },
+        }),
       });
 
       const data = await res.json().catch(() => null);
@@ -110,7 +123,6 @@ export default function PaymentPending({ iiitCode, registrationData }) {
   // After the first submit attempt, errors update as the coordinator fixes them.
   const paymentErrors = attempted ? validatePayment() : {};
   const canFinalSubmit = !uploadBusy && !isSubmitting;
-  const amount = getRegistrationFee(uniqueStudentsCount);
 
   return (
     <div className="min-h-screen bg-ivory pb-20">
@@ -122,7 +134,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
             <p className="eyebrow">Step 2 of 3 · Payment</p>
             <h1 className="heading-section mt-2">Roster locked — payment pending</h1>
             <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
-              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. Pay <strong className="text-ink">{formatRupees(amount)}</strong> and submit the proof below.
+              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. The total payable is <strong className="text-ink">{formatRupees(totalPayable)}</strong>, including {GLOBAL_RULES.REGISTRATION_GST_PERCENT}% GST and the refundable caution deposit. Complete payment on the portal, then submit the transaction date, reference, and receipt below.
             </p>
           </div>
           <div className="border-t border-line bg-ivory/70 px-5 py-5 sm:px-8">

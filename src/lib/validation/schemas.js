@@ -139,20 +139,7 @@ export const paymentDetailsSchema = z.object({
     return val >= EARLIEST_PAYMENT_DATE && val <= todayInIndia;
   }, "Transaction date cannot be in the future or invalid"),
   transactionId: z.string().trim().min(5, "Transaction ID/UTR must be at least 5 characters").max(64),
-  bankName: z.string().max(128).optional().nullable(),
-  paymentMode: z.enum(["NEFT", "RTGS", "IMPS", "UPI", "OTHER"], {
-    errorMap: () => ({ message: "Payment Mode must be NEFT, RTGS, IMPS, UPI, or OTHER" }),
-  }),
-  otherPaymentMode: z.string().max(128).optional().nullable(),
   proofPathname: z.string().min(5, "Payment proof is required"),
-}).refine((data) => {
-  if (data.paymentMode === "OTHER") {
-    return data.otherPaymentMode && data.otherPaymentMode.trim().length > 0;
-  }
-  return true;
-}, {
-  message: "Other Payment Mode is required when Payment Mode is OTHER",
-  path: ["otherPaymentMode"]
 });
 
 /**

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "@/lib/registration/labels";
+import { useState, useRef } from "react";
+import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, formatRupees, getRegistrationFeeBreakdown } from "@/lib/registration/labels";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 import { guessProofType } from "@/lib/registration/proof-file";
-import Image from "next/image";
 
 function formatFileSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -47,23 +46,19 @@ async function shrinkImage(file) {
   }
 }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
-}
-
 /**
  * PaymentSection — Embeds inside ReviewModal.
  * Manages private proof upload, transaction form fields, and communicates state upward.
  *
  * Props:
  *  uniqueStudentsCount  — number
- *  paymentDetails       — { transactionDate, transactionId, bankName, proofPathname, proofFileName }
+ *  paymentDetails       — { transactionDate, transactionId, proofPathname, proofFileName }
  *  onChange             — fn(details) called on any change
  *  errors               — { transactionDate?, transactionId?, proof? }
  *  onUploadBusy         — fn(bool) so parent can gate submit button
  */
 export default function PaymentSection({ uniqueStudentsCount, paymentDetails, onChange, errors = {}, onUploadBusy }) {
-  const amount = getRegistrationFee(uniqueStudentsCount);
+  const { registrationFee, gst, registrationWithGst, cautionDeposit, total } = getRegistrationFeeBreakdown(uniqueStudentsCount);
   const fileInputRef = useRef(null);
 
   // idle | uploading | success | error
@@ -72,20 +67,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
   );
   const [uploadError, setUploadError] = useState("");
   const [localFile, setLocalFile] = useState(null);
-  const [upiPayment, setUpiPayment] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    fetch("/api/payment/upi", { cache: "no-store" })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Unable to load payment QR");
-        return response.json();
-      })
-      .then((data) => { if (active) setUpiPayment(data); })
-      .catch(() => { if (active) setUpiPayment({ configured: false }); });
-    return () => { active = false; };
-  }, []);
 
   const handleFieldChange = (field, value) => {
     onChange((current) => ({ ...current, [field]: value }));
@@ -172,10 +154,10 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
     <div>
       <div className="mb-5">
         <h2 className="heading-section text-[2rem]">Payment Details</h2>
-        <p className="meta mt-1">Pay the amount below, then record the transfer and upload its proof.</p>
+        <p className="meta mt-1">Complete payment on the portal, then record the transfer and upload its receipt here.</p>
       </div>
 
-      {/* Amount Summary */}
+      {/* Payment summary */}
       <dl className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
         <div className="card-tint rounded-control p-3 sm:p-4">
           <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Students</dt>
@@ -183,30 +165,67 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
         </div>
         <div className="card-tint rounded-control p-3 sm:p-4">
           <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">Per student</dt>
-          <dd className="stat-number mt-1 text-3xl text-ink">{formatCurrency(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
+          <dd className="stat-number mt-1 whitespace-nowrap text-base leading-tight text-ink sm:text-3xl">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
         </div>
         <div className="rounded-control border border-[#ecd27a] bg-gold-wash p-3 sm:p-4">
           <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-gold-text">Amount payable</dt>
-          <dd className="stat-number mt-1 text-3xl text-ink">{formatCurrency(amount)}</dd>
+          <dd className="stat-number mt-1 whitespace-nowrap text-base leading-tight text-ink sm:text-3xl">{formatRupees(total)}</dd>
         </div>
       </dl>
 
-      <div className="mb-6 rounded-control border border-[#cfe0c7] bg-green-wash p-4 sm:p-5">
-        <h3 className="heading-card text-brand-deep">{upiPayment?.configured ? "Pay by UPI" : "How to pay"}</h3>
-        {upiPayment?.configured ? (
-          <div className="mt-4 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-            <Image src={upiPayment.qrDataUrl} alt={`UPI payment QR for ${upiPayment.payeeName}, amount ${formatCurrency(upiPayment.amount)}`} width={200} height={200} unoptimized className="rounded-control border border-line bg-white p-2" />
-            <div className="text-sm text-ink">
-              <p>Scan with your UPI app and confirm the payee and amount before paying.</p>
-              <p className="mt-3 font-bold">Payee: {upiPayment.payeeName}</p>
-              <p className="font-bold">UPI ID: {upiPayment.upiId}</p>
-              <p className="font-bold">Amount: {formatCurrency(upiPayment.amount)}</p>
-              <a href={upiPayment.paymentUri} className="btn btn-primary btn-sm mt-3">Open UPI app</a>
-            </div>
+      <div className="mb-6 rounded-control border border-line bg-ivory p-4 sm:p-5">
+        <h3 className="text-sm font-bold text-brand-deep">Payment breakdown</h3>
+        <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2">
+            <dt className="text-ink-soft">Registration fee ({formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)} × {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"})</dt>
+            <dd className="shrink-0 font-semibold text-ink">{formatRupees(registrationFee)}</dd>
           </div>
-        ) : (
-          <p className="mt-1.5 text-sm text-ink-soft">Pay the amount above using the payment link or account details shared by the IIITDM Kancheepuram Sports Cell. Then enter the transaction details and upload the payment receipt below. The Sports Cell verifies every payment against its records.</p>
-        )}
+          <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2">
+            <dt className="text-ink-soft">GST ({GLOBAL_RULES.REGISTRATION_GST_PERCENT}%)</dt>
+            <dd className="shrink-0 font-semibold text-ink">{formatRupees(gst)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2">
+            <dt className="text-ink-soft">Registration fee + GST</dt>
+            <dd className="shrink-0 font-semibold text-ink">{formatRupees(registrationWithGst)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2">
+            <dt className="text-ink-soft">Refundable caution deposit (one per IIIT)</dt>
+            <dd className="shrink-0 font-semibold text-ink">{formatRupees(cautionDeposit)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 rounded-control border border-[#ecd27a] bg-gold-wash px-3 py-2.5 sm:col-span-2">
+            <dt className="font-bold text-gold-text">Total payable</dt>
+            <dd className="stat-number whitespace-nowrap text-lg text-ink sm:text-xl">{formatRupees(total)}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="mb-6 rounded-control border border-[#cfe0c7] bg-green-wash p-4 sm:p-5">
+        <h3 className="heading-card text-brand-deep">How to pay</h3>
+        <ol className="mt-4 list-decimal space-y-3 pl-5 text-sm leading-6 text-ink-soft marker:font-bold marker:text-brand-primary">
+          <li>
+            Access the payment portal:
+            <a
+              href="https://formbuilder.ccavenue.com/live/indian-bank/iiitdm-kancheepuram/9th-all-india-inter-iiit-students-sports-meet"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open the CCAvenue payment portal (opens in a new tab)"
+              className="btn btn-primary mt-2 inline-flex items-center gap-2"
+            >
+              Open payment portal
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5h5v5m-1-4-9 9" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+              </svg>
+            </a>
+          </li>
+          <li>Fill in all required form details, including your contact information.</li>
+          <li>Verify the details and total payable on the portal, then accept the Terms and Conditions.</li>
+          <li>Click Pay Now and choose the applicable payment option on the portal.</li>
+          <li>For NEFT/RTGS, download the portal-generated challan to complete payment.</li>
+        </ol>
+        <p role="note" className="mt-5 rounded-control border border-[#ecd27a] bg-gold-wash p-3.5 text-sm leading-6 text-ink">
+          <strong>After payment, download your receipt from PAYMENT HISTORY. Then return here and submit the transaction date, reference number, and receipt below.</strong>
+        </p>
       </div>
 
       {/* Form Fields */}
@@ -259,76 +278,6 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             <p id="payment-transaction-id-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.transactionId}</p>
           )}
         </div>
-
-        {/* Bank Name */}
-        <div>
-          <label htmlFor="payment-bank-name" className="mb-1.5 block text-sm font-semibold text-ink">
-            Bank Name <span className="font-normal text-ink-muted">(optional)</span>
-          </label>
-          <input
-            id="payment-bank-name"
-            type="text"
-            placeholder="e.g. State Bank of India"
-            value={paymentDetails?.bankName || ""}
-            onChange={(e) => handleFieldChange("bankName", e.target.value)}
-            className="w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-          />
-        </div>
-
-        {/* Payment Mode */}
-        <div>
-          <label htmlFor="payment-mode" className="mb-1.5 block text-sm font-semibold text-ink">
-            Payment Mode <span className="text-red-700" aria-hidden="true">*</span>
-          </label>
-          <select
-            id="payment-mode"
-            aria-invalid={Boolean(errors.paymentMode) || undefined}
-            aria-describedby={errors.paymentMode ? "payment-mode-error" : undefined}
-            value={paymentDetails?.paymentMode || ""}
-            onChange={(e) => handleFieldChange("paymentMode", e.target.value)}
-            className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 bg-white ${
-              errors.paymentMode
-                ? "border-red-400 bg-red-50 focus:border-red-600"
-                : "border-line focus:border-brand-primary"
-            }`}
-          >
-            <option value="" disabled>Select payment mode</option>
-            <option value="NEFT">NEFT</option>
-            <option value="RTGS">RTGS</option>
-            <option value="IMPS">IMPS</option>
-            <option value="UPI">UPI</option>
-            <option value="OTHER">Other</option>
-          </select>
-          {errors.paymentMode && (
-            <p id="payment-mode-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.paymentMode}</p>
-          )}
-        </div>
-
-        {/* Other Payment Mode */}
-        {paymentDetails?.paymentMode === "OTHER" && (
-          <div className="sm:col-span-2">
-            <label htmlFor="other-payment-mode" className="mb-1.5 block text-sm font-semibold text-ink">
-              Other Payment Mode <span className="text-red-700" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="other-payment-mode"
-            aria-invalid={Boolean(errors.otherPaymentMode) || undefined}
-            aria-describedby={errors.otherPaymentMode ? "other-payment-mode-error" : undefined}
-              type="text"
-              placeholder="e.g. Demand Draft"
-              value={paymentDetails?.otherPaymentMode || ""}
-              onChange={(e) => handleFieldChange("otherPaymentMode", e.target.value)}
-              className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 ${
-                errors.otherPaymentMode
-                  ? "border-red-400 bg-red-50 focus:border-red-600"
-                  : "border-line focus:border-brand-primary"
-              }`}
-            />
-            {errors.otherPaymentMode && (
-              <p id="other-payment-mode-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.otherPaymentMode}</p>
-            )}
-          </div>
-        )}
 
         {/* Proof Upload */}
         <div className="sm:col-span-2">

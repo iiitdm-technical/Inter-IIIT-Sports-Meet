@@ -11,8 +11,10 @@ export const GLOBAL_RULES = {
   MAX_NORMAL_SPORTS_PER_STUDENT: 2,
   MAX_ATHLETICS_INDIVIDUAL_EVENTS: 3,
   MAX_AQUATICS_INDIVIDUAL_EVENTS: 3,
-  // Rupees per unique student. The rulebook states Rs 2,000 + 18% GST; confirm before changing.
+  // CCAvenue portal fees: base per unique student, GST, and one deposit per IIIT.
   REGISTRATION_FEE_PER_STUDENT: 2500,
+  REGISTRATION_GST_PERCENT: 18,
+  REFUNDABLE_CAUTION_DEPOSIT: 25000,
   EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics'],
 };
 

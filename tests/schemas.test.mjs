@@ -12,7 +12,6 @@ const payment = (overrides = {}) => ({
   paymentDetails: {
     transactionDate: today(),
     transactionId: "TX12345",
-    paymentMode: "NEFT",
     proofPathname: "payment-proofs/test/1.pdf",
     ...overrides,
   },
@@ -110,21 +109,21 @@ describe("registrationSubmitSchema", () => {
 });
 
 describe("paymentSubmitSchema", () => {
-  test("accepts valid details, with or without a bank name", () => {
+  test("accepts portal receipt details without payment method or bank fields", () => {
     assert.equal(accepts(payment()), true);
-    assert.equal(accepts(payment({ bankName: "SBI" })), true);
   });
 
-  test("requires transaction id, mode, date and proof", () => {
-    for (const field of ["transactionId", "paymentMode", "transactionDate", "proofPathname"]) {
+  test("requires transaction id, date and proof", () => {
+    for (const field of ["transactionId", "transactionDate", "proofPathname"]) {
       assert.equal(accepts(without(field)), false, `missing ${field} should be rejected`);
     }
   });
 
-  test("rejects unknown modes and requires a description for OTHER", () => {
-    assert.equal(accepts(payment({ paymentMode: "CASH" })), false);
-    assert.equal(accepts(payment({ paymentMode: "OTHER" })), false);
-    assert.equal(accepts(payment({ paymentMode: "OTHER", otherPaymentMode: "Demand Draft" })), true);
+  test("discards obsolete payment method and bank fields from saved forms", () => {
+    const parsed = paymentSubmitSchema.parse(payment({
+      paymentMode: "OTHER", otherPaymentMode: "Demand Draft", bankName: "SBI",
+    }));
+    assert.deepEqual(parsed, payment());
   });
 
   test("rejects future and impossible dates", () => {

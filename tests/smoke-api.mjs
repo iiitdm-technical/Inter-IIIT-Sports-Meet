@@ -163,7 +163,7 @@ try {
   const upi = await request("/api/payment/upi", { cookie: iiitCookie });
   expectStatus(upi, 200, "registration UPI QR");
   assert.equal(upi.body.configured, true, "UPI settings must be configured in the test environment");
-  assert.equal(upi.body.amount, 2500);
+  assert.equal(upi.body.amount, 27950);
   assert(upi.body.qrDataUrl.startsWith("data:image/png;base64,"));
   const csv = await request("/api/registration/csv", { cookie: iiitCookie });
   expectStatus(csv, 200, "IIIT roster CSV");
@@ -183,8 +183,6 @@ try {
   const paymentDetails = {
     transactionDate: new Date().toISOString().slice(0, 10),
     transactionId: "API-TEST-UTR-001",
-    paymentMode: "UPI",
-    bankName: "Test Bank",
     proofPathname: uploaded.body.pathname,
   };
   expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 200, "payment proof submitted");
@@ -219,7 +217,7 @@ try {
   const verifyBody = (transactionId, bankConfirmed = true) => ({
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ iiitCode: iiits[0].iiitCode, transactionId, amount: 2500, bankConfirmed }),
+    body: JSON.stringify({ iiitCode: iiits[0].iiitCode, transactionId, amount: 27950, bankConfirmed }),
   });
   expectStatus(await request(verifyPath, { cookie: iiitCookie, ...verifyBody(paymentDetails.transactionId) }), 403, "IIIT cannot verify payment");
   expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId, false) }), 400, "bank confirmation required");

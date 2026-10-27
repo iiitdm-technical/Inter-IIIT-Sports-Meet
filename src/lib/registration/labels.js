@@ -30,8 +30,16 @@ export function getEventName(sportId, eventId, gender) {
   return eventId;
 }
 
+export function getRegistrationFeeBreakdown(studentCount) {
+  const registrationFee = studentCount * GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT;
+  const gst = Math.round(registrationFee * GLOBAL_RULES.REGISTRATION_GST_PERCENT / 100);
+  const registrationWithGst = registrationFee + gst;
+  const cautionDeposit = GLOBAL_RULES.REFUNDABLE_CAUTION_DEPOSIT;
+  return { registrationFee, gst, registrationWithGst, cautionDeposit, total: registrationWithGst + cautionDeposit };
+}
+
 export function getRegistrationFee(studentCount) {
-  return studentCount * GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT;
+  return getRegistrationFeeBreakdown(studentCount).total;
 }
 
 export function formatRupees(amount) {
