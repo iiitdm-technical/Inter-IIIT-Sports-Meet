@@ -47,7 +47,7 @@ async function shrinkImage(file) {
 }
 
 /**
- * PaymentSection — Embeds inside ReviewModal.
+ * PaymentSection — Payment portal instructions and receipt form.
  * Manages private proof upload, transaction form fields, and communicates state upward.
  *
  * Props:

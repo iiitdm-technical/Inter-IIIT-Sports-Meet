@@ -9,6 +9,7 @@ import { BUS_TERMINALS, CHENNAI_AIRPORT, RAILWAY_STATIONS, arrivalPointForMode }
 
 const today = () => new Date().toISOString().slice(0, 10);
 const payment = (overrides = {}) => ({
+  rosterVersion: "a".repeat(64),
   paymentDetails: {
     transactionDate: today(),
     transactionId: "TX12345",
@@ -111,6 +112,13 @@ describe("registrationSubmitSchema", () => {
 describe("paymentSubmitSchema", () => {
   test("accepts portal receipt details without payment method or bank fields", () => {
     assert.equal(accepts(payment()), true);
+  });
+
+  test("requires a SHA-256 roster version at the top level", () => {
+    const missing = payment();
+    delete missing.rosterVersion;
+    assert.equal(accepts(missing), false);
+    assert.equal(accepts({ ...payment(), rosterVersion: "short" }), false);
   });
 
   test("requires transaction id, date and proof", () => {

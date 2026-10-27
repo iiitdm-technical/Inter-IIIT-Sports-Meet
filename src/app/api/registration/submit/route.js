@@ -27,11 +27,11 @@ export async function POST(request) {
       body,
       session.username
     );
-    await audit({ actor: session.username, role: session.role, action: "roster_locked", target: session.iiitCode, ip: await getClientIp(), details: { students: result.totalStudentsCount, entries: result.totalEntriesCount } });
+    await audit({ actor: session.username, role: session.role, action: "roster_saved", target: session.iiitCode, ip: await getClientIp(), details: { students: result.totalStudentsCount, entries: result.totalEntriesCount } });
 
     return NextResponse.json({
       success: true,
-      message: "Registration submitted and locked successfully",
+      message: "Roster saved. You can edit it until payment details and receipt are submitted.",
       data: result,
     });
   } catch (error) {

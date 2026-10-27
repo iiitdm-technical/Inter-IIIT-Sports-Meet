@@ -148,18 +148,46 @@ try {
   const invalid = structuredClone(payload);
   invalid.entries[0].eventId = "invalid-event";
   expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(invalid) }), 422, "invalid event rejected");
-  expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 200, "registration submitted");
+  const firstRosterSave = await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
+  expectStatus(firstRosterSave, 200, "registration submitted");
+  assert.equal(firstRosterSave.body.data.isLocked, false);
+  const firstPendingState = await request("/api/registration", { cookie: iiitCookie });
+  expectStatus(firstPendingState, 200, "payment-pending roster lookup");
+  assert.equal(firstPendingState.body.data.submitted, true, "submitted remains true when a registration exists");
+  assert.equal(firstPendingState.body.data.isLocked, false);
+  assert.equal(firstPendingState.body.data.registration.status, "payment_pending");
+  assert.match(firstPendingState.body.data.rosterVersion, /^[a-f0-9]{64}$/);
+  assert.equal(firstPendingState.body.data.editableDraft.contactDetails.contactName, payload.contactDetails.contactName);
+  assert.equal(firstPendingState.body.data.editableDraft.slotsMap["athletics|100m|M|main|0"].rollNumber, "API-TEST-001");
+
+  const pendingDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 0 }) });
+  expectStatus(pendingDraft, 200, "draft remains editable while payment is pending");
+  assert.equal(pendingDraft.body.data.revision, 1);
+  const editedPayload = structuredClone(payload);
+  editedPayload.contactDetails.contactName = "Updated API Test Coordinator";
+  editedPayload.students[0].name = "UPDATED API TEST STUDENT";
+  const secondRosterSave = await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(editedPayload) });
+  expectStatus(secondRosterSave, 200, "payment-pending roster saved again");
+  assert.equal(secondRosterSave.body.data.registrationId, firstRosterSave.body.data.registrationId, "roster resave retains registration id");
+  assert.equal(secondRosterSave.body.data.isLocked, false);
+  const secondPendingState = await request("/api/registration", { cookie: iiitCookie });
+  expectStatus(secondPendingState, 200, "updated payment-pending roster lookup");
+  assert.notEqual(secondPendingState.body.data.rosterVersion, firstPendingState.body.data.rosterVersion);
+  assert.equal(secondPendingState.body.data.editableDraft.contactDetails.contactName, "Updated API Test Coordinator");
+  const secondPendingVersion = secondPendingState.body.data.rosterVersion;
+
+  const outstandingDraft = await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 0 }) });
+  expectStatus(outstandingDraft, 200, "another pending roster draft can be saved");
   const clearedDraft = await request("/api/registration/draft", { cookie: iiitCookie });
-  expectStatus(clearedDraft, 200, "cloud draft lookup after lock");
-  assert.equal(clearedDraft.body.data, null);
-  expectStatus(await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 0 }) }), 409, "draft save blocked after lock");
-  expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 403, "duplicate registration rejected");
+  expectStatus(clearedDraft, 200, "cloud draft lookup while payment is pending");
+  assert.notEqual(clearedDraft.body.data, null);
 
   const registration = await request("/api/registration", { cookie: iiitCookie });
-  expectStatus(registration, 200, "locked registration lookup");
+  expectStatus(registration, 200, "payment-pending registration lookup");
   assert.equal(registration.body.data.students.length, 1);
   assert.equal(registration.body.data.entries.length, 1);
   assert.equal(registration.body.data.registration.status, "payment_pending");
+  assert.equal(registration.body.data.isLocked, false);
   const upi = await request("/api/payment/upi", { cookie: iiitCookie });
   expectStatus(upi, 200, "registration UPI QR");
   assert.equal(upi.body.configured, true, "UPI settings must be configured in the test environment");
@@ -185,8 +213,20 @@ try {
     transactionId: "API-TEST-UTR-001",
     proofPathname: uploaded.body.pathname,
   };
-  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 200, "payment proof submitted");
-  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 403, "duplicate payment rejected");
+  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails }) }), 400, "payment submission requires roster version");
+  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails, rosterVersion: secondPendingVersion }) }), 409, "payment blocked while an unsaved roster draft exists");
+  expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(editedPayload) }), 200, "continue saves the updated roster and clears draft");
+  const finalPendingState = await request("/api/registration", { cookie: iiitCookie });
+  expectStatus(finalPendingState, 200, "latest roster version lookup");
+  assert.notEqual(finalPendingState.body.data.rosterVersion, secondPendingVersion);
+  const clearedAfterContinue = await request("/api/registration/draft", { cookie: iiitCookie });
+  expectStatus(clearedAfterContinue, 200, "draft cleared after roster save");
+  assert.equal(clearedAfterContinue.body.data, null);
+  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails, rosterVersion: secondPendingVersion }) }), 409, "stale roster version rejected");
+  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails, rosterVersion: finalPendingState.body.data.rosterVersion }) }), 200, "payment proof submitted with current roster version");
+  expectStatus(await request("/api/payment/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ paymentDetails, rosterVersion: finalPendingState.body.data.rosterVersion }) }), 403, "duplicate payment rejected");
+  expectStatus(await request("/api/registration/submit", { cookie: iiitCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(editedPayload) }), 403, "roster save blocked after payment proof submission");
+  expectStatus(await request("/api/registration/draft", { cookie: iiitCookie, method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...draft, revision: 0 }) }), 409, "draft save blocked after payment proof submission");
   const pendingStatus = await request("/api/payment/status", { cookie: iiitCookie });
   expectStatus(pendingStatus, 200, "payment status after proof submission");
   assert.equal(pendingStatus.body.data.verificationStatus, "pending");
@@ -198,6 +238,7 @@ try {
   const adminRegistration = await request("/api/registration?iiitCode=" + iiits[0].iiitCode, { cookie: adminCookie });
   expectStatus(adminRegistration, 200, "admin registration lookup");
   assert.equal(adminRegistration.body.data.registration.status, "submitted");
+  assert.equal(adminRegistration.body.data.isLocked, true);
   const adminOverview = await request("/api/admin/registrations", { cookie: adminCookie });
   expectStatus(adminOverview, 200, "admin registrations overview");
   assert(adminOverview.body.data.some((row) => row.iiitCode === iiits[0].iiitCode && row.status === "submitted"));

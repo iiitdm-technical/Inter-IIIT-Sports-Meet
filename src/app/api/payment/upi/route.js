@@ -18,7 +18,7 @@ export async function GET() {
     }).from(registrations).where(eq(registrations.iiitCode, session.iiitCode)).limit(1);
 
     if (!registration || registration.status !== "payment_pending") {
-      return NextResponse.json({ error: "A locked registration awaiting payment is required" }, { status: 409 });
+      return NextResponse.json({ error: "A saved registration awaiting payment is required" }, { status: 409 });
     }
 
     const upiId = process.env.PAYMENT_UPI_ID?.trim();

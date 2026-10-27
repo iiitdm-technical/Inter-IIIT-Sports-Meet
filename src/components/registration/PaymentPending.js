@@ -5,7 +5,7 @@ import PaymentSection from "./PaymentSection";
 import LockedHeader from "./LockedHeader";
 import RegistrationSteps from "./RegistrationSteps";
 import RosterSummary from "./RosterSummary";
-import { SPORTS_CELL_EMAIL, formatRupees, getRegistrationFee } from "@/lib/registration/labels";
+import { formatRupees, getRegistrationFee } from "@/lib/registration/labels";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 
 const EMPTY_PAYMENT_DETAILS = {
@@ -33,10 +33,10 @@ function getStoredPaymentDetails(storageKey) {
   }
 }
 
-export default function PaymentPending({ iiitCode, registrationData }) {
+export default function PaymentPending({ iiitCode, registrationData, onEditRoster }) {
   // Keep entered details and the uploaded proof reference in this browser so a
   // reload or expired session does not lose them before submission.
-  const storageKey = `inter_iiit_payment_${iiitCode}`;
+  const storageKey = `inter_iiit_payment_${iiitCode}_${registrationData.rosterVersion}`;
   const [paymentDetails, setPaymentDetails] = useState(() => getStoredPaymentDetails(storageKey));
   const [attempted, setAttempted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,6 +93,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          rosterVersion: registrationData.rosterVersion,
           paymentDetails: {
             transactionDate: paymentDetails.transactionDate,
             transactionId: paymentDetails.transactionId,
@@ -132,10 +133,12 @@ export default function PaymentPending({ iiitCode, registrationData }) {
         <section className="card card-accent overflow-hidden">
           <div className="px-5 pt-6 pb-5 sm:px-8 sm:pt-8">
             <p className="eyebrow">Step 2 of 3 · Payment</p>
-            <h1 className="heading-section mt-2">Roster locked — payment pending</h1>
+            <h1 className="heading-section mt-2">Roster saved — payment pending</h1>
             <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
-              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and can no longer be edited. The total payable is <strong className="text-ink">{formatRupees(totalPayable)}</strong>, including {GLOBAL_RULES.REGISTRATION_GST_PERCENT}% GST and the refundable caution deposit. Complete payment on the portal, then submit the transaction date, reference, and receipt below.
+              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and remains editable until you submit payment details and the receipt. The total payable is <strong className="text-ink">{formatRupees(totalPayable)}</strong>, including {GLOBAL_RULES.REGISTRATION_GST_PERCENT}% GST and the refundable caution deposit. Complete payment on the portal, then submit the transaction date, reference, and receipt below.
             </p>
+            <button type="button" onClick={onEditRoster} disabled={isSubmitting || uploadBusy} className="btn btn-outline mt-4">Edit roster / teams</button>
+            <p className="meta mt-2">Changes to the student count will recalculate your payment total. Check your final roster before paying.</p>
           </div>
           <div className="border-t border-line bg-ivory/70 px-5 py-5 sm:px-8">
             <div className="mx-auto max-w-lg">
@@ -146,7 +149,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
 
         <details className="group card overflow-hidden">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 hover:bg-ivory/70 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-primary sm:px-6">
-            <h2 className="heading-card">Check your locked roster <span className="font-medium text-ink-muted">({entries?.length || 0} event entries)</span></h2>
+            <h2 className="heading-card">Check your saved roster <span className="font-medium text-ink-muted">({entries?.length || 0} event entries)</span></h2>
             <svg className="h-5 w-5 shrink-0 text-ink-muted transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </summary>
           <div className="space-y-3 border-t border-line bg-ivory/60 px-5 py-4 sm:px-6">
@@ -155,9 +158,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
               <a href="/api/registration/csv" download className="btn btn-outline btn-sm">
                 Download roster as CSV
               </a>
-              <p className="meta">
-                Found a mistake? Email <a href={`mailto:${SPORTS_CELL_EMAIL}`} className="font-semibold text-brand-primary underline underline-offset-2">{SPORTS_CELL_EMAIL}</a> before paying.
-              </p>
+              <p className="meta">Found a mistake? Use Edit roster / teams above before submitting payment.</p>
             </div>
           </div>
         </details>
@@ -180,7 +181,7 @@ export default function PaymentPending({ iiitCode, registrationData }) {
 
           <div className="mt-8 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink-soft sm:max-w-md">
-              Submitting locks your payment details and proof. The organizers then check the transfer against their bank statement.
+              Submitting locks your roster, team entries, payment details and receipt. The organizers then check the transfer against their bank statement.
             </p>
             <button
               type="button"

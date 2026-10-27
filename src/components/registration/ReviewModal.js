@@ -115,7 +115,7 @@ export default function ReviewModal({
             ) : (
               <>
                 <p className="text-sm text-ink-soft">
-                  Submitting locks the student and event data. You then pay the registration fee and upload the proof.
+                  Save your roster and continue to payment. You can still edit students and teams until you submit your payment details and receipt.
                 </p>
 
                 <dl className="mt-5 grid grid-cols-2 gap-3">
@@ -168,7 +168,7 @@ export default function ReviewModal({
                     disabled={isSubmitting}
                     className="mt-0.5 size-4 shrink-0 accent-brand-primary"
                   />
-                  I have checked every student, event and contact detail. I understand the roster cannot be changed after it is locked.
+                  I have checked every student, event and contact detail. I understand the roster locks only when I submit my payment details and receipt.
                 </label>
               </>
             )}
@@ -189,7 +189,7 @@ export default function ReviewModal({
                 className="btn btn-accent"
                 onClick={onSubmit}
               >
-                {isSubmitting ? "Locking roster…" : "Lock Roster & Continue →"}
+                {isSubmitting ? "Saving roster…" : "Save Roster & Continue →"}
               </button>
             )}
           </div>

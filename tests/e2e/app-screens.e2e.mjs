@@ -9,6 +9,15 @@ import { BASE_URL, blockApi, createReporter, json, launchBrowser, screenshotPath
 const browser = await launchBrowser();
 const { check, axe, finish } = createReporter("app-screens");
 const iiitUser = { id: 1, username: "iiit-kota", role: "iiit", iiitName: "IIIT Kota", iiitCode: "iiit-kota" };
+const rosterVersion = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const pendingEditableDraft = {
+  contactDetails: { contactName: "Dr A", contactEmail: "a@x.in" },
+  slotsMap: {
+    "athletics|100m|M|main|0": { rollNumber: "R1", name: "RAVI", gender: "M" },
+    "athletics|100m|M|reserve|0": { rollNumber: "R2", name: "ARUN", gender: "M" },
+    "chess|team|mixed|main|0": { rollNumber: "R3", name: "ANITA", gender: "F" },
+  },
+};
 const entries = [
   { id: 1, sportId: "athletics", eventId: "100m", gender: "M", isReserve: false, studentName: "RAVI", rollNumber: "R1" },
   { id: 2, sportId: "athletics", eventId: "100m", gender: "M", isReserve: true, studentName: "ARUN", rollNumber: "R2" },
@@ -50,17 +59,21 @@ try {
     await blockApi(page, iiitUser);
     await page.route("**/api/registration", (r) => json(r, { data: {
       submitted: true,
+      rosterVersion,
+      editableDraft: pendingEditableDraft,
       registration: { status: "payment_pending", iiitName: "IIIT Kota", iiitCode: "iiit-kota", totalStudentsCount: 3 },
       students: [],
       entries,
     } }));
+    await page.route("**/api/registration/draft", (r) => json(r, { data: null }));
     await page.route("**/api/payment/upi", (r) => json(r, { configured: false }));
     await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
-    await page.waitForSelector("text=Roster locked — payment pending");
-    check("steps show roster done", (await page.locator("[aria-current=step]").innerText()).includes("Payment submitted"));
-    await page.getByText(/Check your locked roster/).click();
+    await page.waitForSelector("text=Roster saved — payment pending");
+    const progressSteps = page.locator("[aria-label='Registration progress'] li");
+    check("first progress step is roster saved", (await progressSteps.nth(0).innerText()).includes("Roster saved"));
+    check("payment submitted is the current step", (await page.locator("[aria-current=step]").innerText()).includes("Payment submitted"));
+    await page.getByText(/Check your saved roster/).click();
     check("roster summary lists names", await page.getByText("ARUN").isVisible() && await page.getByText("Athletics · 100 M").isVisible());
-    check("sports cell email shown", (await page.locator("a[href='mailto:sports@iiitdm.ac.in']").count()) >= 1);
     await page.getByRole("button", { name: "Submit payment" }).click();
     await page.waitForTimeout(200);
     check("submit with errors focuses first invalid field", (await page.evaluate(() => document.activeElement?.getAttribute("aria-invalid"))) === "true");
@@ -70,6 +83,12 @@ try {
     check("UTR error clears when fixed", (await page.getByText("must be 5 to 64 characters").count()) === 0);
     await page.screenshot({ path: screenshotPath("payment-pending-mobile"), fullPage: true });
     await axe(page, "payment pending");
+    await page.getByRole("button", { name: "Edit roster / teams" }).click();
+    await page.waitForSelector("#contact-name");
+    await page.getByRole("button", { name: /Athletics/ }).click();
+    const restoredContactName = await page.inputValue("#contact-name");
+    const restoredRollNumbers = await page.locator("#category-panel input").evaluateAll((inputs) => inputs.map((input) => input.value));
+    check("editing pending roster opens with saved contact and teams", restoredContactName === "Dr A" && restoredRollNumbers.includes("R1") && restoredRollNumbers.includes("R2"), `${restoredContactName}/${restoredRollNumbers.join(",")}`);
     await ctx.close();
   }
 
@@ -126,7 +145,7 @@ try {
       { id: 2, iiitName: "IIIT Kota", rollNumber: "R2", studentName: "ARUN", studentGender: "M", sportId: "athletics", eventId: "4x100m_relay", eventGender: "M", isReserve: true },
     ], total: 2, page: 1, totalPages: 1 } }));
     await page.goto(`${BASE_URL}/admin`, { waitUntil: "networkidle" });
-    await page.waitForSelector("text=Rosters locked");
+    await page.waitForSelector("text=Rosters saved");
     check("partial load error shown", await page.getByRole("alert").filter({ hasText: "admin accounts" }).isVisible());
     check("KPI shows awaiting verification", await page.getByText("1 awaiting verification", { exact: false }).isVisible());
     check("entries use names", await page.getByRole("cell", { name: "Table Tennis" }).isVisible()
@@ -135,6 +154,10 @@ try {
     check("filter labels associated", (await page.getByLabel("Roll Number", { exact: false }).count()) === 1);
     await page.screenshot({ path: screenshotPath("admin-entries") });
     await page.getByRole("tab", { name: "IIITs & Payments" }).click();
+    const pendingRow = page.locator("tbody tr").filter({ hasText: "IIIT Pune" });
+    check("payment-pending roster is marked editable", await pendingRow.getByText("Roster editable", { exact: true }).isVisible());
+    const submittedRow = page.locator("tbody tr").filter({ hasText: "IIIT Kota" });
+    check("submitted roster remains marked locked", await submittedRow.getByText("Roster locked", { exact: true }).isVisible());
     await page.selectOption("#payment-filter", "awaiting_verification");
     const rows = await page.locator("tbody tr").count();
     check("payment filter narrows rows", rows === 1, String(rows));

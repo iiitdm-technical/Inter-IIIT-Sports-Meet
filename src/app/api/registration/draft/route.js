@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/session";
 import { getDb } from "@/db/index";
-import { registrationDrafts, registrations } from "@/db/schema";
+import { registrationDrafts, registrations, users } from "@/db/schema";
 
 export const runtime = "nodejs";
 
@@ -96,48 +96,60 @@ export async function PUT(request) {
     }
 
     const db = getDb();
-    const [registration] = await db.select({ id: registrations.id }).from(registrations)
-      .where(eq(registrations.iiitCode, session.iiitCode)).limit(1);
-    if (registration) {
-      return NextResponse.json({ error: "Registration is already locked" }, { status: 409 });
-    }
-
     const { revision, contactDetails, slotsMap } = parsed.data;
-    let saved;
-    if (revision === 0) {
-      const updatedAt = new Date();
-      try {
-        await db.insert(registrationDrafts)
-          .values({ iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt });
-        // Return the values written by this request rather than doing a
-        // follow-up read that could observe a later concurrent revision.
-        saved = { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt };
-      } catch (error) {
-        // A duplicate on the first save means another session created the
-        // draft. Do not suppress validation or connection errors as if they
-        // were a harmless conflict.
-        if (!isUniqueViolation(error)) throw error;
-        const [latest] = await db.select().from(registrationDrafts)
+    let outcome;
+    try {
+      outcome = await db.transaction(async (tx) => {
+        // Lifecycle writers all lock in this order. The owner row serializes
+        // first-save inserts and draft/payment/roster transitions even when
+        // no registration row exists yet.
+        const [owner] = await tx.select({ id: users.id }).from(users)
+          .where(eq(users.iiitCode, session.iiitCode)).limit(1).for("update");
+        if (!owner) {
+          const error = new Error("No IIIT account is associated with this draft");
+          error.statusCode = 404;
+          throw error;
+        }
+        const [registration] = await tx.select({ id: registrations.id, status: registrations.status })
+          .from(registrations).where(eq(registrations.iiitCode, session.iiitCode)).limit(1).for("update");
+        if (registration && registration.status !== "payment_pending") {
+          const error = new Error("Registration is already locked");
+          error.statusCode = 409;
+          throw error;
+        }
+
+        if (revision === 0) {
+          const updatedAt = new Date();
+          await tx.insert(registrationDrafts)
+            .values({ iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt });
+          // Return values written by this request instead of a follow-up read.
+          return { saved: { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: 1, updatedAt } };
+        }
+
+        const updatedAt = new Date();
+        const result = await tx.update(registrationDrafts)
+          .set({ contactDetails, slotsMap, revision: revision + 1, updatedAt })
+          .where(and(eq(registrationDrafts.iiitCode, session.iiitCode), eq(registrationDrafts.revision, revision)));
+        if (affectedRows(result) > 0) {
+          return { saved: { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: revision + 1, updatedAt } };
+        }
+        const [latest] = await tx.select().from(registrationDrafts)
           .where(eq(registrationDrafts.iiitCode, session.iiitCode)).limit(1);
-        return NextResponse.json({ error: "A newer draft exists in another session", data: publicDraft(latest) }, { status: 409 });
-      }
-    } else {
-      const updatedAt = new Date();
-      const result = await db.update(registrationDrafts)
-        .set({ contactDetails, slotsMap, revision: revision + 1, updatedAt })
-        .where(and(eq(registrationDrafts.iiitCode, session.iiitCode), eq(registrationDrafts.revision, revision)));
-      if (affectedRows(result) > 0) {
-        // Construct the successful response from this write. A later save
-        // must not cause this request to return another request's revision.
-        saved = { iiitCode: session.iiitCode, contactDetails, slotsMap, revision: revision + 1, updatedAt };
-      }
-    }
-    if (!saved) {
+        return { conflict: true, latest };
+      });
+    } catch (error) {
+      // A duplicate on the first save means another session created the
+      // draft. Do not suppress validation or connection errors as conflicts.
+      if (!isUniqueViolation(error)) throw error;
       const [latest] = await db.select().from(registrationDrafts)
         .where(eq(registrationDrafts.iiitCode, session.iiitCode)).limit(1);
       return NextResponse.json({ error: "A newer draft exists in another session", data: publicDraft(latest) }, { status: 409 });
     }
-    return NextResponse.json({ data: publicDraft(saved) });
+
+    if (outcome.conflict) {
+      return NextResponse.json({ error: "A newer draft exists in another session", data: publicDraft(outcome.latest) }, { status: 409 });
+    }
+    return NextResponse.json({ data: publicDraft(outcome.saved) });
   } catch (error) {
     console.error("Save registration draft failed:", error);
     return errorResponse(error, "Could not save draft");

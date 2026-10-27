@@ -8,6 +8,14 @@ import { BASE_URL, blockApi, createReporter, json, launchBrowser, screenshotPath
 const browser = await launchBrowser();
 const { check, finish } = createReporter("registration-p1");
 const iiitUser = { id: 1, username: "iiit-kota", role: "iiit", iiitName: "IIIT Kota", iiitCode: "iiit-kota" };
+const rosterVersion = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const pendingEditableDraft = {
+  contactDetails: { contactName: "Dr A", contactEmail: "a@iiitkota.ac.in", contactPhone: "+91 9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" },
+  slotsMap: {
+    "kabaddi|team|M|main|0": { rollNumber: "K1", name: "RAVI", gender: "M" },
+    "chess|team|mixed|main|0": { rollNumber: "C1", name: "ANITA", gender: "F" },
+  },
+};
 
 try {
   // ---------- Registration draft ----------
@@ -85,11 +93,12 @@ try {
     await page.getByRole("button", { name: "Clear Men Kabaddi Squad, Slot 1" }).click();
     await page.getByRole("button", { name: /Review & Submit/ }).click();
     await page.waitForSelector("[role=dialog]");
-    const lockButton = page.getByRole("button", { name: /Lock Roster/ });
-    const disabledBefore = await lockButton.isDisabled();
+    const saveRosterButton = page.getByRole("button", { name: /Save Roster & Continue/ });
+    const disabledBefore = await saveRosterButton.isDisabled();
     await page.getByRole("dialog").getByRole("checkbox").check();
-    const disabledAfter = await lockButton.isDisabled();
-    check("lock button needs confirmation", disabledBefore && !disabledAfter, `${disabledBefore}->${disabledAfter}`);
+    const disabledAfter = await saveRosterButton.isDisabled();
+    check("save roster button needs confirmation", disabledBefore && !disabledAfter, `${disabledBefore}->${disabledAfter}`);
+    check("review action saves roster and continues", (await saveRosterButton.innerText()).trim() === "Save Roster & Continue →");
     const backdropAlpha = await page.evaluate(() => {
       const backdrop = [...document.querySelectorAll("[aria-hidden='true']")].find((e) => getComputedStyle(e).position === "fixed");
       return backdrop ? getComputedStyle(backdrop).backgroundColor : "";
@@ -97,6 +106,15 @@ try {
     check("backdrop is translucent", /\/ 0\.\d+\)|rgba\(.*0\.\d+\)/.test(backdropAlpha), backdropAlpha);
     await page.screenshot({ path: screenshotPath("reg-review-confirm") });
     check("draft saves were mocked", puts >= 0, `PUTs=${puts}`);
+
+    await page.route("**/api/registration/submit", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return json(route, { data: {} });
+    });
+    await saveRosterButton.click();
+    await page.getByRole("button", { name: "Saving roster…" }).waitFor({ state: "visible" });
+    check("save action reports progress", (await page.getByRole("button", { name: "Saving roster…" }).count()) === 1);
+    await page.waitForSelector("[role=dialog]", { state: "detached" });
     await ctx.close();
   }
 
@@ -107,16 +125,26 @@ try {
     await blockApi(page, iiitUser);
     await page.route("**/api/registration", (r) => json(r, { data: {
       submitted: true,
-      registration: { status: "payment_pending", iiitName: "IIIT Kota", iiitCode: "iiit-kota", totalStudentsCount: 4 },
-      students: [],
-      entries: [],
+      rosterVersion,
+      editableDraft: pendingEditableDraft,
+      registration: { status: "payment_pending", iiitName: "IIIT Kota", iiitCode: "iiit-kota", totalStudentsCount: 2 },
+      students: [
+        { id: 1, rollNumber: "K1", studentName: "RAVI", studentGender: "M" },
+        { id: 2, rollNumber: "C1", studentName: "ANITA", studentGender: "F" },
+      ],
+      entries: [
+        { id: 1, rollNumber: "K1", studentName: "RAVI", sportId: "kabaddi", eventId: "team", gender: "M", isReserve: false },
+        { id: 2, rollNumber: "C1", studentName: "ANITA", sportId: "chess", eventId: "team", gender: "mixed", isReserve: false },
+      ],
     } }));
+    await page.route("**/api/registration/draft", (r) => json(r, { data: null }));
     await page.route("**/api/payment/upi", (r) => json(r, { configured: false }));
     let uploads = 0;
     await page.route("**/api/upload", (r) => {
       uploads++;
       return json(r, { pathname: "payment-proofs/iiit-kota/x.pdf", fileName: "proof.pdf" });
     });
+    await page.route("**/api/payment/submit", (r) => json(r, { error: "Mocked submission for request inspection" }, 500));
     await page.goto(`${BASE_URL}/register`, { waitUntil: "networkidle" });
     await page.waitForSelector("#payment-transaction-id");
     await page.fill("#payment-transaction-id", "UTR123456");
@@ -145,6 +173,12 @@ try {
     const utr = await page.inputValue("#payment-transaction-id");
     const stillUploaded = await page.locator("text=Upload successful").count();
     check("UTR and proof survive reload", utr === "UTR123456" && stillUploaded === 1, `${utr} ${stillUploaded}`);
+    await page.fill("#payment-transaction-date", await page.locator("#payment-transaction-date").getAttribute("max"));
+    const paymentSubmission = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/payment/submit" && response.request().method() === "POST");
+    await page.getByRole("button", { name: "Submit payment" }).click();
+    const paymentRequest = (await paymentSubmission).request();
+    const paymentBody = paymentRequest.postDataJSON();
+    check("payment submission sends rosterVersion at top level", paymentBody.rosterVersion === rosterVersion && paymentBody.paymentDetails?.rosterVersion === undefined, JSON.stringify(paymentBody));
     await ctx.close();
   }
 

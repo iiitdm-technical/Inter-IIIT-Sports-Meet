@@ -31,7 +31,7 @@ if (liveUrl && sameDatabase(testUrl, liveUrl)) {
 // before they load.
 process.env.DATABASE_URL = testUrl;
 
-const { submitRegistration, submitPayment } = await import("../src/lib/registration/service.js");
+const { getRegistrationForIIIT, submitRegistration, submitPayment } = await import("../src/lib/registration/service.js");
 const { getDb, getPool } = await import("../src/db/index.js");
 const { registrations, users, students, studentEventParticipations, registrationDrafts, paymentTransactions, auditLog, sessions } = await import("../src/db/schema.js");
 const { eq, sql } = await import("drizzle-orm");
@@ -41,6 +41,8 @@ const { verifyPayment, getAdminFilteredEntries } = await import("../src/lib/admi
 const IIIT = `test-${randomUUID().slice(0, 8)}`;
 const db = getDb();
 let failed = 0;
+let pendingRegistrationId;
+let currentRosterVersion;
 
 async function step(name, fn) {
   try {
@@ -72,15 +74,54 @@ try {
   });
   await db.delete(registrations).where(eq(registrations.iiitCode, IIIT));
 
-  await step("locks a valid roster in payment_pending", async () => {
+  await step("saves an editable roster in payment_pending", async () => {
     const result = await submitRegistration(IIIT, registration, IIIT);
     assert.equal(result.status, "payment_pending");
+    assert.equal(result.isLocked, false);
     assert.equal(result.totalStudentsCount, 2);
     assert.equal(result.totalEntriesCount, 3);
+    const state = await getRegistrationForIIIT(IIIT);
+    assert.equal(state.submitted, true, "submitted remains the compatibility flag for an existing registration");
+    assert.equal(state.isLocked, false);
+    assert.equal(state.registration.status, "payment_pending");
+    assert.equal(state.editableDraft.contactDetails.contactName, "A");
+    assert.equal(Object.keys(state.editableDraft.slotsMap).length, 3);
+    assert.match(state.rosterVersion, /^[a-f0-9]{64}$/);
+    pendingRegistrationId = result.registrationId;
+    currentRosterVersion = state.rosterVersion;
   });
 
-  await step("rejects a second roster for the same IIIT", async () => {
-    await assert.rejects(submitRegistration(IIIT, registration, IIIT), (error) => error.statusCode >= 400 && error.statusCode < 500);
+  await step("replaces a payment-pending roster in place", async () => {
+    const edited = {
+      ...registration,
+      contactDetails: { ...registration.contactDetails, contactName: "Updated Coordinator", staffCount: 3 },
+      students: [
+        { rollNumber: "R1", name: "UPDATED STUDENT 1", gender: "M" },
+        { rollNumber: "R3", name: "STUDENT 3", gender: "M" },
+      ],
+      entries: [
+        { sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1", isReserve: false },
+        { sportId: "volleyball", eventId: "team", gender: "M", rollNumber: "R1", isReserve: false },
+        { sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R3", isReserve: false },
+      ],
+    };
+    const before = await db.select().from(registrations).where(eq(registrations.iiitCode, IIIT));
+    const result = await submitRegistration(IIIT, edited, IIIT);
+    const [after] = await db.select().from(registrations).where(eq(registrations.iiitCode, IIIT));
+    const state = await getRegistrationForIIIT(IIIT);
+    assert.equal(result.registrationId, pendingRegistrationId, "the registration id must be retained");
+    assert.equal(after.id, pendingRegistrationId);
+    assert(after.submittedAt.getTime() > before[0].submittedAt.getTime(), "resaving must advance the version timestamp");
+    assert.equal(after.contactName, "Updated Coordinator");
+    assert.equal(after.boysCount, 2);
+    assert.equal(after.staffCount, 3);
+    assert.equal(state.isLocked, false);
+    assert.notEqual(state.rosterVersion, currentRosterVersion);
+    assert.deepEqual(state.students.map((student) => student.rollNumber).sort(), ["R1", "R3"]);
+    assert.equal(state.entries.length, 3);
+    assert.equal(state.editableDraft.contactDetails.contactName, "Updated Coordinator");
+    assert.equal(state.editableDraft.slotsMap["cricket|team|M|main|1"].rollNumber, "R3");
+    currentRosterVersion = state.rosterVersion;
   });
 
   await step("rejects a roster that breaks the rules", async () => {
@@ -98,6 +139,7 @@ try {
         transactionId: "TX12345",
         proofPathname: `payment-proofs/${IIIT}/missing.pdf`,
       },
+      rosterVersion: currentRosterVersion,
     }, IIIT), (error) => error.statusCode >= 400 && error.statusCode < 500);
   });
 
@@ -140,6 +182,10 @@ try {
   await step("allows only one concurrent conditional payment approval", async () => {
     const [reg] = await db.select().from(registrations).where(eq(registrations.iiitCode, IIIT));
     await db.update(registrations).set({ status: "submitted" }).where(eq(registrations.id, reg.id));
+    const state = await getRegistrationForIIIT(IIIT);
+    assert.equal(state.submitted, true);
+    assert.equal(state.isLocked, true);
+    await assert.rejects(submitRegistration(IIIT, registration, IIIT), (error) => error.statusCode === 403);
     await db.insert(paymentTransactions).values({ registrationId: reg.id, uniqueStudentCount: 2, amount: 5000,
       transactionDate: new Date(), transactionId: "TEST-UTR", proofPathname: "test-only/not-an-object",
       proofFileName: "test.pdf", proofContentType: "application/pdf", proofSize: 42 });

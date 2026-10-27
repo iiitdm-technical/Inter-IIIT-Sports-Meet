@@ -3,7 +3,7 @@ import { httpError } from "../security/request.js";
 /**
  * Optional registration deadline from REGISTRATION_CLOSES_AT (ISO 8601,
  * e.g. 2026-12-05T23:59:59+05:30). After it, drafts can no longer be saved
- * or locked. Payment for an already locked roster is still accepted.
+ * or updated. Payment for an already saved roster is still accepted.
  */
 export function getRegistrationClosesAt() {
   const raw = process.env.REGISTRATION_CLOSES_AT;

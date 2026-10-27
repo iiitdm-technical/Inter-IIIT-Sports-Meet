@@ -3,7 +3,7 @@
 import { getCategoryLabel, getEventName, getSportName } from "@/lib/registration/labels";
 
 /**
- * Read-only view of a locked roster, grouped by sport and event.
+ * Read-only summary of a saved roster, grouped by sport and event.
  * `entries` are rows from GET /api/registration.
  */
 export default function RosterSummary({ entries = [] }) {

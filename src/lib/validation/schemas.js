@@ -155,5 +155,6 @@ export const registrationSubmitSchema = z.object({
  * Payment Submission Payload Schema
  */
 export const paymentSubmitSchema = z.object({
+  rosterVersion: z.string().regex(/^[a-f0-9]{64}$/, "A current roster version is required"),
   paymentDetails: paymentDetailsSchema,
 });

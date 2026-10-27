@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const [user, setUser] = useState(null);
   const [closesAt, setClosesAt] = useState(null);
   const [lockedRegistrationData, setLockedRegistrationData] = useState(null);
+  const [isEditingRoster, setIsEditingRoster] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   
@@ -62,6 +63,36 @@ export default function RegisterPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const loadRosterDraft = useCallback(async (account, savedRegistration = null) => {
+    const draftRes = await fetch("/api/registration/draft", { cache: "no-store" });
+    if (!draftRes.ok) throw new Error("Could not load your saved draft. Please try again before editing.");
+    const cloudDraft = (await draftRes.json()).data;
+    draftRevisionRef.current = cloudDraft?.revision || 0;
+    let localDraft = null;
+    try {
+      localDraft = JSON.parse(localStorage.getItem(`inter_iiit_registration_${account.username}`) || "null");
+    } catch {
+      setSaveError("This browser cannot access your local draft. Changes may not be saved.");
+    }
+    // A saved roster supersedes older local drafts from before Continue.
+    const savedAt = savedRegistration?.registration?.submittedAt;
+    if (savedAt && !(Date.parse(localDraft?.updatedAt) > Date.parse(savedAt))) localDraft = null;
+    const localIsNewer = localDraft?.updatedAt &&
+      (!cloudDraft || Date.parse(localDraft.updatedAt) > Date.parse(cloudDraft.updatedAt));
+    const fallback = savedRegistration?.editableDraft;
+    const draft = localIsNewer ? localDraft : cloudDraft || localDraft || fallback;
+    setContactDetails(withContactDefaults(draft?.contactDetails));
+    setSlotsMap(draft?.slotsMap || {});
+    setLastSaved(!localIsNewer && (cloudDraft?.updatedAt || savedAt)
+      ? new Date(cloudDraft?.updatedAt || savedAt) : null);
+    const synced = cloudDraft || fallback;
+    syncedRef.current = draftContent(withContactDefaults(synced?.contactDetails), synced?.slotsMap || {});
+    conflictRef.current = false;
+    setConflictDraft(null);
+    setHasUnsyncedChanges(Boolean(localIsNewer));
+    return Boolean(cloudDraft || localIsNewer);
+  }, []);
 
   // Initialize and check auth/registration status
   useEffect(() => {
@@ -98,32 +129,17 @@ export default function RegisterPage() {
         }
         if (regData.data?.submitted) {
           setLockedRegistrationData(regData.data);
+          if (regData.data.registration.status === "payment_pending") {
+            setIsEditingRoster(await loadRosterDraft(authData.user, regData.data));
+          } else {
+            setIsEditingRoster(false);
+          }
           setLoading(false);
           return;
         }
-        
-        // Not submitted → load the cloud draft, preserving newer local edits.
-        const draftRes = await fetch("/api/registration/draft");
-        if (!draftRes.ok) {
-          throw new Error("Could not load your saved draft. Please try again before editing.");
-        }
-        const cloudDraft = (await draftRes.json()).data;
-        draftRevisionRef.current = cloudDraft?.revision || 0;
-        const draftKey = `inter_iiit_registration_${authData.user.username}`;
-        let localDraft = null;
-        try {
-          const saved = localStorage.getItem(draftKey);
-          if (saved) localDraft = JSON.parse(saved);
-        } catch {
-          setSaveError("This browser cannot access your local draft. Changes may not be saved.");
-        }
-        const localIsNewer = localDraft?.updatedAt &&
-          (!cloudDraft || Date.parse(localDraft.updatedAt) > Date.parse(cloudDraft.updatedAt));
-        const draft = localIsNewer ? localDraft : cloudDraft || localDraft;
-        if (draft?.contactDetails) setContactDetails(withContactDefaults(draft.contactDetails));
-        if (draft?.slotsMap) setSlotsMap(draft.slotsMap);
-        if (cloudDraft && !localIsNewer) setLastSaved(new Date(cloudDraft.updatedAt));
-        syncedRef.current = draftContent(withContactDefaults(cloudDraft?.contactDetails), cloudDraft?.slotsMap || {});
+        setLockedRegistrationData(null);
+        setIsEditingRoster(false);
+        await loadRosterDraft(authData.user);
         setLoading(false);
       } catch (err) {
         console.error("Initialization error:", err);
@@ -132,11 +148,11 @@ export default function RegisterPage() {
       }
     };
     init();
-  }, [router, retryCount]);
+  }, [router, retryCount, loadRosterDraft]);
 
   // Save immediately in this browser, then sync each change to Neon in order.
   useEffect(() => {
-    if (loading || loadError || lockedRegistrationData || !user) return;
+    if (loading || loadError || (lockedRegistrationData && !isEditingRoster) || !user || isSubmitting) return;
     
     const content = draftContent(contactDetails, slotsMap);
     if (content === syncedRef.current) return;
@@ -183,7 +199,31 @@ export default function RegisterPage() {
       clearTimeout(localTimer);
       clearTimeout(timer);
     };
-  }, [contactDetails, slotsMap, loading, loadError, lockedRegistrationData, user, saveRetryCount]);
+  }, [contactDetails, slotsMap, loading, loadError, lockedRegistrationData, isEditingRoster, isSubmitting, user, saveRetryCount]);
+
+  const handleEditRoster = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/registration", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result?.data || typeof result.data.submitted !== "boolean") {
+        throw new Error("Could not load the latest roster. Please try again before editing.");
+      }
+      const latest = result.data.submitted ? result.data : null;
+      setLockedRegistrationData(latest);
+      if (!latest || latest.registration.status === "payment_pending") {
+        await loadRosterDraft(user, latest);
+        setIsEditingRoster(Boolean(latest));
+      } else {
+        setIsEditingRoster(false);
+      }
+      setSubmitError("");
+    } catch (error) {
+      setLoadError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLoadCloudDraft = () => {
     if (!conflictDraft) return;
@@ -280,6 +320,12 @@ export default function RegisterPage() {
         return;
       }
 
+      // Let any in-flight autosave finish before Continue removes the draft.
+      await saveQueueRef.current;
+      if (conflictRef.current) {
+        throw new Error("Resolve the newer draft from another session before saving the roster.");
+      }
+
       const res = await fetch("/api/registration/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -292,11 +338,11 @@ export default function RegisterPage() {
         throw new Error((data && data.error) ? data.error : `Submission failed with status ${res.status}`);
       }
       
-      // Success — clear local draft and reload to show locked state
+      // Success — reload the saved, still-editable roster's payment screen.
       try {
         localStorage.removeItem(`inter_iiit_registration_${user.username}`);
       } catch {
-        // The server has accepted and locked the registration; reload its authoritative state.
+        // The server has accepted the roster; reload its authoritative state.
       }
       window.location.reload();
       
@@ -330,10 +376,10 @@ export default function RegisterPage() {
     );
   }
 
-  // If locked, show the readonly locked view
-  if (lockedRegistrationData) {
+  // Pending rosters can return to the form; payment submission locks editing.
+  if (lockedRegistrationData && !isEditingRoster) {
     if (lockedRegistrationData.registration.status === 'payment_pending') {
-      return <PaymentPending iiitCode={user.username} registrationData={lockedRegistrationData} />;
+      return <PaymentPending iiitCode={user.iiitCode || user.username} registrationData={lockedRegistrationData} onEditRoster={handleEditRoster} />;
     }
     return <LockedRegistration registrationData={lockedRegistrationData} />;
   }
@@ -410,7 +456,7 @@ export default function RegisterPage() {
           <p className="eyebrow">Step 1 of 3 · Build your roster</p>
           <h2 className="heading-section mt-2">Contingent roster</h2>
           <p className="mt-2 max-w-2xl text-sm text-ink-soft">
-            Add the contact person, then enter students in each event. Your draft saves automatically; fix any flagged issues, then review and lock the roster.
+            Add the contact person, then enter students in each event. Your draft saves automatically; review and save it to continue to payment. You can edit the roster until you submit your payment details and receipt.
           </p>
         </div>
 

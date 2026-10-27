@@ -7,47 +7,41 @@ import { headProof } from "../storage/index.js";
 import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/schemas.js";
 import { countByGender } from "./contingent.js";
 import { validateRegistrationRules } from "../validation/rules.js";
+import { buildEditableDraft, createRosterVersion } from "./roster-version.js";
 
 function affectedRows(result) {
   return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);
 }
 
 /**
- * Fetch submitted registration state and entries for an IIIT.
- * If the IIIT has not submitted, returns an empty non-submitted state.
- * Unsubmitted drafts are served separately by /api/registration/draft.
+ * Fetch the registration state and entries for an IIIT.
+ * If the IIIT has no roster, returns an empty state. In-progress JSON drafts
+ * remain available separately from /api/registration/draft.
  */
 export async function getRegistrationForIIIT(iiitCode) {
   const db = getDb();
+  return db.transaction(async (tx) => {
+    // Read the registration and all versioned children in one consistent
+    // snapshot so the payment precondition always corresponds to this roster.
+    const [reg] = await tx.select().from(registrations)
+      .where(eq(registrations.iiitCode, iiitCode)).limit(1);
 
-  // Find submitted registration record
-  const regList = await db
-    .select()
-    .from(registrations)
-    .where(eq(registrations.iiitCode, iiitCode))
-    .limit(1);
+    if (!reg) {
+      return {
+        submitted: false,
+        isLocked: false,
+        registration: null,
+        students: [],
+        entries: [],
+        payment: null,
+        rosterVersion: null,
+        editableDraft: null,
+      };
+    }
 
-  if (regList.length === 0) {
-    return {
-      submitted: false,
-      isLocked: false,
-      registration: null,
-      students: [],
-      entries: [],
-    };
-  }
-
-  const reg = regList[0];
-
-  // Fetch students
-  const studentList = await db
-    .select()
-    .from(students)
-    .where(eq(students.registrationId, reg.id));
-
-  // Fetch entries
-  const participationList = await db
-    .select({
+    const studentList = await tx.select().from(students)
+      .where(eq(students.registrationId, reg.id)).orderBy(students.rollNumber);
+    const participationList = await tx.select({
       id: studentEventParticipations.id,
       sportId: studentEventParticipations.sportId,
       eventId: studentEventParticipations.eventId,
@@ -58,25 +52,97 @@ export async function getRegistrationForIIIT(iiitCode) {
       rollNumber: students.rollNumber,
       studentGender: students.gender,
     })
-    .from(studentEventParticipations)
-    .innerJoin(students, eq(studentEventParticipations.studentId, students.id))
-    .where(eq(studentEventParticipations.registrationId, reg.id));
+      .from(studentEventParticipations)
+      .innerJoin(students, eq(studentEventParticipations.studentId, students.id))
+      .where(eq(studentEventParticipations.registrationId, reg.id))
+      .orderBy(studentEventParticipations.id);
+    const [payment] = await tx.select().from(paymentTransactions)
+      .where(eq(paymentTransactions.registrationId, reg.id)).limit(1);
 
-  // Fetch payment transaction
-  const paymentList = await db
-    .select()
-    .from(paymentTransactions)
-    .where(eq(paymentTransactions.registrationId, reg.id))
-    .limit(1);
+    return {
+      // `submitted` historically means a registration row exists; retain that
+      // compatibility flag while `isLocked` now reflects the actual lifecycle.
+      submitted: true,
+      isLocked: reg.status === "submitted",
+      registration: reg,
+      students: studentList,
+      entries: participationList,
+      payment: payment || null,
+      rosterVersion: createRosterVersion(reg, studentList, participationList),
+      editableDraft: buildEditableDraft(reg, participationList),
+    };
+  });
+}
 
+function nextRosterTimestamp(previous) {
+  const previousMs = previous instanceof Date ? previous.getTime() : Date.parse(previous || "");
+  return new Date(Math.max(Date.now(), Number.isFinite(previousMs) ? previousMs + 1 : 0));
+}
+
+function registrationValues(iiitCode, iiitName, username, payload, submittedAt) {
+  const { contactDetails } = payload;
+  const { boys, girls } = countByGender(payload.students);
   return {
-    submitted: true,
-    isLocked: true,
-    registration: reg,
-    students: studentList,
-    entries: participationList,
-    payment: paymentList.length > 0 ? paymentList[0] : null,
+    iiitCode,
+    iiitName,
+    status: "payment_pending",
+    submittedAt,
+    updatedAt: submittedAt,
+    submittedBy: username,
+    contactName: contactDetails.contactName,
+    contactEmail: contactDetails.contactEmail,
+    contactPhone: contactDetails.contactPhone,
+    arrivalDate: contactDetails.arrivalDate,
+    arrivalTime: contactDetails.arrivalTime,
+    travelMode: contactDetails.travelMode,
+    arrivalPoint: contactDetails.arrivalPoint || null,
+    departureDate: contactDetails.departureDate || null,
+    boysSecretaryName: contactDetails.boysSecretaryName,
+    boysSecretaryPhone: contactDetails.boysSecretaryPhone,
+    boysSecretaryEmail: contactDetails.boysSecretaryEmail,
+    girlsSecretaryName: contactDetails.girlsSecretaryName,
+    girlsSecretaryPhone: contactDetails.girlsSecretaryPhone,
+    girlsSecretaryEmail: contactDetails.girlsSecretaryEmail,
+    boysCount: boys,
+    girlsCount: girls,
+    staffCount: contactDetails.staffCount,
+    notes: contactDetails.notes || null,
+    totalStudentsCount: payload.students.length,
   };
+}
+
+async function replaceRosterRows(tx, registrationId, iiitCode, payload) {
+  await tx.delete(studentEventParticipations)
+    .where(eq(studentEventParticipations.registrationId, registrationId));
+  await tx.delete(students).where(eq(students.registrationId, registrationId));
+
+  const studentRows = payload.students.map((student) => ({
+    registrationId,
+    iiitCode,
+    rollNumber: student.rollNumber,
+    name: student.name,
+    gender: student.gender,
+  }));
+  await tx.insert(students).values(studentRows);
+
+  const insertedStudents = await tx.select({ id: students.id, rollNumber: students.rollNumber })
+    .from(students).where(eq(students.registrationId, registrationId));
+  const rollToIdMap = new Map(insertedStudents.map((student) => [student.rollNumber, student.id]));
+  const participationRows = payload.entries.map((entry) => {
+    const studentId = rollToIdMap.get(entry.rollNumber);
+    if (studentId == null) {
+      throw new Error(`Internal error mapping student roll number: ${entry.rollNumber}`);
+    }
+    return {
+      registrationId,
+      studentId,
+      sportId: entry.sportId,
+      eventId: entry.eventId,
+      gender: entry.gender,
+      isReserve: entry.isReserve,
+    };
+  });
+  await tx.insert(studentEventParticipations).values(participationRows);
 }
 
 export async function submitRegistration(iiitCode, rawPayload, username) {
@@ -103,126 +169,65 @@ export async function submitRegistration(iiitCode, rawPayload, username) {
     throw error;
   }
 
-  // 3. Check if that IIIT has already submitted (either payment_pending or submitted)
-  const existingRegList = await db
-    .select()
-    .from(registrations)
-    .where(eq(registrations.iiitCode, iiitCode))
-    .limit(1);
-
-  if (existingRegList.length > 0) {
-    const error = new Error(
-      "Registration already exists. Cannot submit new registration."
-    );
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // 4. Retrieve official IIIT Name from users table
-  const userList = await db
-    .select({ iiitName: users.iiitName })
-    .from(users)
-    .where(eq(users.iiitCode, iiitCode))
-    .limit(1);
-
-  const iiitName = userList[0]?.iiitName || iiitCode;
-
-  // 5. Execute atomic database transaction
+  // Lock order is shared with draft saves and payment submission: owner user
+  // first, then its registration. The user lock serializes initial creation,
+  // which has no registration row available to lock yet.
   const result = await db.transaction(async (tx) => {
-    // Insert new registration in payment_pending state. A concurrent
-    // submission for the same IIIT fails on the unique iiit_code index.
-    const submittedAt = new Date();
-    const [insertedReg] = await tx
-      .insert(registrations)
-      .values({
-        iiitCode,
-        iiitName,
-        status: "payment_pending",
-        submittedAt,
-        submittedBy: username,
-        contactName: payload.contactDetails.contactName,
-        contactEmail: payload.contactDetails.contactEmail,
-        contactPhone: payload.contactDetails.contactPhone,
-        arrivalDate: payload.contactDetails.arrivalDate,
-        arrivalTime: payload.contactDetails.arrivalTime,
-        travelMode: payload.contactDetails.travelMode,
-        arrivalPoint: payload.contactDetails.arrivalPoint || null,
-        departureDate: payload.contactDetails.departureDate || null,
-        boysSecretaryName: payload.contactDetails.boysSecretaryName,
-        boysSecretaryPhone: payload.contactDetails.boysSecretaryPhone,
-        boysSecretaryEmail: payload.contactDetails.boysSecretaryEmail,
-        girlsSecretaryName: payload.contactDetails.girlsSecretaryName,
-        girlsSecretaryPhone: payload.contactDetails.girlsSecretaryPhone,
-        girlsSecretaryEmail: payload.contactDetails.girlsSecretaryEmail,
-        boysCount: countByGender(payload.students).boys,
-        girlsCount: countByGender(payload.students).girls,
-        staffCount: payload.contactDetails.staffCount,
-        notes: payload.contactDetails.notes || null,
-        totalStudentsCount: payload.students.length,
-      })
-      .$returningId();
-
-    const regId = insertedReg?.id;
-    if (regId == null) throw new Error("Could not retrieve the new registration ID");
-
-    // Insert student roster
-    const studentRows = payload.students.map((s) => ({
-      registrationId: regId,
-      iiitCode,
-      rollNumber: s.rollNumber,
-      name: s.name,
-      gender: s.gender,
-    }));
-
-    await tx.insert(students).values(studentRows);
-
-    // MySQL does not support RETURNING rows for inserts. Querying by the
-    // registration ID in this transaction gives us the exact generated IDs
-    // without relying on auto-increment ranges from a bulk insert.
-    const insertedStudents = await tx
-      .select({ id: students.id, rollNumber: students.rollNumber })
-      .from(students)
-      .where(eq(students.registrationId, regId));
-
-    // Map rollNumber -> studentId
-    const rollToIdMap = new Map();
-    for (const s of insertedStudents) {
-      rollToIdMap.set(s.rollNumber, s.id);
+    const [owner] = await tx.select({ iiitName: users.iiitName }).from(users)
+      .where(eq(users.iiitCode, iiitCode)).limit(1).for("update");
+    if (!owner) {
+      const error = new Error("No IIIT account is associated with this registration");
+      error.statusCode = 404;
+      throw error;
     }
 
-    // Insert event participations
-    const participationRows = payload.entries.map((entry) => {
-      const studentId = rollToIdMap.get(entry.rollNumber);
-      if (studentId == null) {
-        throw new Error(`Internal error mapping student roll number: ${entry.rollNumber}`);
-      }
-      return {
-        registrationId: regId,
-        studentId,
-        sportId: entry.sportId,
-        eventId: entry.eventId,
-        gender: entry.gender,
-        isReserve: entry.isReserve,
-      };
-    });
+    const [existing] = await tx.select().from(registrations)
+      .where(eq(registrations.iiitCode, iiitCode)).limit(1).for("update");
+    if (existing && existing.status !== "payment_pending") {
+      const error = new Error("Payment has been submitted; the registration is permanently locked.");
+      error.statusCode = 403;
+      throw error;
+    }
 
-    await tx.insert(studentEventParticipations).values(participationRows);
+    const iiitName = owner.iiitName || iiitCode;
+    const submittedAt = nextRosterTimestamp(existing?.submittedAt);
+    const values = registrationValues(iiitCode, iiitName, username, payload, submittedAt);
+    let registrationId;
+    if (existing) {
+      const updateResult = await tx.update(registrations).set(values)
+        .where(and(
+          eq(registrations.id, existing.id),
+          eq(registrations.status, "payment_pending"),
+        ));
+      if (affectedRows(updateResult) === 0) {
+        const conflict = new Error("Registration state changed. Reload the page and try again.");
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+      registrationId = existing.id;
+    } else {
+      const [insertedReg] = await tx.insert(registrations).values(values).$returningId();
+      registrationId = insertedReg?.id;
+      if (registrationId == null) throw new Error("Could not retrieve the new registration ID");
+    }
+
+    await replaceRosterRows(tx, registrationId, iiitCode, payload);
 
     await tx.delete(registrationDrafts).where(eq(registrationDrafts.iiitCode, iiitCode));
 
     return {
-      registrationId: regId,
+      registrationId,
       iiitCode,
       iiitName,
       status: "payment_pending",
-      isLocked: true, // Data locked, but payment still pending
+      isLocked: false,
       totalStudentsCount: payload.students.length,
       totalEntriesCount: payload.entries.length,
       submittedAt: submittedAt.toISOString(),
     };
   }).catch((error) => {
     if (isUniqueViolation(error)) {
-      const conflict = new Error("This roster has already been submitted from another session. Reload the page to see it.");
+      const conflict = new Error("This roster was updated from another session. Reload the page to see it.");
       conflict.statusCode = 409;
       throw conflict;
     }
@@ -250,20 +255,17 @@ export async function submitPayment(iiitCode, rawPayload, username) {
 
   const payload = parsed.data;
 
-  // 2. Fetch the registration to ensure it exists and is payment_pending
-  const regList = await db
-    .select()
-    .from(registrations)
-    .where(eq(registrations.iiitCode, iiitCode))
-    .limit(1);
+  // A preflight read avoids a storage request for an unknown registration.
+  // The current registration is looked up again under the shared lifecycle
+  // locks below before the receipt is accepted.
+  const [reg] = await db.select().from(registrations)
+    .where(eq(registrations.iiitCode, iiitCode)).limit(1);
 
-  if (regList.length === 0) {
+  if (!reg) {
     const error = new Error("Registration not found. Please submit registration first.");
     error.statusCode = 404;
     throw error;
   }
-
-  const reg = regList[0];
 
   if (reg.status === "submitted") {
     const error = new Error("Payment has already been submitted and is permanently locked.");
@@ -311,11 +313,17 @@ export async function submitPayment(iiitCode, rawPayload, username) {
 
   // 4. Execute atomic database transaction
   const result = await db.transaction(async (tx) => {
-    // A row lock serializes payment against administrative reopen/status
-    // changes. Recheck the state after acquiring it; the preflight read above
-    // is only for fast feedback before checking object storage.
+    // Keep the same lock order as roster submissions and draft saves. Locking
+    // the owner also serializes the absent-registration case and draft checks.
+    const [owner] = await tx.select({ id: users.id }).from(users)
+      .where(eq(users.iiitCode, iiitCode)).limit(1).for("update");
+    if (!owner) {
+      const error = new Error("Registration not found. Please submit registration first.");
+      error.statusCode = 404;
+      throw error;
+    }
     const [lockedReg] = await tx.select().from(registrations)
-      .where(eq(registrations.id, reg.id)).limit(1).for("update");
+      .where(eq(registrations.iiitCode, iiitCode)).limit(1).for("update");
     if (!lockedReg) {
       const error = new Error("Registration not found. Please submit registration first.");
       error.statusCode = 404;
@@ -330,6 +338,36 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       const error = new Error(`Registration is in an invalid state: ${lockedReg.status}.`);
       error.statusCode = 400;
       throw error;
+    }
+
+    const roster = await tx.select({
+      rollNumber: students.rollNumber,
+      name: students.name,
+      gender: students.gender,
+    }).from(students).where(eq(students.registrationId, lockedReg.id));
+    const entries = await tx.select({
+      rollNumber: students.rollNumber,
+      sportId: studentEventParticipations.sportId,
+      eventId: studentEventParticipations.eventId,
+      gender: studentEventParticipations.gender,
+      isReserve: studentEventParticipations.isReserve,
+    })
+      .from(studentEventParticipations)
+      .innerJoin(students, eq(studentEventParticipations.studentId, students.id))
+      .where(eq(studentEventParticipations.registrationId, lockedReg.id));
+    const currentRosterVersion = createRosterVersion(lockedReg, roster, entries);
+    if (payload.rosterVersion !== currentRosterVersion) {
+      const conflict = new Error("The roster changed after this payment form loaded. Reload the registration and try again.");
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+
+    const [outstandingDraft] = await tx.select({ iiitCode: registrationDrafts.iiitCode })
+      .from(registrationDrafts).where(eq(registrationDrafts.iiitCode, iiitCode)).limit(1);
+    if (outstandingDraft) {
+      const conflict = new Error("Save the updated roster before submitting payment.");
+      conflict.statusCode = 409;
+      throw conflict;
     }
 
     // Prevent concurrent payments for the same registration
@@ -395,6 +433,10 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       conflict.statusCode = 409;
       throw conflict;
     }
+
+    // Normally there is no draft after the precondition above. Keep cleanup
+    // in the same commit so a later lifecycle change cannot leave one behind.
+    await tx.delete(registrationDrafts).where(eq(registrationDrafts.iiitCode, iiitCode));
 
     return {
       registrationId: lockedReg.id,

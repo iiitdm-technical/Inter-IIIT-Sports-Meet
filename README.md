@@ -1,6 +1,6 @@
 # 9th Inter-IIIT Sports Meet 2026
 
-Student registration for participating IIITs. Coordinators enter students and events, review the roster, then lock it and submit bank transfer details with a private payment proof. Admins can inspect entries, payment details, and export CSV files. A submitted proof is **not** confirmation that the bank transfer has been verified.
+Student registration for participating IIITs. Coordinators enter students and events, review and save the roster, then submit bank transfer details with a private payment proof. A saved roster remains editable while payment is pending; submitting the payment details and proof locks it. Admins can inspect entries, payment details, and export CSV files. A submitted proof is **not** confirmation that the bank transfer has been verified.
 
 ## Stack
 
@@ -53,7 +53,7 @@ ADMIN_EMAIL=sports@iiitdm.ac.in ADMIN_PASSWORD='…' npm run db:set-admin -- --r
 
 The password is read from the environment and never stored in the repository. Changing it signs that admin out everywhere. Admins sign in with their email or username; the faculty contact email entered by a coordinator never grants admin access. The admin dashboard's **Admin Accounts** tab lists admins without exposing password hashes.
 
-Open `http://localhost:3000/login`. Draft registrations are saved to MySQL for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Locking the roster removes the draft and stores the final students and entries in MySQL. Payment proofs are stored privately (server folder or Neon bucket) and served only through an authenticated endpoint to the owning IIIT and the admin.
+Open `http://localhost:3000/login`. Draft registrations are saved to MySQL for the IIIT account and kept in that browser as a fallback. A coordinator can resume the draft on another device after signing in. If two sessions edit the same draft, the page asks which version to keep. Saving the roster to continue to payment creates a saved, still-editable payment-pending roster. Submitting payment details and proof locks the roster and stores its final students and entries in MySQL. Payment proofs are stored privately (server folder or Neon bucket) and served only through an authenticated endpoint to the owning IIIT and the admin.
 
 Coordinators pay through the [CCAvenue payment portal](https://formbuilder.ccavenue.com/live/indian-bank/iiitdm-kancheepuram/9th-all-india-inter-iiit-students-sports-meet), which handles all payment methods. The payment page shows the fee breakdown: ₹2,500 per unique student, 18% GST on registration fees, and one ₹25,000 refundable caution deposit per IIIT. Coordinators download the receipt from the portal's PAYMENT HISTORY, then submit the transaction date, reference number and receipt here. An organizer must check the bank statement and mark the payment verified in the admin view; opening the portal does not automatically confirm payment.
 

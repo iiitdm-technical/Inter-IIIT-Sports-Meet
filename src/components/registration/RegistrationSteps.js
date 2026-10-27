@@ -1,6 +1,6 @@
 "use client";
 
-const STEPS = ["Roster locked", "Payment submitted", "Bank verified"];
+const STEPS = ["Roster saved", "Payment submitted", "Bank verified"];
 
 /**
  * Progress through the three post-roster steps. `current` is the index of the

@@ -42,7 +42,7 @@ export const users = mysqlTable("users", {
 
 /**
  * 2. REGISTRATIONS TABLE
- * Represents an immutable submitted registration for an IIIT.
+ * Represents a saved IIIT roster; immutable after payment is submitted.
  * Unsubmitted drafts are stored separately and can be resumed on another device.
  */
 export const registrations = mysqlTable("registrations", {
@@ -64,7 +64,7 @@ export const registrations = mysqlTable("registrations", {
   arrivalPoint: varchar("arrival_point", { length: 128 }),
   departureDate: varchar("departure_date", { length: 10 }),
   // Contingent: the IIIT's sports secretaries, students by gender (counted
-  // from the roster at lock time) and accompanying staff.
+  // from the roster at each save) and accompanying staff.
   boysSecretaryName: varchar("boys_secretary_name", { length: 128 }),
   boysSecretaryPhone: varchar("boys_secretary_phone", { length: 32 }),
   boysSecretaryEmail: varchar("boys_secretary_email", { length: 128 }),

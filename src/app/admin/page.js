@@ -205,7 +205,7 @@ export default function AdminDashboardPage() {
       if (regRes.ok) setRegistrationsOverview((await regRes.json()).data || []);
       refreshStats().catch(() => {});
       loadEntries(1, appliedFilters);
-      setNotice(`${reopenTarget.iiitName}'s roster is open for editing again. Ask the coordinator to review it and lock it again.`);
+      setNotice(`${reopenTarget.iiitName}'s roster is open for editing again. Ask the coordinator to review it and save the roster again.`);
       setReopenTarget(null);
     } catch (error) {
       setReopenError(error.message || "Could not reopen the roster");
@@ -336,7 +336,7 @@ export default function AdminDashboardPage() {
         {stats && (
           <dl className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             <div className="card card-accent p-5">
-              <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Rosters locked</dt>
+              <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Rosters saved</dt>
               <dd className="mt-2 flex items-baseline gap-1.5">
                 <span className="stat-number text-5xl text-brand-primary">{stats.lockedIIITs}</span>
                 <span className="font-display text-xl font-semibold text-ink-muted">/ {stats.totalIIITs}</span>
@@ -387,7 +387,7 @@ export default function AdminDashboardPage() {
         {activeTab === "entries" && (
         <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="eyebrow">Locked rosters</p>
+            <p className="eyebrow">Saved rosters</p>
             <h2 className="heading-section mt-1 text-[2rem]">
               Registration Entries
             </h2>
@@ -550,7 +550,7 @@ export default function AdminDashboardPage() {
                           <svg className="w-8 h-8 text-ink-muted/50" fill="none" aria-hidden="true" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          <p>No locked entries found matching your criteria.</p>
+                          <p>No entries found matching your criteria.</p>
                         </div>
                       )}
                     </td>
@@ -605,7 +605,7 @@ export default function AdminDashboardPage() {
           <div className="card overflow-hidden">
             <div className="flex flex-col gap-3 border-b border-line px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-semibold text-ink">
-                {registrationsOverview.length} IIIT accounts · {registrationsOverview.filter(r => r.isSubmitted).length} rosters locked
+                {registrationsOverview.length} IIIT accounts · {registrationsOverview.filter(r => r.isSubmitted).length} rosters saved
               </span>
               <div className="flex items-center gap-2">
                 <label htmlFor="payment-filter" className="text-sm font-semibold text-ink">Show</label>
@@ -702,7 +702,9 @@ export default function AdminDashboardPage() {
                         ) : "—"}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {row.status
+                        {row.status === "payment_pending"
+                          ? <span className="chip chip-gold">Roster editable</span>
+                          : row.status
                           ? <span className="chip">Roster locked</span>
                           : <span className="chip bg-ivory-dark text-ink-soft">Not submitted</span>}
                       </td>
@@ -801,9 +803,9 @@ export default function AdminDashboardPage() {
               <p className="eyebrow">Roster correction</p>
               <h2 id="reopen-title" className="heading-section mt-1 text-[2rem]">Reopen {reopenTarget.iiitName}</h2>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
-                <li>The locked roster becomes an editable draft for the coordinator, with all students, events and contact details kept.</li>
+                <li>The submitted roster becomes an editable draft for the coordinator, with all students, events and contact details kept.</li>
                 {reopenTarget.paymentProofPathname && <li className="font-semibold text-red-800">The submitted payment details and proof are deleted. The coordinator must submit payment again; refund or adjust any amount already paid outside this system.</li>}
-                <li>The IIIT drops out of the entries list and statistics until it locks the roster again.</li>
+                <li>The IIIT drops out of the entries list and statistics until the coordinator saves the roster again.</li>
               </ul>
               <div className="mt-5">
                 <label htmlFor="reopen-confirm" className="block text-sm font-semibold text-ink">Type <span className="font-mono">{reopenTarget.iiitCode}</span> to confirm</label>
