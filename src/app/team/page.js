@@ -29,13 +29,13 @@ const boardSections = [
 ];
 
 const studentMembers = [
-  { name: "Sanshrey", role: "Student Member", image: "/assets/team/sanshrey.jpg" },
-  { name: "Vijay", role: "Student Member", image: "/assets/team/vijay.jpg" },
-  { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
   { name: "Ashrith", role: "Student Member", image: "/assets/team/ashrith.jpg" },
   { name: "Bhargav Sai", role: "Student Member", image: "/assets/team/bhargav-sai.jpg" },
   { name: "Sainatha", role: "Student Member", image: "/assets/team/sainath.jpg" },
+  { name: "Sanshrey", role: "Student Member", image: "/assets/team/sanshrey.jpg" },
   { name: "Sriram", role: "Student Member" },
+  { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
+  { name: "Vijay", role: "Student Member", image: "/assets/team/vijay.jpg" },
 ];
 
 function initialOf(name) {
