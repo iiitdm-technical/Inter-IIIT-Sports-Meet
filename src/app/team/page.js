@@ -38,7 +38,7 @@ const studentMembers = [
 
 const websiteTeam = [
   { name: "Jeevanandham", role: "Website Team" },
-  { name: "Yashvanth", role: "Website Team", image: "/assets/team/yashvanth.jpg" },
+  { name: "Yashvanth", role: "Website Team", image: "/assets/team/yashvanth-dp.jpg" },
   { name: "Shreyansh", role: "Website Team" },
   { name: "Narendhar", role: "Website Team" },
 ];
