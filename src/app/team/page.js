@@ -28,30 +28,33 @@ const boardSections = [
   },
 ];
 
-const studentMembers = [
-  { name: "Sainatha", role: "Student Member", image: "/assets/team/sainath.jpg" },
-  { name: "Sanshrey", role: "Student Member", image: "/assets/team/sanshrey.jpg" },
-  { name: "Sriram", role: "Student Member", image: "/assets/team/sriram.jpg" },
-  { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
-  { name: "Vijay", role: "Student Member", image: "/assets/team/vijay.jpg" },
+// Shown under "Organizing Team", in the organizers' order. No per-card role:
+// the section heading already says it.
+const organizingTeam = [
+  { name: "Sainatha", image: "/assets/team/sainath.jpg" },
+  { name: "Sanshrey", image: "/assets/team/sanshrey.jpg" },
+  { name: "Vijay", image: "/assets/team/vijay.jpg" },
+  { name: "Sriram", image: "/assets/team/sriram.jpg" },
+  { name: "Varshini", image: "/assets/team/varshini.jpg" },
 ];
 
 const websiteTeam = [
-  { name: "Jeevanandham", role: "Website Team" },
-  { name: "Yashvanth", role: "Website Team", image: "/assets/team/yashvanth-dp.jpg" },
-  { name: "Shreyansh", role: "Website Team" },
-  { name: "Narendhar", role: "Website Team", image: "/assets/team/narendhar.jpg" },
+  { name: "Jeevanandham" },
+  { name: "Yashvanth", image: "/assets/team/yashvanth-dp.jpg" },
+  { name: "Shreyansh" },
+  { name: "Narendhar", image: "/assets/team/narendhar.jpg" },
 ];
 
 function initialOf(name) {
   return name.replace(/^(Prof\.|Dr\.|Mr\.|Ms\.|Mrs\.|\(Dr\.\)|\s)+/g, "").charAt(0).toUpperCase();
 }
 
+// The name is shown right below the photo, so the photo itself is decorative.
 function Avatar({ member, size }) {
   return (
     <div className={`relative ${size} shrink-0 overflow-hidden rounded-full border-4 border-white bg-green-wash shadow-md ring-2 ring-brand-accent/40 transition-all duration-300 motion-safe:group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-brand-accent`}>
       {member.image ? (
-        <Image src={member.image} alt={member.name} fill sizes="176px" className="object-cover object-top" />
+        <Image src={member.image} alt="" fill sizes="176px" className="object-cover object-top" />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-display text-4xl font-bold text-brand-primary" aria-hidden="true">
           {initialOf(member.name)}
@@ -66,8 +69,8 @@ function MemberCard({ member, size = "md" }) {
   return (
     <li className="group flex w-40 shrink-0 flex-col items-center text-center sm:w-48">
       <Avatar member={member} size={avatar} />
-      <p className="mt-4 font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-primary">{member.role}</p>
-      <h3 className="mt-1 text-base font-bold leading-snug text-ink sm:text-lg">{member.name}</h3>
+      {member.role && <p className="mt-4 font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-primary">{member.role}</p>}
+      <h3 className={`${member.role ? "mt-1" : "mt-4"} text-base font-bold leading-snug text-ink sm:text-lg`}>{member.name}</h3>
       {member.detail && <p className="meta mt-1">{member.detail}</p>}
     </li>
   );
@@ -114,10 +117,10 @@ export default function Team() {
           );
         })}
 
-        <section aria-labelledby="team-student-members">
-          <SectionHeading id="team-student-members">Student Members</SectionHeading>
+        <section aria-labelledby="team-organizing-team">
+          <SectionHeading id="team-organizing-team">Organizing Team</SectionHeading>
           <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
-            {studentMembers.map((member) => <MemberCard key={member.name} member={member} />)}
+            {organizingTeam.map((member) => <MemberCard key={member.name} member={member} />)}
           </ul>
         </section>
 
