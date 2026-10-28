@@ -91,6 +91,8 @@ try {
     check("focus returns to Review button", await page.evaluate(() => /Review/.test(document.activeElement?.textContent || "")));
 
     await page.getByRole("button", { name: "Clear Men Kabaddi Squad, Slot 1" }).click();
+    // Clearing the only girl leaves 0 girls on the roster; the typed headcount must match.
+    await page.fill("#contact-girls-travelling", "0");
     await page.getByRole("button", { name: /Review & Submit/ }).click();
     await page.waitForSelector("[role=dialog]");
     const saveRosterButton = page.getByRole("button", { name: /Save Roster & Continue/ });
