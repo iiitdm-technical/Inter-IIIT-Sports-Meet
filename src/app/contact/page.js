@@ -79,7 +79,10 @@ export default function Contact() {
           <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {contactNumbers.map((contact) => (
               <div key={contact.tel} className="rounded-control border border-line bg-white px-4 py-3">
-                <dt className="meta">{contact.role}</dt>
+                <dt>
+                  {contact.name && <span className="block font-semibold text-ink">{contact.name}</span>}
+                  <span className="meta">{contact.role}</span>
+                </dt>
                 <dd className="mt-1">
                   <a href={`tel:${contact.tel}`} className="whitespace-nowrap font-semibold text-brand-primary underline-offset-4 hover:underline">{contact.display}</a>
                 </dd>
