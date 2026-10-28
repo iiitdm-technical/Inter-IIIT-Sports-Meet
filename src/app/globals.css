@@ -160,24 +160,6 @@ p {
   100% { transform: translateX(-50%); }
 }
 
-/* Team page: student members scroll; pauses on hover or keyboard focus. */
-.team-marquee {
-  display: flex;
-  width: max-content;
-  animation: marquee 70s linear infinite;
-}
-.team-marquee-wrap {
-  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-}
-.team-marquee-wrap:hover .team-marquee,
-.team-marquee-wrap:focus-within .team-marquee { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) {
-  .team-marquee { animation: none; width: auto; justify-content: center; }
-  .team-marquee > ul { flex-wrap: wrap; justify-content: center; row-gap: 3.5rem; padding-right: 0; }
-  .team-marquee-copy, .team-marquee-repeat { display: none; }
-  .team-marquee-wrap { mask-image: none; }
-}
-
 /* Animation: fadeUp */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }

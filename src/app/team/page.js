@@ -3,9 +3,9 @@ import PageHeader from '@/components/PageHeader';
 
 /**
  * Sports Board of the 9th All India Inter-IIIT Sports Meet 2026, in the
- * order the organizers set. The board, the sports secretaries and the website
- * team are shown still; the student members scroll. A member without `image` shows their
- * initial until the photo is added to /public/assets/team/.
+ * order the organizers set. Every section is a still, centred grid. A member
+ * without `image` shows their initial until the photo is added to
+ * /public/assets/team/.
  */
 const boardSections = [
   {
@@ -38,7 +38,7 @@ const studentMembers = [
 
 const websiteTeam = [
   { name: "Jeevanandham", role: "Website Team" },
-  { name: "Yashvanth", role: "Website Team" },
+  { name: "Yashvanth", role: "Website Team", image: "/assets/team/yashvanth.jpg" },
   { name: "Shreyansh", role: "Website Team" },
   { name: "Narendhar", role: "Website Team" },
 ];
@@ -47,11 +47,11 @@ function initialOf(name) {
   return name.replace(/^(Prof\.|Dr\.|Mr\.|Ms\.|Mrs\.|\(Dr\.\)|\s)+/g, "").charAt(0).toUpperCase();
 }
 
-function Avatar({ member, size, decorative }) {
+function Avatar({ member, size }) {
   return (
     <div className={`relative ${size} shrink-0 overflow-hidden rounded-full border-4 border-white bg-green-wash shadow-md ring-2 ring-brand-accent/40 transition-all duration-300 motion-safe:group-hover:-translate-y-1 group-hover:shadow-lg group-hover:ring-brand-accent`}>
       {member.image ? (
-        <Image src={member.image} alt={decorative ? "" : member.name} fill sizes="176px" className="object-cover object-top" />
+        <Image src={member.image} alt={member.name} fill sizes="176px" className="object-cover object-top" />
       ) : (
         <span className="flex h-full w-full items-center justify-center font-display text-4xl font-bold text-brand-primary" aria-hidden="true">
           {initialOf(member.name)}
@@ -61,11 +61,11 @@ function Avatar({ member, size, decorative }) {
   );
 }
 
-function MemberCard({ member, size = "md", decorative = false }) {
+function MemberCard({ member, size = "md" }) {
   const avatar = size === "lg" ? "h-40 w-40 sm:h-44 sm:w-44" : "h-28 w-28 sm:h-32 sm:w-32";
   return (
-    <li className={`group flex w-40 shrink-0 flex-col items-center text-center sm:w-48 ${decorative ? "team-marquee-repeat" : ""}`} aria-hidden={decorative || undefined}>
-      <Avatar member={member} size={avatar} decorative={decorative} />
+    <li className="group flex w-40 shrink-0 flex-col items-center text-center sm:w-48">
+      <Avatar member={member} size={avatar} />
       <p className="mt-4 font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-primary">{member.role}</p>
       <h3 className="mt-1 text-base font-bold leading-snug text-ink sm:text-lg">{member.name}</h3>
       {member.detail && <p className="meta mt-1">{member.detail}</p>}
@@ -84,9 +84,6 @@ function SectionHeading({ id, children }) {
 }
 
 export default function Team() {
-  // Each half of the scrolling track must be wider than a wide screen, so
-  // repeat a short list before doubling it for the seamless loop.
-  const loop = studentMembers.length < 10 ? [...studentMembers, ...studentMembers] : studentMembers;
 
   return (
     <div className="min-h-screen bg-ivory">
@@ -119,19 +116,9 @@ export default function Team() {
 
         <section aria-labelledby="team-student-members">
           <SectionHeading id="team-student-members">Student Members</SectionHeading>
-          <div className="team-marquee-wrap -mx-4 overflow-hidden py-2 sm:-mx-6 lg:-mx-8">
-            <div className="team-marquee">
-              <ul className="flex gap-x-10 pr-10 sm:gap-x-16 sm:pr-16">
-                {studentMembers.map((member) => <MemberCard key={member.name} member={member} />)}
-                {loop.slice(studentMembers.length).map((member, index) => (
-                  <MemberCard key={`repeat-${index}`} member={member} decorative />
-                ))}
-              </ul>
-              <ul className="team-marquee-copy flex gap-x-10 pr-10 sm:gap-x-16 sm:pr-16" aria-hidden="true">
-                {loop.map((member, index) => <MemberCard key={`copy-${index}`} member={member} decorative />)}
-              </ul>
-            </div>
-          </div>
+          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+            {studentMembers.map((member) => <MemberCard key={member.name} member={member} />)}
+          </ul>
         </section>
 
         <section aria-labelledby="team-website-team">
