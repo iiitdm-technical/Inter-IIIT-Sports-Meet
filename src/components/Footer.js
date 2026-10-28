@@ -75,7 +75,7 @@ export default function Footer() {
         <div className="flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-8 md:flex-row">
           <p className="text-xs text-white/65">© 2026 All India Inter-IIIT Sports Meet. All rights reserved.</p>
           <p className="text-xs text-white/65">
-            Hosted by {eventInfo.host} · Website by <span className="font-semibold text-white/85">CS Club, IIITDM Kancheepuram</span>
+            Hosted by <span className="font-semibold text-white/85">{eventInfo.host}</span> · Website by <span className="font-semibold text-white/85">CS Club, IIITDM Kancheepuram</span>
           </p>
         </div>
       </div>
