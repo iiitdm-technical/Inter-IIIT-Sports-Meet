@@ -89,7 +89,7 @@ export default function Team() {
     <div className="min-h-screen bg-ivory">
       <PageHeader title="Meet the Team" label="Meet" badgeLabel="Our Team" description="The Sports Board of the 9th All India Inter-IIIT Sports Meet 2026, IIITDM Kancheepuram." />
 
-      <div className="mx-auto max-w-6xl space-y-24 px-4 py-20 sm:space-y-32 sm:px-6 sm:py-28 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-24 px-4 py-20 sm:space-y-32 sm:px-6 sm:py-28 lg:px-8">
         {boardSections.map((section, sectionIndex) => {
           const headingId = `team-${section.title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
           const [lead, ...rest] = section.members;
@@ -100,13 +100,13 @@ export default function Team() {
                 <ul className="flex flex-col items-center gap-14">
                   <MemberCard member={lead} size="lg" />
                   <li className="w-full">
-                    <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+                    <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
                       {rest.map((member) => <MemberCard key={member.name} member={member} />)}
                     </ul>
                   </li>
                 </ul>
               ) : (
-                <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+                <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
                   {section.members.map((member) => <MemberCard key={member.name} member={member} />)}
                 </ul>
               )}
@@ -116,14 +116,14 @@ export default function Team() {
 
         <section aria-labelledby="team-student-members">
           <SectionHeading id="team-student-members">Student Members</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
             {studentMembers.map((member) => <MemberCard key={member.name} member={member} />)}
           </ul>
         </section>
 
         <section aria-labelledby="team-website-team">
           <SectionHeading id="team-website-team">Website Team</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
             {websiteTeam.map((member) => <MemberCard key={member.name} member={member} />)}
           </ul>
         </section>
