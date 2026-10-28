@@ -31,11 +31,11 @@ const boardSections = [
 // Shown under "Organizing Team", in the organizers' order. No per-card role:
 // the section heading already says it.
 const organizingTeam = [
-  { name: "Sainatha", image: "/assets/team/sainath.jpg" },
   { name: "Sanshrey", image: "/assets/team/sanshrey.jpg" },
   { name: "Vijay", image: "/assets/team/vijay.jpg" },
   { name: "Sriram", image: "/assets/team/sriram.jpg" },
   { name: "Varshini", image: "/assets/team/varshini.jpg" },
+  { name: "Sainatha", image: "/assets/team/sainath.jpg" },
 ];
 
 const websiteTeam = [
@@ -67,7 +67,7 @@ function Avatar({ member, size }) {
 function MemberCard({ member, size = "md" }) {
   const avatar = size === "lg" ? "h-40 w-40 sm:h-44 sm:w-44" : "h-28 w-28 sm:h-32 sm:w-32";
   return (
-    <li className="group flex w-40 shrink-0 flex-col items-center text-center sm:w-48">
+    <li className="group flex w-36 shrink-0 flex-col items-center text-center sm:w-48">
       <Avatar member={member} size={avatar} />
       {member.role && <p className="mt-4 font-display text-sm font-bold uppercase tracking-[0.12em] text-brand-primary">{member.role}</p>}
       <h3 className={`${member.role ? "mt-1" : "mt-4"} text-base font-bold leading-snug text-ink sm:text-lg`}>{member.name}</h3>
@@ -103,13 +103,13 @@ export default function Team() {
                 <ul className="flex flex-col items-center gap-14">
                   <MemberCard member={lead} size="lg" />
                   <li className="w-full">
-                    <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
+                    <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
                       {rest.map((member) => <MemberCard key={member.name} member={member} />)}
                     </ul>
                   </li>
                 </ul>
               ) : (
-                <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
+                <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
                   {section.members.map((member) => <MemberCard key={member.name} member={member} />)}
                 </ul>
               )}
@@ -119,14 +119,14 @@ export default function Team() {
 
         <section aria-labelledby="team-organizing-team">
           <SectionHeading id="team-organizing-team">Organizing Team</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
             {organizingTeam.map((member) => <MemberCard key={member.name} member={member} />)}
           </ul>
         </section>
 
         <section aria-labelledby="team-website-team">
           <SectionHeading id="team-website-team">Website Team</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-12">
+          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
             {websiteTeam.map((member) => <MemberCard key={member.name} member={member} />)}
           </ul>
         </section>
