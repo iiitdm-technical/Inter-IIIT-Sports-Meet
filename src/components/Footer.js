@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { eventInfo } from '@/data/info';
+import { eventInfo, contactNumbers } from '@/data/info';
 import { iiits } from '@/data/iiits';
 
 const footerLinks = [
@@ -60,6 +60,9 @@ export default function Footer() {
               </p>
               <a href="mailto:sports@iiitdm.ac.in" className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
                 sports@iiitdm.ac.in
+              </a>
+              <a href={`tel:${contactNumbers[0].tel}`} className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
+                {contactNumbers[0].role}: {contactNumbers[0].display}
               </a>
             </address>
             <Link href="/register" className="btn btn-accent btn-sm px-5">

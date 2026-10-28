@@ -1,5 +1,5 @@
 import PageHeader from '@/components/PageHeader';
-import { eventInfo } from '@/data/info';
+import { eventInfo, contactNumbers } from '@/data/info';
 import { sports } from '@/data/sports';
 import Link from 'next/link';
 
@@ -45,6 +45,21 @@ export default function Contact() {
 
           {/* Venue and dates */}
           <div className="grid gap-6">
+            <section className="card p-6 sm:p-8" aria-labelledby="contact-phone-title">
+              <p className="eyebrow">Phone</p>
+              <h2 id="contact-phone-title" className="heading-card mt-2 text-xl">Call us</h2>
+              <dl className="mt-4 divide-y divide-line text-sm">
+                {contactNumbers.map((contact) => (
+                  <div key={contact.tel} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2.5">
+                    <dt className="text-ink-soft">{contact.role}</dt>
+                    <dd>
+                      <a href={`tel:${contact.tel}`} className="font-semibold text-brand-primary underline-offset-4 hover:underline">{contact.display}</a>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+
             <section className="card p-6 sm:p-8" aria-labelledby="contact-venue-title">
               <p className="eyebrow">Venue</p>
               <h2 id="contact-venue-title" className="heading-card mt-2 text-xl">{eventInfo.host}</h2>

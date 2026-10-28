@@ -1,6 +1,15 @@
 import { iiits } from "./iiits";
 import { sports } from "./sports";
 
+/** Phone contacts. `tel` is the dialable form; `travel` marks who helps arriving teams. */
+export const contactNumbers = [
+  { role: "PTI", display: "+91 86106 96546", tel: "+918610696546" },
+  { role: "Sports Secretary", display: "+91 73494 29692", tel: "+917349429692" },
+  { role: "Sports Joint Secretary", display: "+91 63044 03973", tel: "+916304403973" },
+  { role: "Organising Team", display: "+91 91107 49788", tel: "+919110749788", travel: true },
+  { role: "Organising Team", display: "+91 98494 56070", tel: "+919849456070", travel: true },
+];
+
 export const eventInfo = {
   name: "9th All India Inter-IIIT Sports Meet",
   shortName: "All India Inter-IIIT Sports Meet 2026",
