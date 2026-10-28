@@ -4,7 +4,7 @@ import { registrationSubmitSchema, paymentSubmitSchema } from "../src/lib/valida
 import { escapeCsvField, formatCsv } from "../src/lib/csv/generator.js";
 import { hashPassword, verifyPassword } from "../src/lib/auth/passwords.js";
 import { detectProofType, guessProofType } from "../src/lib/registration/proof-file.js";
-import { countByGender, isPersonalEmail } from "../src/lib/registration/contingent.js";
+import { countByGender, describeContingent, isPersonalEmail, totalTravelling } from "../src/lib/registration/contingent.js";
 import { BUS_TERMINALS, CHENNAI_AIRPORT, RAILWAY_STATIONS, arrivalPointForMode } from "../src/lib/registration/arrival.js";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -42,7 +42,7 @@ describe("registrationSubmitSchema", () => {
         girlsSecretaryName: "Anita Rao",
         girlsSecretaryPhone: "+91 9000000012",
         girlsSecretaryEmail: "anita@iiitkota.ac.in",
-        staffCount: 2,
+        boysTravelling: 1, girlsTravelling: 0, staffCount: 2,
         notes: "Arrives 18 December",
       },
       students: [{ rollNumber: "  2023bcs001  ", name: "  rahul sharma  ", gender: "M" }],
@@ -57,7 +57,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires valid contact details and at least one student and entry", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2, notes: "" },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", boysTravelling: 1, girlsTravelling: 0, staffCount: 2, notes: "" },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -70,7 +70,7 @@ describe("registrationSubmitSchema", () => {
 
   test("requires arrival date, time and mode of travel", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", boysTravelling: 1, girlsTravelling: 0, staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -91,7 +91,7 @@ describe("registrationSubmitSchema", () => {
 
   test("checks departure date and the Other travel mode", () => {
     const base = {
-      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
+      contactDetails: { contactName: "A", contactEmail: "a@b.in", contactPhone: "123456", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", boysTravelling: 1, girlsTravelling: 0, staffCount: 2 },
       students: [{ rollNumber: "R1", name: "A", gender: "M" }],
       entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }],
     };
@@ -203,7 +203,7 @@ describe("arrival point by mode of travel", () => {
     arrivalDate: "2026-12-18", arrivalTime: "07:30", departureDate: "2026-12-23",
     boysSecretaryName: "Ravi", boysSecretaryPhone: "9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in",
     girlsSecretaryName: "Anita", girlsSecretaryPhone: "9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in",
-    staffCount: 2,
+    boysTravelling: 1, girlsTravelling: 0, staffCount: 2,
   };
   const base = { students: [{ rollNumber: "R1", name: "A", gender: "M" }], entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }] };
   const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...contact, ...changes } });
@@ -251,7 +251,7 @@ describe("sports secretaries and contingent", () => {
     arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23",
     boysSecretaryName: "Ravi", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in",
     girlsSecretaryName: "Anita", girlsSecretaryPhone: "9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in",
-    staffCount: "2",
+    boysTravelling: 1, girlsTravelling: 0, staffCount: "2",
   };
   const base = { students: [{ rollNumber: "R1", name: "A", gender: "M" }], entries: [{ sportId: "cricket", eventId: "team", gender: "M", rollNumber: "R1" }] };
   const parse = (changes) => registrationSubmitSchema.safeParse({ ...base, contactDetails: { ...contact, ...changes } });
@@ -273,15 +273,56 @@ describe("sports secretaries and contingent", () => {
     assert.equal(isPersonalEmail(" X@GMAIL.COM "), true);
   });
 
-  test("accompanying staff is a whole number from 1 to 3", () => {
+  test("accompanying staff is a whole number of at least 1, with no upper limit", () => {
     assert.equal(parse({ staffCount: "1" }).data?.contactDetails.staffCount, 1);
     assert.equal(parse({ staffCount: 3 }).success, true);
-    for (const bad of ["0", "4", "1.5", "two", -1]) assert.equal(parse({ staffCount: bad }).success, false, String(bad));
+    assert.equal(parse({ staffCount: "6" }).success, true);
+    for (const bad of ["0", "1.5", "two", -1]) assert.equal(parse({ staffCount: bad }).success, false, String(bad));
   });
 
   test("boys and girls are counted once per student", () => {
     assert.deepEqual(countByGender([{ gender: "M" }, { gender: "F" }, { gender: "M" }]), { boys: 2, girls: 1 });
     assert.deepEqual(countByGender([]), { boys: 0, girls: 0 });
+  });
+
+  test("boys and girls travelling are required and must equal the roster", () => {
+    assert.equal(parse({ boysTravelling: "1", girlsTravelling: "0" }).success, true);
+    for (const field of ["boysTravelling", "girlsTravelling"]) {
+      assert.equal(parse({ [field]: "" }).success, false, `${field} empty`);
+      assert.equal(parse({ [field]: undefined }).success, false, `${field} missing`);
+      assert.equal(parse({ [field]: "1.5" }).success, false, `${field} fractional`);
+    }
+    const mismatch = parse({ boysTravelling: 3 });
+    assert.equal(mismatch.success, false);
+    assert.deepEqual(mismatch.error.issues.map((issue) => issue.path.join(".")), ["contactDetails.boysTravelling"]);
+    assert.equal(parse({ girlsTravelling: 2 }).success, false, "no girls on the roster");
+
+    // 80 boys and 30 girls registered: only exactly 80 and 30 are accepted.
+    const students = [
+      ...Array.from({ length: 80 }, (_, i) => ({ rollNumber: `B${i}`, name: "B", gender: "M" })),
+      ...Array.from({ length: 30 }, (_, i) => ({ rollNumber: `G${i}`, name: "G", gender: "F" })),
+    ];
+    const travelling = (boys, girls) => registrationSubmitSchema.safeParse({
+      ...base, students, contactDetails: { ...contact, boysTravelling: boys, girlsTravelling: girls },
+    }).success;
+    assert.equal(travelling(80, 30), true);
+    for (const [boys, girls] of [[79, 30], [81, 30], [80, 29], [80, 31], [110, 0]]) {
+      assert.equal(travelling(boys, girls), false, `${boys} boys, ${girls} girls`);
+    }
+  });
+
+  test("a travelling mismatch is reported even while other fields are incomplete", () => {
+    const result = parse({ contactName: "", boysTravelling: 5 });
+    const paths = result.error.issues.map((issue) => issue.path.join("."));
+    assert.ok(paths.includes("contactDetails.contactName"));
+    assert.ok(paths.includes("contactDetails.boysTravelling"));
+  });
+
+  test("the contingent total adds students and staff", () => {
+    assert.equal(totalTravelling(4, 2, 3), 9);
+    assert.equal(totalTravelling("4", "", undefined), 4);
+    assert.equal(describeContingent(1, 2, 2), "1 boy, 2 girls, 2 accompanying staff (5 people in total)");
+    assert.equal(describeContingent(1, 0), "1 boy, 0 girls");
   });
 });
 

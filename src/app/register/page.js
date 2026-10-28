@@ -16,7 +16,7 @@ const EMPTY_CONTACT = {
   arrivalDate: "", arrivalTime: "", travelMode: "", arrivalPoint: "", departureDate: "", notes: "",
   boysSecretaryName: "", boysSecretaryPhone: "", boysSecretaryEmail: "",
   girlsSecretaryName: "", girlsSecretaryPhone: "", girlsSecretaryEmail: "",
-  staffCount: "",
+  boysTravelling: "", girlsTravelling: "", staffCount: "",
 };
 
 // Drafts saved before a field existed lack it; fill the gaps so every input stays controlled.
@@ -403,6 +403,7 @@ export default function RegisterPage() {
     issues = [{ message: errors[0], slotKeys: [], fieldId: null }];
   }
   const errorSlotKeys = new Set(issues.flatMap((issue) => issue.slotKeys));
+  const nameConflictSlotKeys = new Set(issues.filter((issue) => issue.kind === "name-conflict").flatMap((issue) => issue.slotKeys));
   const firstIssue = issues[0];
   const canShowFirstIssue = firstIssue && (firstIssue.slotKeys.length > 0 || firstIssue.fieldId);
 
@@ -497,6 +498,7 @@ export default function RegisterPage() {
               isOpen={openSections.has(`${sport.id}|${activeTab}`)}
               onToggle={() => toggleSection(`${sport.id}|${activeTab}`)}
               errorSlotKeys={errorSlotKeys}
+              nameConflictSlotKeys={nameConflictSlotKeys}
             />
           ))}
         </div>

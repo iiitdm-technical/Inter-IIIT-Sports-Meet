@@ -30,6 +30,8 @@ const draftSchema = z.object({
     girlsSecretaryName: z.string().max(128).optional(),
     girlsSecretaryPhone: z.string().max(32).optional(),
     girlsSecretaryEmail: z.string().max(128).optional(),
+    boysTravelling: z.union([z.string().max(4), z.number().int().min(0).max(999)]).optional(),
+    girlsTravelling: z.union([z.string().max(4), z.number().int().min(0).max(999)]).optional(),
     staffCount: z.union([z.string().max(3), z.number().int().min(0).max(99)]).optional(),
   }),
   slotsMap: z.record(

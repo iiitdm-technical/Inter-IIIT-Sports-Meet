@@ -2,12 +2,13 @@
 
 import ParticipantSlot from "./ParticipantSlot";
 import { getSlotKey, getSlotInputId } from "@/lib/registration/client-utils";
+import { normalizeRoll } from "@/lib/registration/identity";
 
 const GENDER_LABELS = { M: "Men", F: "Women", mixed: "Combined" };
 
 const SLOT_GENDER_LABELS = { M: "Man", F: "Woman" };
 
-export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, slotGenders, reserveGenders, isRelay, studentRegistry, errorSlotKeys }) {
+export default function EventBlock({ sportConfig, eventId, eventName, gender, slotsMap, onChangeSlot, maxParticipants, maxReserves, slotGenders, reserveGenders, isRelay, studentRegistry, errorSlotKeys, nameConflictSlotKeys }) {
 
   // Is it a combined event like Chess where gender is mixed?
   const isCombined = sportConfig.type === "combined_team" || gender === "mixed";
@@ -18,7 +19,7 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
   const renderSlot = (role, i) => {
     const key = getSlotKey(sportConfig.id, eventId, gender, role, i);
     const data = slotsMap[key];
-    const knownName = data?.rollNumber ? studentRegistry.get(data.rollNumber.trim().toUpperCase())?.name : null;
+    const knownName = data?.rollNumber ? studentRegistry.get(normalizeRoll(data.rollNumber))?.name : null;
     // Mixed relays fix each slot's gender so only the 2 men + 2 women split is possible.
     const slotGender = (role === "main" ? slotGenders : reserveGenders)?.[i] || fixedSlotGender;
     const baseLabel = role === "main" ? `Slot ${i + 1}` : `Reserve ${i + 1}`;
@@ -35,6 +36,7 @@ export default function EventBlock({ sportConfig, eventId, eventName, gender, sl
         isReserve={role === "reserve"}
         knownName={knownName}
         hasError={errorSlotKeys.has(key)}
+        nameConflict={nameConflictSlotKeys?.has(key)}
       />
     );
   };

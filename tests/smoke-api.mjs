@@ -141,7 +141,7 @@ try {
   expectStatus(await request("/api/upload", { cookie: iiitCookie, method: "POST", body: new FormData() }), 403, "proof unavailable before roster lock");
 
   const payload = {
-    contactDetails: { contactName: "API Test Coordinator", contactEmail: "test@example.org", contactPhone: "9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", staffCount: 2 },
+    contactDetails: { contactName: "API Test Coordinator", contactEmail: "test@example.org", contactPhone: "9876543210", arrivalDate: "2026-12-18", arrivalTime: "07:30", travelMode: "Train", arrivalPoint: "Tambaram (TBM)", departureDate: "2026-12-23", boysSecretaryName: "Ravi Kumar", boysSecretaryPhone: "+91 9000000011", boysSecretaryEmail: "ravi@iiitkota.ac.in", girlsSecretaryName: "Anita Rao", girlsSecretaryPhone: "+91 9000000012", girlsSecretaryEmail: "anita@iiitkota.ac.in", boysTravelling: 1, girlsTravelling: 0, staffCount: 2 },
     students: [{ rollNumber: "API-TEST-001", name: "API TEST STUDENT", gender: "M" }],
     entries: [{ sportId: "athletics", eventId: "100m", gender: "M", rollNumber: "API-TEST-001", isReserve: false }],
   };

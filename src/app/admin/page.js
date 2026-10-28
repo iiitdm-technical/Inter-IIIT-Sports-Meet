@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatTravelDate } from "@/lib/registration/arrival";
+import { totalTravelling } from "@/lib/registration/contingent";
 
 const formatMB = (bytes) => {
   const mb = bytes / 1024 / 1024;
@@ -747,6 +748,7 @@ export default function AdminDashboardPage() {
                             <div><span className="font-semibold text-ink">{row.boysCount ?? 0}</span> {row.boysCount === 1 ? "boy" : "boys"}</div>
                             <div><span className="font-semibold text-ink">{row.girlsCount ?? 0}</span> {row.girlsCount === 1 ? "girl" : "girls"}</div>
                             <div><span className="font-semibold text-ink">{row.staffCount}</span> staff</div>
+                            <div className="mt-1 border-t border-line pt-1"><span className="font-semibold text-ink">{totalTravelling(row.boysCount, row.girlsCount, row.staffCount)}</span> total</div>
                           </div>
                         ) : "—"}
                       </td>

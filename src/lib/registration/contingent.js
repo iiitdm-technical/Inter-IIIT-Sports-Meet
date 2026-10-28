@@ -4,10 +4,9 @@
  * girls are counted from the roster, so they always match the fee.
  */
 
-// Rulebook XII(g): at most 2 officials and 1 supporting staff, and a
-// permanent staff member must accompany the contingent.
+// A permanent staff member must accompany the contingent. There is no upper
+// limit; contingents usually bring about 3 (2 officials, 1 supporting staff).
 export const STAFF_MIN = 1;
-export const STAFF_MAX = 3;
 
 // Secretaries must give their institute email, not a personal mailbox.
 const PERSONAL_EMAIL_DOMAINS = [
@@ -35,9 +34,15 @@ export function countByGender(students) {
 
 const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
-/** "1 boy, 2 girls, 2 accompanying staff". */
+/** "1 boy, 2 girls, 2 accompanying staff (5 people in total)". */
 export function describeContingent(boys = 0, girls = 0, staff) {
   const parts = [plural(boys, "boy", "boys"), plural(girls, "girl", "girls")];
-  if (staff !== undefined && staff !== null && staff !== "") parts.push(`${staff} accompanying staff`);
-  return parts.join(", ");
+  if (staff === undefined || staff === null || staff === "") return parts.join(", ");
+  parts.push(`${staff} accompanying staff`);
+  return `${parts.join(", ")} (${plural(totalTravelling(boys, girls, staff), "person", "people")} in total)`;
+}
+
+/** Everyone arriving at the campus: students plus accompanying staff. */
+export function totalTravelling(boys = 0, girls = 0, staff = 0) {
+  return (Number(boys) || 0) + (Number(girls) || 0) + (Number(staff) || 0);
 }

@@ -3,27 +3,28 @@ import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX, formatTravelDate,
   CHENNAI_AIRPORT,
 } from "../registration/arrival.js";
-import { STAFF_MIN, STAFF_MAX, isPersonalEmail } from "../registration/contingent.js";
+import { STAFF_MIN, isPersonalEmail, countByGender } from "../registration/contingent.js";
+import { normalizeRoll, normalizeName } from "../registration/identity.js";
 
 /**
- * Normalizes roll number to uppercase trimmed string
+ * Normalizes roll number to uppercase with every space removed
  */
 export const rollNumberSchema = z
   .string()
   .trim()
   .min(1, "Roll number is required")
   .max(64, "Roll number is too long")
-  .transform((val) => val.toUpperCase());
+  .transform(normalizeRoll);
 
 /**
- * Normalizes name to uppercase trimmed string
+ * Normalizes name to uppercase with single spaces
  */
 export const studentNameSchema = z
   .string()
   .trim()
   .min(1, "Student name is required")
   .max(128, "Student name is too long")
-  .transform((val) => val.toUpperCase());
+  .transform(normalizeName);
 
 /**
  * Gender validation ('M' or 'F' only)
@@ -82,6 +83,15 @@ function secretaryFields(prefix, label) {
   };
 }
 
+/** Number of boys or girls travelling, typed into a number field (may arrive as a string). */
+function travellingCount(label) {
+  return z.preprocess(
+    (value) => (value === "" || value == null ? undefined : Number(value)),
+    z.number({ error: `Number of ${label} travelling is required` }).int(`Number of ${label} travelling must be a whole number`)
+      .min(0, `Number of ${label} travelling cannot be negative`),
+  );
+}
+
 export const contactDetailsSchema = z.object({
   contactName: z.string().trim().min(1, "Contact person name is required").max(128),
   contactEmail: z.email("Invalid contact email address").max(128),
@@ -98,12 +108,14 @@ export const contactDetailsSchema = z.object({
       `Exit date must be between ${formatTravelDate(DEPARTURE_DATE_MIN)} and ${formatTravelDate(DEPARTURE_DATE_MAX)}`),
   ...secretaryFields("boys", "Boys'"),
   ...secretaryFields("girls", "Girls'"),
+  // Typed by the IIIT as a headcount check; must match the roster (see registrationSubmitSchema).
+  boysTravelling: travellingCount("boys"),
+  girlsTravelling: travellingCount("girls"),
   // Typed into a number field, so it may arrive as a string.
   staffCount: z.preprocess(
     (value) => (value === "" || value == null ? undefined : Number(value)),
     z.number({ error: "Number of accompanying staff is required" }).int("Number of accompanying staff must be a whole number")
-      .min(STAFF_MIN, `At least ${STAFF_MIN} accompanying staff member is required`)
-      .max(STAFF_MAX, `At most ${STAFF_MAX} accompanying staff are allowed (2 officials and 1 supporting staff)`),
+      .min(STAFF_MIN, `At least ${STAFF_MIN} accompanying staff member is required`),
   ),
   notes: z.string().trim().max(1000, "Other notes are too long").optional().default(""),
 }).superRefine((details, ctx) => {
@@ -149,7 +161,22 @@ export const registrationSubmitSchema = z.object({
   contactDetails: contactDetailsSchema,
   students: z.array(studentRecordSchema).min(1, "At least one student must be registered").max(150),
   entries: z.array(eventEntrySchema).min(1, "At least one event entry must be submitted").max(1200),
-});
+}).superRefine(({ contactDetails, students }, ctx) => {
+  // Every registered student travels, and only they do: the typed headcount must equal the roster.
+  const { boys, girls } = countByGender(Array.isArray(students) ? students : []);
+  for (const [field, rostered, label] of [["boysTravelling", boys, "boys"], ["girlsTravelling", girls, "girls"]]) {
+    // Runs on raw input even when other fields fail; blank or malformed counts already have their own error.
+    const raw = contactDetails?.[field];
+    const typed = raw === "" || raw == null ? NaN : Number(raw);
+    if (Number.isInteger(typed) && typed >= 0 && typed !== rostered) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["contactDetails", field],
+        message: `Number of ${label} travelling (${typed}) must equal the ${rostered} ${label} registered in the events below`,
+      });
+    }
+  }
+}, { when: () => true });
 
 /**
  * Payment Submission Payload Schema

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { getSportConfig } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
-import { countByGender, describeContingent } from "@/lib/registration/contingent";
+import { countByGender, describeContingent, totalTravelling } from "@/lib/registration/contingent";
+import { formatRupees, getCategoryLabel, getEventName, getRegistrationFee, getSportName } from "@/lib/registration/labels";
 
 /**
  * Cleans up Zod validation error strings into readable labels.
@@ -20,6 +20,8 @@ function formatError(raw) {
     "contactDetails.departureDate:": "Travel — Exit date:",
     "contactDetails.boysSecretary": "Boys' sports secretary —",
     "contactDetails.girlsSecretary": "Girls' sports secretary —",
+    "contactDetails.boysTravelling:": "Contingent — Boys travelling:",
+    "contactDetails.girlsTravelling:": "Contingent — Girls travelling:",
     "contactDetails.staffCount:": "Contingent — Accompanying staff:",
     "contactDetails.notes:": "Travel — Other notes:",
     "students.": "Student roster —",
@@ -31,6 +33,28 @@ function formatError(raw) {
     }
   }
   return raw;
+}
+
+/**
+ * The roster two ways for checking: each student (by name) with their events,
+ * and each team or event (in catalogue order) with its player count.
+ */
+function summarizeRoster(payload) {
+  const students = new Map((payload?.students || []).map((student) => [student.rollNumber, { ...student, events: [] }]));
+  const teams = new Map();
+  for (const entry of payload?.entries || []) {
+    const sport = getSportName(entry.sportId);
+    const event = getEventName(entry.sportId, entry.eventId, entry.gender);
+    const category = getCategoryLabel(entry.gender);
+    students.get(entry.rollNumber)?.events.push(`${sport} ${category} ${event}${entry.isReserve ? " (reserve)" : ""}`);
+    const key = `${entry.sportId}|${entry.gender}|${entry.eventId}`;
+    if (!teams.has(key)) teams.set(key, { key, sport, category, event, mains: 0, reserves: 0 });
+    teams.get(key)[entry.isReserve ? "reserves" : "mains"]++;
+  }
+  return {
+    roster: [...students.values()].sort((a, b) => a.name.localeCompare(b.name) || a.rollNumber.localeCompare(b.rollNumber)),
+    teams: [...teams.values()],
+  };
 }
 
 /**
@@ -47,7 +71,9 @@ export default function ReviewModal({
 
   const hasRegistrationErrors = issues && issues.length > 0;
   const canProceed = !hasRegistrationErrors && !isSubmitting;
-  const studentsByRoll = new Map((payload?.students || []).map((student) => [student.rollNumber, student]));
+  const { boys, girls } = countByGender(payload?.students);
+  const staff = Number(payload?.contactDetails?.staffCount) || 0;
+  const { roster, teams } = summarizeRoster(payload);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -60,7 +86,7 @@ export default function ReviewModal({
           aria-modal="true"
           aria-labelledby="modal-title"
           tabIndex={-1}
-          className="relative w-full overflow-hidden rounded-card border border-line bg-paper text-left shadow-lift outline-none sm:max-w-2xl"
+          className="relative w-full overflow-hidden rounded-card border border-line bg-paper text-left shadow-lift outline-none sm:max-w-3xl"
         >
           <div className="border-b border-line px-5 pt-5 pb-4 sm:px-6">
             <p className="eyebrow">Step 1 of 3 · Review</p>
@@ -118,15 +144,19 @@ export default function ReviewModal({
                   Save your roster and continue to payment. You can still edit students and teams until you submit your payment details and receipt.
                 </p>
 
-                <dl className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="card-tint rounded-control p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique students</dt>
-                    <dd className="stat-number mt-1.5 text-4xl text-ink">{uniqueStudentsCount || 0}</dd>
-                  </div>
-                  <div className="card-tint rounded-control p-4">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Event entries</dt>
-                    <dd className="stat-number mt-1.5 text-4xl text-ink">{payload?.entries?.length || 0}</dd>
-                  </div>
+                <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    ["Unique students", uniqueStudentsCount || 0, `${boys} boys · ${girls} girls`],
+                    ["Event entries", payload?.entries?.length || 0, `${teams.length} teams / events`],
+                    ["People travelling", totalTravelling(boys, girls, staff), `incl. ${staff || 0} staff`],
+                    ["Amount to pay", formatRupees(getRegistrationFee(uniqueStudentsCount || 0)), "incl. GST and deposit"],
+                  ].map(([label, value, note]) => (
+                    <div key={label} className="card-tint rounded-control p-4">
+                      <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">{label}</dt>
+                      <dd className="stat-number mt-1.5 text-2xl text-ink sm:text-3xl">{value}</dd>
+                      <dd className="meta mt-1">{note}</dd>
+                    </div>
+                  ))}
                 </dl>
 
                 <div className="mt-4 rounded-control border border-line p-4">
@@ -139,24 +169,50 @@ export default function ReviewModal({
                     <dt className="text-ink-muted">Exit</dt><dd className="font-medium text-ink">{formatTravelDate(payload?.contactDetails?.departureDate) || "N/A"}</dd>
                     <dt className="text-ink-muted">Boys&apos; sec.</dt><dd className="font-medium text-ink">{[payload?.contactDetails?.boysSecretaryName, payload?.contactDetails?.boysSecretaryPhone, payload?.contactDetails?.boysSecretaryEmail].filter(Boolean).join(" · ") || "N/A"}</dd>
                     <dt className="text-ink-muted">Girls&apos; sec.</dt><dd className="font-medium text-ink">{[payload?.contactDetails?.girlsSecretaryName, payload?.contactDetails?.girlsSecretaryPhone, payload?.contactDetails?.girlsSecretaryEmail].filter(Boolean).join(" · ") || "N/A"}</dd>
-                    <dt className="text-ink-muted">Contingent</dt><dd className="font-medium text-ink">{describeContingent(countByGender(payload?.students).boys, countByGender(payload?.students).girls, payload?.contactDetails?.staffCount || 0)}</dd>
+                    <dt className="text-ink-muted">Contingent</dt><dd className="font-medium text-ink">{describeContingent(boys, girls, staff)}</dd>
                   </dl>
                 </div>
 
                 <div className="mt-4 overflow-hidden rounded-control border border-line">
-                  <h4 className="border-b border-line bg-ivory px-4 py-3 text-sm font-bold text-ink">Student roster and event entries</h4>
-                  <div className="max-h-64 divide-y divide-line overflow-auto bg-white" tabIndex={0} aria-label="Student roster and event entries">
-                    {payload?.entries?.map((entry, index) => {
-                      const student = studentsByRoll.get(entry.rollNumber);
-                      const sport = getSportConfig(entry.sportId);
-                      const event = sport?.events?.[entry.gender]?.find((item) => item.id === entry.eventId);
-                      return (
-                        <div key={`${entry.rollNumber}-${entry.sportId}-${entry.eventId}-${index}`} className="gap-4 px-4 py-2.5 text-sm sm:flex sm:justify-between">
-                          <div className="font-semibold text-ink">{student?.name || entry.rollNumber} <span className="font-mono text-xs font-normal text-ink-muted">({entry.rollNumber})</span></div>
-                          <div className="text-ink-soft">{sport?.name || entry.sportId} · {event?.name || (entry.eventId === "team" ? "Squad" : entry.eventId)} · {entry.gender === "mixed" ? "Mixed" : entry.gender === "M" ? "Men" : "Women"}{entry.isReserve ? " · Reserve" : ""}</div>
-                        </div>
-                      );
-                    })}
+                  <h4 className="border-b border-line bg-ivory px-4 py-3 text-sm font-bold text-ink">Teams and events ({teams.length})</h4>
+                  <div className="max-h-64 overflow-auto bg-white" tabIndex={0} aria-label="Teams and events">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-white text-left text-xs uppercase tracking-[0.06em] text-ink-muted">
+                        <tr><th className="px-4 py-2 font-semibold">Sport</th><th className="px-4 py-2 font-semibold">Event</th><th className="px-4 py-2 text-right font-semibold">Players</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {teams.map((team) => (
+                          <tr key={team.key}>
+                            <td className="px-4 py-2 font-semibold text-ink">{team.sport} <span className="font-normal text-ink-muted">· {team.category}</span></td>
+                            <td className="px-4 py-2 text-ink-soft">{team.event}</td>
+                            <td className="whitespace-nowrap px-4 py-2 text-right text-ink">{team.mains}{team.reserves > 0 && <span className="text-ink-muted"> + {team.reserves} reserve{team.reserves !== 1 ? "s" : ""}</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-control border border-line">
+                  <h4 className="border-b border-line bg-ivory px-4 py-3 text-sm font-bold text-ink">Students ({roster.length}) — check every name and roll number</h4>
+                  <div className="max-h-80 overflow-auto bg-white" tabIndex={0} aria-label="Students and their events">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-white text-left text-xs uppercase tracking-[0.06em] text-ink-muted">
+                        <tr><th className="px-4 py-2 font-semibold">#</th><th className="px-4 py-2 font-semibold">Student</th><th className="px-4 py-2 font-semibold">Events</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {roster.map((student, index) => (
+                          <tr key={student.rollNumber} className="align-top">
+                            <td className="px-4 py-2 text-ink-muted">{index + 1}</td>
+                            <td className="px-4 py-2">
+                              <div className="font-semibold text-ink">{student.name}</div>
+                              <div className="font-mono text-xs text-ink-muted">{student.rollNumber} · {student.gender === "F" ? "Girl" : "Boy"}</div>
+                            </td>
+                            <td className="px-4 py-2 text-ink-soft">{student.events.join(", ")}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 

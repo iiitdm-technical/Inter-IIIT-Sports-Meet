@@ -1,4 +1,5 @@
 import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
+import { normalizeRoll, normalizeName } from "../registration/identity.js";
 
 function describeSplit(genders) {
   const men = genders.filter((g) => g === "M").length;
@@ -29,14 +30,14 @@ export function validateRegistrationRules({ students, entries }) {
   const studentMap = new Map(); // rollNumber -> { rollNumber, name, gender }
 
   for (const s of students) {
-    const roll = s.rollNumber.trim().toUpperCase();
+    const roll = normalizeRoll(s.rollNumber);
     if (uniqueRollNumbers.has(roll)) {
       fail(`Duplicate student roll number detected in student roster: ${roll}`, { rolls: [roll] });
     }
     uniqueRollNumbers.add(roll);
     studentMap.set(roll, {
       rollNumber: roll,
-      name: s.name.trim().toUpperCase(),
+      name: normalizeName(s.name),
       gender: s.gender,
     });
   }
@@ -74,7 +75,7 @@ export function validateRegistrationRules({ students, entries }) {
   const eventParticipationMap = new Map();
 
   for (const entry of entries) {
-    const roll = entry.rollNumber.trim().toUpperCase();
+    const roll = normalizeRoll(entry.rollNumber);
     const sportId = entry.sportId.toLowerCase();
     const eventId = entry.eventId.toLowerCase();
     const eventGender = entry.gender;

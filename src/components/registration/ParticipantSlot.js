@@ -1,6 +1,6 @@
 "use client";
 
-export default function ParticipantSlot({ inputId, label, context, slotData, onChange, fixedGender, isReserve, knownName, hasError }) {
+export default function ParticipantSlot({ inputId, label, context, slotData, onChange, fixedGender, isReserve, knownName, hasError, nameConflict }) {
   const rollNumber = slotData?.rollNumber || "";
   const name = slotData?.name || "";
   const gender = slotData?.gender || fixedGender || "M";
@@ -16,7 +16,8 @@ export default function ParticipantSlot({ inputId, label, context, slotData, onC
 
   const handleClear = () => onChange({ rollNumber: "", name: "", gender: fixedGender || "M" });
 
-  const inputClass = `w-full rounded-control border bg-white px-3 py-2 text-sm text-ink placeholder:normal-case placeholder:text-ink-muted/70 uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${hasError ? "border-red-400 focus:border-red-600" : "border-line focus:border-brand-primary"}`;
+  const fieldClass = (textTone) => `w-full rounded-control border bg-white px-3 py-2 text-sm ${textTone} placeholder:normal-case placeholder:text-ink-muted/70 uppercase transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/20 ${hasError ? "border-red-400 focus:border-red-600" : "border-line focus:border-brand-primary"}`;
+  const inputClass = fieldClass("text-ink");
   const containerTone = hasError
     ? "bg-red-50 border-red-300"
     : isReserve ? "bg-gold-wash/60 border-[#eadcb4]" : "bg-paper border-line";
@@ -44,12 +45,18 @@ export default function ParticipantSlot({ inputId, label, context, slotData, onC
             type="text"
             aria-label={`${accessibleSlot}: student name`}
             aria-invalid={hasError || undefined}
+            aria-describedby={nameConflict ? `${inputId}-name-conflict` : undefined}
             placeholder={knownName ? `Auto: ${knownName}` : "Student name"}
             value={name}
             onChange={(e) => handleChange("name", e.target.value)}
-            className={inputClass}
+            className={nameConflict ? `${fieldClass("text-red-700")} font-semibold` : inputClass}
             maxLength={128}
           />
+          {nameConflict && (
+            <p id={`${inputId}-name-conflict`} className="mt-1 text-xs font-semibold text-red-700">
+              Roll no. {rollNumber.trim()} has a different name in another event
+            </p>
+          )}
           {knownName && !name && rollNumber && (
             <p className="mt-1 text-xs font-medium text-brand-primary">Using existing name</p>
           )}

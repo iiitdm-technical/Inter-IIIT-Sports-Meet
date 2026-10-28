@@ -2,6 +2,7 @@ import { eq, and, sql, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
+import { totalTravelling } from "../registration/contingent.js";
 
 /**
  * Escape a field for RFC 4180 CSV
@@ -189,6 +190,7 @@ export async function generateAdminMasterCSV(filters = {}) {
     "No. of Boys",
     "No. of Girls",
     "Accompanying Staff",
+    "Total Travelling",
     "Payment Mode",
     "Other Payment Mode",
   ];
@@ -230,6 +232,7 @@ export async function generateAdminMasterCSV(filters = {}) {
       entry.boysCount ?? "",
       entry.girlsCount ?? "",
       entry.staffCount ?? "",
+      entry.staffCount == null ? "" : totalTravelling(entry.boysCount, entry.girlsCount, entry.staffCount),
       entry.paymentMode || "",
       entry.otherPaymentMode || "",
     ];

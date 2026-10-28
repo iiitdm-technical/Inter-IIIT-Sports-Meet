@@ -6,7 +6,7 @@ import {
   TRAVEL_MODES, ARRIVAL_DATE_MIN, ARRIVAL_DATE_MAX, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX,
   RAILWAY_STATIONS, BUS_TERMINALS, CHENNAI_AIRPORT, arrivalPointForMode,
 } from "@/lib/registration/arrival";
-import { STAFF_MIN, STAFF_MAX } from "@/lib/registration/contingent";
+import { STAFF_MIN, totalTravelling } from "@/lib/registration/contingent";
 
 const fieldClass = "w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-muted/70 transition-colors focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20";
 const labelClass = "mb-1.5 block text-sm font-semibold text-ink";
@@ -329,16 +329,34 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
 
       <fieldset className="mt-6 border-t border-line pt-5">
         <legend className="heading-card float-left mb-1 w-full text-base">Contingent strength</legend>
-        <p className="meta clear-left mb-4">Boys and girls are counted from the students entered below; a student in several events counts once.</p>
+        <p className="meta clear-left mb-4">Enter how many people will travel to the campus. The boys and girls must match the students entered in the events below; a student in several events counts once.</p>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-          <div>
-            <p id="contact-boys-count-label" className={labelClass}>No. of boys {required}</p>
-            <output aria-labelledby="contact-boys-count-label" className="flex h-[46px] items-center rounded-control border border-line bg-ivory px-3.5 font-semibold text-ink">{studentCounts.boys}</output>
-          </div>
-          <div>
-            <p id="contact-girls-count-label" className={labelClass}>No. of girls {required}</p>
-            <output aria-labelledby="contact-girls-count-label" className="flex h-[46px] items-center rounded-control border border-line bg-ivory px-3.5 font-semibold text-ink">{studentCounts.girls}</output>
-          </div>
+          {[["boys", "Boys"], ["girls", "Girls"]].map(([key, label]) => {
+            const field = `${key}Travelling`;
+            const typed = contactDetails[field];
+            const mismatch = typed !== "" && typed != null && Number(typed) !== studentCounts[key];
+            return (
+              <div key={key}>
+                <label htmlFor={`contact-${key}-travelling`} className={labelClass}>No. of {key} travelling {required}</label>
+                <input
+                  id={`contact-${key}-travelling`}
+                  type="number"
+                  inputMode="numeric"
+                  required
+                  min={0}
+                  step={1}
+                  value={typed ?? ""}
+                  onChange={(e) => handleChange(field, e.target.value)}
+                  className={fieldClass}
+                  aria-invalid={mismatch || undefined}
+                  aria-describedby={`contact-${key}-travelling-help`}
+                />
+                <p id={`contact-${key}-travelling-help`} className={`meta mt-1.5 ${mismatch ? "font-semibold text-red-700" : ""}`}>
+                  {label} registered in events: {studentCounts[key]}{mismatch ? " (must match)" : ""}
+                </p>
+              </div>
+            );
+          })}
           <div>
             <label htmlFor="contact-staff-count" className={labelClass}>No. of accompanying staff {required}</label>
             <input
@@ -347,16 +365,19 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
               inputMode="numeric"
               required
               min={STAFF_MIN}
-              max={STAFF_MAX}
               step={1}
               value={contactDetails.staffCount ?? ""}
               onChange={(e) => handleChange("staffCount", e.target.value)}
               className={fieldClass}
               aria-describedby="contact-staff-count-help"
             />
-            <p id="contact-staff-count-help" className="meta mt-1.5">{STAFF_MIN} to {STAFF_MAX}: up to 2 officials and 1 supporting staff, including a permanent staff member.</p>
+            <p id="contact-staff-count-help" className="meta mt-1.5">At least {STAFF_MIN}, including a permanent staff member. Usually 3: 2 officials and 1 supporting staff.</p>
           </div>
         </div>
+        <p className="mt-4 rounded-control border border-line bg-ivory px-3.5 py-2.5 text-sm text-ink" aria-live="polite">
+          Total people travelling:{" "}
+          <span className="font-semibold">{totalTravelling(contactDetails.boysTravelling, contactDetails.girlsTravelling, contactDetails.staffCount)}</span>
+        </p>
       </fieldset>
     </section>
   );

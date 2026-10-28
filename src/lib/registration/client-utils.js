@@ -1,4 +1,6 @@
 import { validateRegistrationRules } from "../validation/rules.js";
+import { normalizeRoll, normalizeName } from "./identity.js";
+import { getCategoryLabel, getEventName, getSportName } from "./labels.js";
 import { GLOBAL_RULES, getSportConfig } from "../sports/config.js";
 import { registrationSubmitSchema } from "../validation/schemas.js";
 
@@ -53,13 +55,13 @@ export function buildSubmissionPayload(contactDetails, slotsMap) {
   for (const [key, slotData] of Object.entries(slotsMap)) {
     if (!slotData || !slotData.rollNumber) continue;
 
-    const roll = slotData.rollNumber.trim().toUpperCase();
+    const roll = normalizeRoll(slotData.rollNumber);
     if (!roll) continue;
 
     const parsed = parseSlotKey(key);
     if (!isKnownSlot(parsed)) continue;
 
-    const name = (slotData.name || "").trim().toUpperCase();
+    const name = normalizeName(slotData.name);
     const gender = slotData.gender || "M";
 
     if (!studentsMap.has(roll)) {
@@ -93,7 +95,7 @@ export function getStudentRegistry(slotsMap) {
   const registry = new Map();
   for (const [key, slotData] of Object.entries(slotsMap)) {
     if (!slotData || !slotData.rollNumber || !isKnownSlot(parseSlotKey(key))) continue;
-    const roll = slotData.rollNumber.trim().toUpperCase();
+    const roll = normalizeRoll(slotData.rollNumber);
     if (roll) {
       if (!registry.has(roll)) {
         registry.set(roll, {
@@ -128,6 +130,8 @@ const CONTACT_FIELD_IDS = {
   girlsSecretaryName: "contact-girls-secretary-name",
   girlsSecretaryPhone: "contact-girls-secretary-phone",
   girlsSecretaryEmail: "contact-girls-secretary-email",
+  boysTravelling: "contact-boys-travelling",
+  girlsTravelling: "contact-girls-travelling",
   staffCount: "contact-staff-count",
   notes: "contact-notes",
 };
@@ -139,6 +143,14 @@ export function getSlotInputId(slotKey) {
   return `slot-${slotKey.replace(/[^a-zA-Z0-9_-]/g, "-")}-roll`;
 }
 
+/** Where a slot is on the form, e.g. "Cricket Men Squad" or "Athletics Men 100 M (reserve)". */
+export function describeSlot(slotKey) {
+  const slot = parseSlotKey(slotKey);
+  if (!slot) return slotKey;
+  const label = `${getSportName(slot.sportId)} ${getCategoryLabel(slot.eventGender)} ${getEventName(slot.sportId, slot.eventId, slot.eventGender)}`;
+  return slot.role === "reserve" ? `${label} (reserve)` : label;
+}
+
 /**
  * Finds the filled slots a rule issue refers to.
  */
@@ -147,7 +159,7 @@ function findIssueSlotKeys(issue, slotsMap) {
   if (!hasTarget) return [];
   const keys = [];
   for (const [key, slotData] of Object.entries(slotsMap)) {
-    const roll = slotData?.rollNumber?.trim().toUpperCase();
+    const roll = normalizeRoll(slotData?.rollNumber);
     if (!roll) continue;
     const slot = parseSlotKey(key);
     if (!slot) continue;
@@ -205,29 +217,32 @@ export function getLiveValidationErrors(contactDetails, allSlots) {
     });
   }
 
-  // 2. Check for conflicting names for the same roll number
-  const nameMap = new Map();
-  for (const slotData of Object.values(slotsMap)) {
-    if (!slotData || !slotData.rollNumber) continue;
-    const roll = slotData.rollNumber.trim().toUpperCase();
-    const name = (slotData.name || "").trim().toUpperCase();
-    if (roll && name) {
-      if (nameMap.has(roll) && nameMap.get(roll) !== name) {
-        issues.push({
-          message: `Conflicting names for roll number ${roll}: "${nameMap.get(roll)}" vs "${name}"`,
-          slotKeys: findIssueSlotKeys({ rolls: [roll] }, slotsMap),
-          fieldId: null,
-        });
-      }
-      nameMap.set(roll, name);
-    }
+  // 2. One roll number, one name: report every name used and where, once per roll number.
+  const namesByRoll = new Map(); // roll -> Map(name -> [slotKeys])
+  for (const [key, slotData] of Object.entries(slotsMap)) {
+    const roll = normalizeRoll(slotData?.rollNumber);
+    const name = normalizeName(slotData?.name);
+    if (!roll || !name) continue;
+    if (!namesByRoll.has(roll)) namesByRoll.set(roll, new Map());
+    const names = namesByRoll.get(roll);
+    names.set(name, [...(names.get(name) || []), key]);
+  }
+  for (const [roll, names] of namesByRoll) {
+    if (names.size < 2) continue;
+    const where = [...names].map(([name, keys]) => `"${name}" in ${keys.map(describeSlot).join(", ")}`);
+    issues.push({
+      message: `Roll number ${roll} is entered with ${names.size} different names: ${where.join("; ")}. Use the same name in every event.`,
+      slotKeys: [...names.values()].flat(),
+      fieldId: null,
+      kind: "name-conflict",
+    });
   }
 
   // 2b. One student, one gender: a roll number entered as a woman cannot also
   // fill a man's slot (e.g. a mixed relay "Man" slot), and vice versa.
   const genderSlots = new Map(); // roll -> { M: [slotKeys], F: [slotKeys] }
   for (const [key, slotData] of Object.entries(slotsMap)) {
-    const roll = slotData?.rollNumber?.trim().toUpperCase();
+    const roll = normalizeRoll(slotData?.rollNumber);
     if (!roll || (slotData.gender !== "M" && slotData.gender !== "F")) continue;
     if (!genderSlots.has(roll)) genderSlots.set(roll, { M: [], F: [] });
     genderSlots.get(roll)[slotData.gender].push(key);

@@ -312,6 +312,8 @@ export async function reopenRegistration(iiitCode) {
       girlsSecretaryName: registration.girlsSecretaryName || "",
       girlsSecretaryPhone: registration.girlsSecretaryPhone || "",
       girlsSecretaryEmail: registration.girlsSecretaryEmail || "",
+      boysTravelling: registration.boysCount == null ? "" : String(registration.boysCount),
+      girlsTravelling: registration.girlsCount == null ? "" : String(registration.girlsCount),
       staffCount: registration.staffCount == null ? "" : String(registration.staffCount),
       notes: registration.notes || "",
     };

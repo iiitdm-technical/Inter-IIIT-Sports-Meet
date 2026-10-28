@@ -2,7 +2,7 @@
 
 import EventBlock from "./EventBlock";
 
-export default function SportSection({ sportConfig, gender, slotsMap, onChangeSlot, studentRegistry, isOpen, onToggle, errorSlotKeys }) {
+export default function SportSection({ sportConfig, gender, slotsMap, onChangeSlot, studentRegistry, isOpen, onToggle, errorSlotKeys, nameConflictSlotKeys }) {
   // Each sport appears only in the tab of a category it offers. Chess and the
   // athletics and aquatics mixed relays are listed under 'mixed' (Combined).
   if (!sportConfig.genders.includes(gender)) {
@@ -26,6 +26,7 @@ export default function SportSection({ sportConfig, gender, slotsMap, onChangeSl
         maxReserves={0}
         studentRegistry={studentRegistry}
         errorSlotKeys={errorSlotKeys}
+        nameConflictSlotKeys={nameConflictSlotKeys}
       />
     );
   } else if (sportConfig.type === "event_based" || sportConfig.type === "weight_category_based") {
@@ -46,6 +47,7 @@ export default function SportSection({ sportConfig, gender, slotsMap, onChangeSl
         isRelay={ev.isRelay}
         studentRegistry={studentRegistry}
         errorSlotKeys={errorSlotKeys}
+        nameConflictSlotKeys={nameConflictSlotKeys}
       />
     ));
   }

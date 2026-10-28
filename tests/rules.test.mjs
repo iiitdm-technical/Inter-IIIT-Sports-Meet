@@ -27,6 +27,8 @@ const contact = {
   girlsSecretaryName: "Anita Rao",
   girlsSecretaryPhone: "+91 9000000012",
   girlsSecretaryEmail: "anita@iiitkota.ac.in",
+  boysTravelling: 1,
+  girlsTravelling: 1,
   staffCount: 2,
   notes: "",
 };
@@ -318,8 +320,45 @@ describe("getLiveValidationErrors", () => {
       [first]: { rollNumber: "R1", name: "RAVI", gender: "M" },
       [second]: { rollNumber: "R1", name: "RAVI KUMAR", gender: "M" },
     });
-    const conflict = result.issues.find((issue) => issue.message.includes("Conflicting names"));
+    const conflict = result.issues.find((issue) => issue.message.includes("different names"));
     assert.deepEqual(conflict.slotKeys.sort(), [first, second].sort());
+  });
+
+  test("reports each roll number's names once, with where every name was entered", () => {
+    const cricket = getSlotKey("cricket", "team", "M", "main", 0);
+    const volleyball = getSlotKey("volleyball", "team", "M", "main", 0);
+    const sprint = getSlotKey("athletics", "100m", "M", "main", 0);
+    const result = getLiveValidationErrors(contact, {
+      [cricket]: { rollNumber: "R1", name: "RAVI KUMAR", gender: "M" },
+      [volleyball]: { rollNumber: "R1", name: "RAVI K", gender: "M" },
+      [sprint]: { rollNumber: "r1", name: "R KUMAR", gender: "M" },
+    });
+    const conflicts = result.issues.filter((issue) => issue.message.includes("different names"));
+    assert.equal(conflicts.length, 1);
+    assert.equal(
+      conflicts[0].message,
+      'Roll number R1 is entered with 3 different names: "RAVI KUMAR" in Cricket Men Squad; "RAVI K" in Volleyball Men Squad; "R KUMAR" in Athletics Men 100 M. Use the same name in every event.',
+    );
+    assert.deepEqual(conflicts[0].slotKeys.sort(), [cricket, volleyball, sprint].sort());
+    assert.equal(conflicts[0].kind, "name-conflict", "the form colours these names red");
+  });
+
+  test("ignores case and extra spaces when comparing names", () => {
+    const result = getLiveValidationErrors(contact, {
+      [getSlotKey("cricket", "team", "M", "main", 0)]: { rollNumber: "R1", name: "Ravi  Kumar", gender: "M" },
+      [getSlotKey("volleyball", "team", "M", "main", 0)]: { rollNumber: "R1", name: " RAVI KUMAR", gender: "M" },
+    });
+    assert.equal(result.issues.some((issue) => issue.message.includes("different names")), false);
+  });
+
+  test("a roll number typed with spaces or another case is the same student", () => {
+    const result = getLiveValidationErrors(contact, {
+      [getSlotKey("cricket", "team", "M", "main", 0)]: { rollNumber: "2023 bcs 001", name: "RAVI", gender: "M" },
+      [getSlotKey("volleyball", "team", "M", "main", 0)]: { rollNumber: "2023BCS001", name: "RAVI", gender: "M" },
+      [getSlotKey("athletics", "100m", "M", "main", 0)]: { rollNumber: " 2023bcs001 ", name: "RAVI", gender: "M" },
+    });
+    assert.equal(result.totalUniqueStudents, 1);
+    assert.deepEqual(result.payload.students.map((s) => s.rollNumber), ["2023BCS001"]);
   });
 
   test("points contact field problems at the matching input", () => {
