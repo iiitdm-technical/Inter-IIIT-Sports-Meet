@@ -3,8 +3,8 @@ import PageHeader from '@/components/PageHeader';
 
 /**
  * Sports Board of the 9th All India Inter-IIIT Sports Meet 2026, in the
- * order the organizers set. The board and the sports secretaries are shown
- * still; the student members scroll. A member without `image` shows their
+ * order the organizers set. The board, the sports secretaries and the website
+ * team are shown still; the student members scroll. A member without `image` shows their
  * initial until the photo is added to /public/assets/team/.
  */
 const boardSections = [
@@ -29,13 +29,18 @@ const boardSections = [
 ];
 
 const studentMembers = [
-  { name: "Ashrith", role: "Student Member", image: "/assets/team/ashrith.jpg" },
-  { name: "Bhargav Sai", role: "Student Member", image: "/assets/team/bhargav-sai.jpg" },
   { name: "Sainatha", role: "Student Member", image: "/assets/team/sainath.jpg" },
   { name: "Sanshrey", role: "Student Member", image: "/assets/team/sanshrey.jpg" },
-  { name: "Sriram", role: "Student Member" },
+  { name: "Sriram", role: "Student Member", image: "/assets/team/sriram.jpg" },
   { name: "Varshini", role: "Student Member", image: "/assets/team/varshini.jpg" },
   { name: "Vijay", role: "Student Member", image: "/assets/team/vijay.jpg" },
+];
+
+const websiteTeam = [
+  { name: "Jeevanandham", role: "Website Team" },
+  { name: "Yashvanth", role: "Website Team" },
+  { name: "Shreyansh", role: "Website Team" },
+  { name: "Narendhar", role: "Website Team" },
 ];
 
 function initialOf(name) {
@@ -127,6 +132,13 @@ export default function Team() {
               </ul>
             </div>
           </div>
+        </section>
+
+        <section aria-labelledby="team-website-team">
+          <SectionHeading id="team-website-team">Website Team</SectionHeading>
+          <ul className="flex flex-wrap justify-center gap-x-10 gap-y-14 sm:gap-x-16">
+            {websiteTeam.map((member) => <MemberCard key={member.name} member={member} />)}
+          </ul>
         </section>
       </div>
     </div>

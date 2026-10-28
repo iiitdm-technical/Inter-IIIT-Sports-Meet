@@ -1,7 +1,7 @@
 import PageHeader from '@/components/PageHeader';
 import Link from 'next/link';
 import Image from 'next/image';
-import { eventInfo, contactNumbers } from '@/data/info';
+import { eventInfo } from '@/data/info';
 
 /**
  * Location Page Component
@@ -226,20 +226,9 @@ export default function Location() {
               </p>
             </div>
 
-            <div className="shrink-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <Link href="/contact" className="btn btn-accent">Contact Sports Cell</Link>
-                <a href="mailto:sports@iiitdm.ac.in" className="btn btn-on-dark">sports@iiitdm.ac.in</a>
-              </div>
-              <p className="mt-5 text-sm font-semibold text-white">For arrival help, call:</p>
-              <ul className="mt-2 space-y-1.5">
-                {contactNumbers.filter((contact) => contact.travel).map((contact) => (
-                  <li key={contact.tel} className="text-sm text-white/80">
-                    {contact.role}{" "}
-                    <a href={`tel:${contact.tel}`} className="font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">{contact.display}</a>
-                  </li>
-                ))}
-              </ul>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <Link href="/contact#call-us" className="btn btn-accent">Contact Sports Cell</Link>
+              <a href="mailto:sports@iiitdm.ac.in" className="btn btn-on-dark">sports@iiitdm.ac.in</a>
             </div>
           </div>
         </section>
