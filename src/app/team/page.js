@@ -38,11 +38,18 @@ const organizingTeam = [
   { name: "Sainatha", image: "/assets/team/sainath.jpg" },
 ];
 
-const websiteTeam = [
-  { name: "Jeevanandham" },
-  { name: "Yashvanth", image: "/assets/team/yashvanth-dp.jpg" },
-  { name: "Shreyansh" },
-  { name: "Narendhar", image: "/assets/team/narendhar.jpg" },
+// One row per array, in the organizers' order.
+const websiteTeamRows = [
+  [
+    { name: "Jeevanandham", image: "/assets/team/jeevanandham.jpg" },
+    { name: "Yashvanth", image: "/assets/team/yashvanth-dp.jpg" },
+    { name: "Shreyansh", image: "/assets/team/shreyansh.jpg" },
+    { name: "Narendhar", image: "/assets/team/narendhar.jpg" },
+  ],
+  [
+    { name: "Ambadas Rautrao", image: "/assets/team/ambadas-rautrao.jpg" },
+    { name: "Guna", image: "/assets/team/guna.jpg" },
+  ],
 ];
 
 function initialOf(name) {
@@ -126,9 +133,13 @@ export default function Team() {
 
         <section aria-labelledby="team-website-team">
           <SectionHeading id="team-website-team">Website Team</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
-            {websiteTeam.map((member) => <MemberCard key={member.name} member={member} />)}
-          </ul>
+          <div className="space-y-12 sm:space-y-14">
+            {websiteTeamRows.map((row) => (
+              <ul key={row[0].name} className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
+                {row.map((member) => <MemberCard key={member.name} member={member} />)}
+              </ul>
+            ))}
+          </div>
         </section>
       </div>
     </div>

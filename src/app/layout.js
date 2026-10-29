@@ -19,7 +19,7 @@ const bodyFont = Manrope({
 });
 
 export const metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://interiiitsportsmeet.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://allindiaiiitsportsmeet.iiitdm.ac.in"),
   title: {
     default: "9th All India Inter-IIIT Sports Meet 2026 | IIITDM Kancheepuram",
     template: "%s | All India Inter-IIIT Sports Meet 2026",
