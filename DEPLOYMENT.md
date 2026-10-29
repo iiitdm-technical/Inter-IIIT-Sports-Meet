@@ -22,6 +22,18 @@ The checkout is the **deployment control repository**, not PM2's runtime directo
 6. Replaces **only** PM2's `sports` process with the new release. Explicit replacement avoids PM2 retaining the old absolute script path.
 7. Verifies the PM2 working directory, script path, local and public HTTP checks; updates `current` and saves the PM2 process list.
 
+## Keeping the site running (watchdog)
+
+PM2 started from an SSH login lives inside that login's session, which this shared server can clean up (the site went down this way on 27 and 28 Oct, with no crash or out-of-memory record). `watchdog.sh` runs from cron instead, like the long-running services on this server: every 2 minutes it checks `http://127.0.0.1:8010/api/auth/me`, and if the site does not answer it runs `pm2 resurrect` (or starts `current/ecosystem.config.cjs`). It skips while `./update.sh` holds the deploy lock and logs restarts to `~/.local/share/inter-iiit/watchdog.log`. Install once:
+
+```bash
+(crontab -l 2>/dev/null | grep -v 'Inter-IIIT-Sports-Meet/watchdog.sh'
+ echo '*/2 * * * * $HOME/allindiaiiitsportsmeet.iiitdm.ac.in/Inter-IIIT-Sports-Meet/watchdog.sh'
+ echo '@reboot sleep 30 && $HOME/allindiaiiitsportsmeet.iiitdm.ac.in/Inter-IIIT-Sports-Meet/watchdog.sh') | crontab -
+```
+
+To move an SSH-started PM2 under cron right away, run `pm2 kill`; the watchdog restores the site within about 2 minutes.
+
 ## Storage limit (3 GB)
 
 The institute allows **3 GB in total** for the website: application files, uploaded documents and the database. Uploads are limited to **1 MB per file** and payment receipts to **200 MB in total** (`PROOF_STORAGE_MAX_MB`); an upload that would pass the cap is refused with HTTP 507. To stay well inside the limit the updater:
