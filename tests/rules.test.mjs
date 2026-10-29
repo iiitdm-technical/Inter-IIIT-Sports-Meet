@@ -449,3 +449,28 @@ describe("fee and contingent counts", () => {
     assert.equal(getRegistrationFee(payload.students.length), 2 * 2500 * 1.18 + 25000);
   });
 });
+
+describe("same student in several events", () => {
+  test("the name is taken from whichever slot has it, in any slot order", async () => {
+    const { buildSubmissionPayload, getLiveValidationErrors } = await import("../src/lib/registration/client-utils.js");
+    const named = { rollNumber: "CS21B001", name: "Ravi Kumar", gender: "M" };
+    const autoFilled = { rollNumber: "CS21B001", name: "", gender: "M" };
+    for (const slots of [
+      { "aquatics|50m_freestyle|M|main|0": autoFilled, "aquatics|100m_freestyle|M|main|0": named },
+      { "aquatics|50m_freestyle|M|main|0": named, "aquatics|100m_freestyle|M|main|0": autoFilled },
+      { "aquatics|50m_freestyle|M|main|0": autoFilled, "aquatics|100m_freestyle|M|main|0": autoFilled, "aquatics|200m_freestyle|M|main|0": named },
+    ]) {
+      const payload = buildSubmissionPayload(contact, slots);
+      assert.deepEqual(payload.students, [{ rollNumber: "CS21B001", name: "RAVI KUMAR", gender: "M" }]);
+      assert.equal(payload.entries.length, Object.keys(slots).length);
+      assert.equal(getLiveValidationErrors(contact, slots).issues.some((issue) => /name is required/i.test(issue.message)), false);
+    }
+  });
+
+  test("a student with no name anywhere is still reported", async () => {
+    const { getLiveValidationErrors } = await import("../src/lib/registration/client-utils.js");
+    const blank = { rollNumber: "CS21B001", name: "", gender: "M" };
+    const result = getLiveValidationErrors(contact, { "aquatics|50m_freestyle|M|main|0": blank, "aquatics|100m_freestyle|M|main|0": blank });
+    assert.equal(result.issues.some((issue) => /name is required/i.test(issue.message)), true);
+  });
+});

@@ -64,8 +64,14 @@ export function buildSubmissionPayload(contactDetails, slotsMap) {
     const name = normalizeName(slotData.name);
     const gender = slotData.gender || "M";
 
-    if (!studentsMap.has(roll)) {
+    // A student entered in several events usually has the name typed once and
+    // auto-filled elsewhere. Slot order is not typing order (a saved draft comes
+    // back in the database's key order), so take the name from any slot.
+    const existing = studentsMap.get(roll);
+    if (!existing) {
       studentsMap.set(roll, { rollNumber: roll, name, gender });
+    } else if (!existing.name && name) {
+      existing.name = name;
     }
 
     entries.push({
