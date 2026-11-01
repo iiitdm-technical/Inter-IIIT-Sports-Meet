@@ -6,7 +6,6 @@ import useReveal from '@/components/useReveal';
 import CircularGallery from './CircularGallery';
 import { sports } from '@/data/sports';
 import { getAllSportsList } from '@/lib/sports/config';
-import Link from 'next/link';
 
 const galleryItems = sports.map((sport) => ({
   image: sport.image,
@@ -42,7 +41,7 @@ function describeLimits(sport, gender) {
 function EventSummary() {
   const catalogue = getAllSportsList();
   return (
-    <section aria-labelledby="event-summary-title" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-10">
+    <section aria-labelledby="event-summary-title" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
       <div className="grid gap-6 border-t border-line pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:items-end">
         <div>
           <p className="eyebrow">At a glance</p>
@@ -121,33 +120,6 @@ export default function Events() {
         </div>
 
         <EventSummary />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-20">
-          <section data-reveal aria-labelledby="rulebook-title" className="card-ink relative overflow-hidden rounded-card px-6 py-10 sm:px-10 md:px-14">
-            <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full border-[28px] border-brand-highlight/15" aria-hidden="true" />
-            <div className="pointer-events-none absolute left-0 top-0 h-1.5 w-28 bg-brand-highlight" aria-hidden="true" />
-            <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="eyebrow text-brand-highlight">Rule book</p>
-                <h2 id="rulebook-title" className="heading-section mt-3 text-white">
-                  Read the full rulebook
-                </h2>
-                <p className="mt-4 text-[0.9375rem] leading-relaxed text-white/80">
-                  Competition rules, eligibility, event regulations and participation limits for every sport.
-                </p>
-              </div>
-              <Link
-                href="/assets/docs/rulebook.pdf"
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-accent shrink-0 px-7"
-              >
-                View rule book (PDF)
-                <span aria-hidden="true">&rarr;</span>
-              </Link>
-            </div>
-          </section>
-        </div>
       </div>
     </div>
   );

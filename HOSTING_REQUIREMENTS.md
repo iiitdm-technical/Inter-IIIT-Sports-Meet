@@ -7,7 +7,7 @@ Figures were measured on 21 October 2026 from the repository and the current pro
 
 | Item | Measured now | Expected at full load | Recommended allocation |
 |---|---|---|---|
-| Source code (tracked in Git) | 42.7 MB total; 0.7 MB application code, 7.1 MB site images and PDFs, 34.5 MB reference material (brochure, rulebook, design references) | unchanged | 100 MB |
+| Source code (tracked in Git) | 42.7 MB total; 0.7 MB application code, 5.6 MB site images, 34.5 MB reference material (brochure, rulebook, design references) | unchanged | 100 MB |
 | Production build (`.next`, excluding dev and build caches) | 5.7 MB | grows a little with the image cache | 100 MB (includes runtime image cache) |
 | Runtime dependencies (`node_modules`, production only) | ~350 MB | unchanged | 500 MB |
 | Build-time dependencies (only if built on the server) | ~1.4 GB `node_modules` plus ~280 MB build cache | unchanged | 2 GB, or build elsewhere and copy the output |
@@ -15,7 +15,7 @@ Figures were measured on 21 October 2026 from the repository and the current pro
 | Uploaded files (payment proofs) | 0 | up to 50 MB | 1 GB |
 | **Total disk for the application** | | | **5 GB, plus space for backups** |
 
-The site's photographs, logos and rulebook PDF are static files shipped with the build (`public/`, 7.1 MB). They are not user uploads. The only uploaded files are payment proofs.
+The site's photographs and logos are static files shipped with the build (`public/`, 5.6 MB). They are not user uploads. The only uploaded files are payment proofs. The rulebook is not published on the site; developers have it as `reference/rulebook.md`.
 
 ## What the application is
 
