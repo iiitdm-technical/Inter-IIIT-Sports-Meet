@@ -27,7 +27,8 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Login failed. Please check your credentials.");
-      router.push(data.user?.role === "admin" ? "/admin" : "/register");
+      const role = data.user?.role;
+      router.push(role === "admin" ? "/admin" : role === "coordinator" ? "/admin/live" : "/register");
     } catch (err) {
       setError(err.message || "An unexpected error occurred during login.");
     } finally {

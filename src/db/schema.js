@@ -199,3 +199,81 @@ export const auditLog = mysqlTable("audit_log", {
   index("audit_log_at_idx").on(table.at),
   index("audit_log_action_idx").on(table.action),
 ]);
+
+/**
+ * 9. LIVE RESULTS (see LIVE_RESULTS_PLAN.md)
+ *
+ * coordinator_sports: which sports a coordinator may update. gender is
+ * "M", "F", "mixed" or "all".
+ */
+export const coordinatorSports = mysqlTable("coordinator_sports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sportId: varchar("sport_id", { length: 64 }).notNull(),
+  gender: varchar("gender", { length: 10 }).default("all").notNull(),
+  createdAt: currentUtcDateTime("created_at").notNull(),
+}, (table) => [
+  uniqueIndex("coordinator_sport_unique").on(table.userId, table.sportId, table.gender),
+]);
+
+/**
+ * matches: one fixture or one individual event (heat/final).
+ * kind "versus" has sides A and B with a score; kind "event" has placings.
+ * status: scheduled | live | completed | postponed | cancelled.
+ * version increases on every change so concurrent edits are refused.
+ */
+export const matches = mysqlTable("matches", {
+  id: int("id").autoincrement().primaryKey(),
+  sportId: varchar("sport_id", { length: 64 }).notNull(),
+  gender: varchar("gender", { length: 10 }).notNull(),
+  kind: varchar("kind", { length: 16 }).notNull(),
+  eventId: varchar("event_id", { length: 64 }),
+  round: varchar("round", { length: 64 }).default("").notNull(),
+  venue: varchar("venue", { length: 128 }).default("").notNull(),
+  scheduledAt: utcDateTime("scheduled_at").notNull(),
+  status: varchar("status", { length: 16 }).default("scheduled").notNull(),
+  sideA: varchar("side_a", { length: 64 }),
+  sideB: varchar("side_b", { length: 64 }),
+  scoreA: int("score_a"),
+  scoreB: int("score_b"),
+  scoreDetail: varchar("score_detail", { length: 255 }).default("").notNull(),
+  winner: varchar("winner", { length: 64 }),
+  resultNote: varchar("result_note", { length: 255 }).default("").notNull(),
+  isSample: boolean("is_sample").default(false).notNull(),
+  version: int("version").default(1).notNull(),
+  startedAt: utcDateTime("started_at"),
+  finishedAt: utcDateTime("finished_at"),
+  createdBy: varchar("created_by", { length: 254 }),
+  updatedBy: varchar("updated_by", { length: 254 }),
+  createdAt: currentUtcDateTime("created_at").notNull(),
+  updatedAt: currentUtcDateTime("updated_at").notNull(),
+}, (table) => [
+  index("matches_sport_idx").on(table.sportId, table.gender),
+  index("matches_schedule_idx").on(table.scheduledAt),
+  index("matches_status_idx").on(table.status),
+]);
+
+/** event_placings: finishing positions for kind "event" matches. */
+export const eventPlacings = mysqlTable("event_placings", {
+  id: int("id").autoincrement().primaryKey(),
+  matchId: int("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  position: int("position").notNull(),
+  iiitCode: varchar("iiit_code", { length: 64 }).notNull(),
+  athlete: varchar("athlete", { length: 128 }).default("").notNull(),
+  mark: varchar("mark", { length: 64 }).default("").notNull(),
+}, (table) => [
+  uniqueIndex("event_placing_unique").on(table.matchId, table.position),
+]);
+
+/** match_changes: every change to a match, for the change log and disputes. */
+export const matchChanges = mysqlTable("match_changes", {
+  id: int("id").autoincrement().primaryKey(),
+  matchId: int("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  at: currentUtcDateTime("at").notNull(),
+  actor: varchar("actor", { length: 254 }),
+  action: varchar("action", { length: 32 }).notNull(),
+  before: json("before"),
+  after: json("after"),
+}, (table) => [
+  index("match_changes_match_idx").on(table.matchId),
+]);

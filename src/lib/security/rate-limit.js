@@ -13,6 +13,8 @@ export const LIMITS = {
   draftSave: { limit: 1500, windowSeconds: 60 * 60 },
   submit: { limit: 10, windowSeconds: 60 * 60 },
   adminWrite: { limit: 120, windowSeconds: 60 * 60 },
+  // Live scoring: a busy match can need many updates in an hour.
+  liveWrite: { limit: 1500, windowSeconds: 60 * 60 },
   download: { limit: 300, windowSeconds: 60 * 60 },
 };
 

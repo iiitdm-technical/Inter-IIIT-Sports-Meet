@@ -152,6 +152,10 @@ export default function AdminDashboardPage() {
         const authData = await authRes.json();
 
         // Null-safe check and authorization
+        if (authData?.user?.role === "coordinator") {
+          router.push("/admin/live");
+          return;
+        }
         if (!authData || !authData.user || authData.user.role !== "admin") {
           router.push("/login");
           return;
@@ -353,7 +357,8 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-white/75 sm:block">
+            <Link href="/admin/live" className="btn btn-accent btn-sm whitespace-nowrap">Live results</Link>
+            <span className="hidden text-sm text-white/75 lg:block">
               Logged in as <strong className="font-semibold text-white">{currentUser?.displayName || currentUser?.email || currentUser?.username}</strong>
             </span>
             <button

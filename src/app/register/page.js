@@ -113,6 +113,10 @@ export default function RegisterPage() {
           router.push("/admin");
           return;
         }
+        if (authData.user.role === "coordinator") {
+          router.push("/admin/live");
+          return;
+        }
         setUser(authData.user);
         const deadline = authData.registrationClosesAt ? new Date(authData.registrationClosesAt) : null;
         setClosesAt(deadline && !Number.isNaN(deadline.getTime())

@@ -121,7 +121,7 @@ export async function getSession() {
     .where(and(eq(sessions.id, id), gt(sessions.expiresAt, new Date())))
     .limit(1);
 
-  if (!row || !["iiit", "admin"].includes(row.role)) return null;
+  if (!row || !["iiit", "admin", "coordinator"].includes(row.role)) return null;
   if (row.role === "iiit" && !row.iiitCode) return null;
 
   if (Date.now() - new Date(row.lastSeenAt).getTime() > RENEW_AFTER_MS) {

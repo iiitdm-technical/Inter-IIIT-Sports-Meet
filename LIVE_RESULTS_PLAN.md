@@ -1,6 +1,15 @@
 # Live Results Board — Plan
 
-Status: **proposal**, 3 Nov 2026. Nothing here is built yet.
+Status: **phase 1 built** on branch `feature/live-results` (3 Nov 2026), not yet deployed. Deploying needs `./update.sh --migrate` (migration `0003_live_results`, add-only) after a database backup.
+
+### What phase 1 includes
+
+- Public `/live` (no login, "Live" in the navbar): Live now, Up next, Results, Medal tally; filters for sport, category and IIIT kept in the link; refreshes every 10 s while the tab is open; sample-data banner; times in IST.
+- `/admin/live` for coordinators (phone-first): their own sports only; start, +/− score with a detail line, finish with winner (no draw in a Final / 3rd place), placings for athletics / aquatics / powerlifting. A stale save is refused and the latest score is shown.
+- Super admin (`sports-sac`) on the same page: all sports, schedule a match, edit / postpone / cancel / delete, reopen a finished match, change history, coordinator management (add by email with a one-time password, change sports, new password, remove), add / clear sample matches. A "Live results" button is on `/admin`.
+- API: `GET /api/live`; `GET/POST /api/admin/live/matches`; `GET/PATCH/DELETE /api/admin/live/matches/:id` (PATCH actions: start, score, placings, finish, reopen, details); `GET/POST /api/admin/live/coordinators`; `PUT/POST/DELETE /api/admin/live/coordinators/:id`; `POST/DELETE /api/admin/live/sample`.
+- Medals are counted from completed Finals and 3rd-place matches. Championship points wait for the Sports Board's rules (open question 2).
+- Not yet built: undo button (the change history is recorded), CSV schedule import, points table, big-screen mode.
 
 A public, live-updating results board for the 9th All India Inter-IIIT Sports Meet (19–23 Dec 2026), in the spirit of IIITDM Jabalpur's Employee Sports Meet `/live` page. The reference page (`employee-sportsmeet.iiitdmj.ac.in/live`) did not respond from our network or from our server when this plan was written; screenshots of it would help match its layout.
 

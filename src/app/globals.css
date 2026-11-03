@@ -411,3 +411,19 @@ p {
   .chip-gold { background: var(--color-gold-wash); color: var(--color-gold-text); }
   .chip-ink { background: var(--color-brand-dark); color: var(--color-brand-highlight); box-shadow: inset 0 0 0 1px rgb(245 197 24 / 0.4); }
 }
+
+/* Live results: pulsing dot on matches in progress */
+.live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation: none; }
+}
