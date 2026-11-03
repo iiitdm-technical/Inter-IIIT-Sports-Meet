@@ -15,6 +15,11 @@ export const COORDINATOR_GENDERS = ["all", "M", "F", "mixed"];
 export const ROUNDS = ["League", "Pool", "Round of 16", "Quarter-final", "Semi-final", "3rd place", "Final", "Heat"];
 export const MEDAL_ROUNDS = { final: "Final", bronze: "3rd place" };
 
+// Group stage: pools A–H and the points a pool table awards.
+// Placeholder until the Sports Board confirms the rules (LIVE_RESULTS_PLAN.md, open question 2).
+export const POOLS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+export const POOL_POINTS = { win: 3, draw: 1, loss: 0, confirmed: false };
+
 function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }

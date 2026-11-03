@@ -2,9 +2,22 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import MatchCard from "./MatchCard";
+import FixturesView from "./FixturesView";
+import PoolTables from "./PoolTables";
 import { agoLabel } from "@/lib/live/format";
 
-const POLL_MS = 10_000;
+// The live board refreshes often; the schedule and pool tables change less.
+const POLL_MS = { board: 10_000, fixtures: 30_000, pools: 30_000 };
+const VIEWS = [
+  { id: "board", label: "Live board" },
+  { id: "fixtures", label: "Fixtures" },
+  { id: "pools", label: "Pools" },
+];
+
+/** URL query for the filters; the default view is left out. */
+function urlQuery(filters) {
+  return new URLSearchParams(Object.entries(filters).filter(([key, value]) => value && !(key === "view" && value === "board"))).toString();
+}
 const GENDERS = [
   { value: "", label: "All categories" },
   { value: "M", label: "Men" },
@@ -64,7 +77,7 @@ function MedalTable({ medals }) {
  */
 export default function LiveBoard({ sports, iiits, initialFilters }) {
   const [filters, setFilters] = useState(initialFilters);
-  const [board, setBoard] = useState(null);
+  const [result, setResult] = useState(null); // { view, payload }
   const [error, setError] = useState("");
   const [lastOk, setLastOk] = useState(null);
   const [now, setNow] = useState(() => Date.now());
@@ -72,13 +85,15 @@ export default function LiveBoard({ sports, iiits, initialFilters }) {
 
   const load = useCallback(async (current) => {
     const id = ++requestId.current;
-    const query = new URLSearchParams(Object.entries(current).filter(([, value]) => value)).toString();
+    const { view, ...apiFilters } = current;
+    const query = new URLSearchParams(Object.entries(apiFilters).filter(([, value]) => value)).toString();
+    const endpoint = view === "board" ? "/api/live" : "/api/live/fixtures";
     try {
-      const response = await fetch(`/api/live${query ? `?${query}` : ""}`, { cache: "no-store" });
+      const response = await fetch(`${endpoint}${query ? `?${query}` : ""}`, { cache: "no-store" });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Unable to load live results");
       if (id !== requestId.current) return; // a newer filter's answer wins
-      setBoard(body.data);
+      setResult({ view: view === "board" ? "board" : "fixtures", payload: body.data });
       setError("");
       setLastOk(Date.now());
     } catch (err) {
@@ -93,7 +108,7 @@ export default function LiveBoard({ sports, iiits, initialFilters }) {
     let timer = null;
     const start = () => {
       clearInterval(timer);
-      timer = setInterval(() => load(filters), POLL_MS);
+      timer = setInterval(() => load(filters), POLL_MS[filters.view] || POLL_MS.board);
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -120,17 +135,18 @@ export default function LiveBoard({ sports, iiits, initialFilters }) {
   const setFilter = (key, value) => {
     const next = { ...values, [key]: value };
     setFilters(next);
-    const params = new URLSearchParams(Object.entries(next).filter(([, item]) => item));
-    const url = `${window.location.pathname}${params.size ? `?${params}` : ""}`;
-    window.history.replaceState(null, "", url);
+    const query = urlQuery(next);
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
   };
 
   const values = filters;
   const filtered = values.sport || values.gender || values.iiit;
+  const board = values.view === "board" && result?.view === "board" ? result.payload : null;
+  const fixtures = values.view !== "board" && result?.view === "fixtures" ? result.payload : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      {board?.hasSample && (
+      {(board || fixtures)?.hasSample && (
         <div role="note" className="mb-6 rounded-card border border-amber-300 bg-gold-wash px-4 py-3 text-sm text-ink">
           <strong className="font-semibold">Sample data.</strong> These matches show how the board will look. The official schedule is coming soon.
         </div>
@@ -170,11 +186,28 @@ export default function LiveBoard({ sports, iiits, initialFilters }) {
         {lastOk && <span>Last updated {agoLabel(new Date(lastOk).toISOString(), now)}</span>}
         {filtered && (
           <button type="button" className="font-semibold text-brand-primary underline underline-offset-2" onClick={() => {
-            setFilters({ sport: "", gender: "", iiit: "" });
-            window.history.replaceState(null, "", window.location.pathname);
+            const next = { sport: "", gender: "", iiit: "", view: values.view };
+            setFilters(next);
+            const query = urlQuery(next);
+            window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
           }}>Clear filters</button>
         )}
       </p>
+
+      <div className="mb-8 flex gap-1 overflow-x-auto border-b border-line" role="tablist" aria-label="Views">
+        {VIEWS.map((item) => (
+          <button
+            key={item.id} type="button" role="tab" aria-selected={values.view === item.id}
+            className={`-mb-px shrink-0 border-b-2 px-4 py-2.5 font-display text-base font-bold uppercase tracking-wide ${values.view === item.id ? "border-brand-primary text-brand-primary" : "border-transparent text-ink-muted hover:text-ink"}`}
+            onClick={() => setFilter("view", item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {fixtures && values.view === "fixtures" && <FixturesView matches={fixtures.matches} />}
+      {fixtures && values.view === "pools" && <PoolTables pools={fixtures.pools} points={fixtures.poolPoints} highlight={values.iiit} />}
 
       {board && (
         <>

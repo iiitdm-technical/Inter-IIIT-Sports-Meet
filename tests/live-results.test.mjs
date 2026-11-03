@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeMedals, makeCoordinatorPassword, normalizeAssignments, normalizeFixture, scopeAllows } from "../src/lib/live/service.js";
+import { computeMedals, computePoolTables, makeCoordinatorPassword, normalizeAssignments, normalizeFixture, scopeAllows } from "../src/lib/live/service.js";
 import { LIVE_IIITS, isIiitCode, kindForSport } from "../src/lib/live/catalog.js";
 import { coordinatorCreateSchema, matchActionSchema } from "../src/lib/live/schemas.js";
-import { fromIstInput, ordinal, toIstInput } from "../src/lib/live/format.js";
+import { fromIstInput, ordinal, stageLabel, toIstInput } from "../src/lib/live/format.js";
+import { POOL_POINTS } from "../src/lib/live/catalog.js";
 import { iiits } from "../src/data/iiits.js";
 
 const side = (code) => ({ code, name: code });
@@ -104,4 +105,42 @@ test("times are entered and shown in IST whatever the device's zone", () => {
   assert.equal(toIstInput("2026-12-19T03:30:00.000Z"), "2026-12-19T09:00");
   assert.equal(fromIstInput("garbage"), "");
   assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22].map(ordinal), ["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd"]);
+});
+
+test("pool tables count completed pool matches only and rank by points, difference, score", () => {
+  const m = (sideA, sideB, scoreA, scoreB, winner, extra = {}) => ({
+    kind: "versus", sportId: "football", sportName: "Football", gender: "M", pool: "A", status: "completed",
+    sideA: side(sideA), sideB: side(sideB), scoreA, scoreB, winner, ...extra,
+  });
+  const tables = computePoolTables([
+    m("kota", "una", 3, 0, "kota"),
+    m("trichy", "jabalpur", 1, 1, "draw"),
+    m("una", "trichy", 2, 1, "una"),
+    m("kota", "ranchi", 0, 0, null, { status: "scheduled", scoreA: null, scoreB: null }),
+    m("kota", "trichy", 9, 0, "kota", { status: "cancelled" }),
+    m("kota", "una", 1, 0, "kota", { pool: "" }),
+    m("x", "y", 1, 0, "x", { pool: "B" }),
+    { kind: "event", pool: "A", status: "completed", placings: [] },
+  ]);
+  assert.equal(tables.length, 2);
+  const a = tables[0];
+  assert.equal(a.pool, "A");
+  assert.equal(a.total, 4, "cancelled and pool-less matches are left out");
+  assert.equal(a.played, 3);
+  // Kota and Una both 3 points (difference splits them); Jabalpur and Trichy both 1 (difference 0 vs −1).
+  assert.deepEqual(a.rows.map((r) => r.iiitCode), ["kota", "una", "jabalpur", "trichy", "ranchi"]);
+  const kota = a.rows[0];
+  assert.deepEqual([kota.played, kota.won, kota.points, kota.diff], [1, 1, POOL_POINTS.win, 3]);
+  const una = a.rows[1];
+  assert.deepEqual([una.played, una.won, una.lost, una.diff, una.points], [2, 1, 1, -2, POOL_POINTS.win + POOL_POINTS.loss]);
+  const trichy = a.rows[3];
+  assert.deepEqual([trichy.drawn, trichy.lost, trichy.points], [1, 1, POOL_POINTS.draw]);
+  assert.deepEqual([a.rows[4].played, a.rows[4].points], [0, 0], "a team with only scheduled matches still appears");
+});
+
+test("stage labels combine pool and round", () => {
+  assert.equal(stageLabel({ pool: "A", round: "Pool" }), "Pool A");
+  assert.equal(stageLabel({ pool: "B", round: "League" }), "Pool B · League");
+  assert.equal(stageLabel({ pool: "", round: "Final" }), "Final");
+  assert.equal(stageLabel({ pool: "", round: "" }), "");
 });

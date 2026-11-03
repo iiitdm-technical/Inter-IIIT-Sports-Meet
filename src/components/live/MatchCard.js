@@ -1,4 +1,4 @@
-import { agoLabel, formatWhen, genderLabel, matchTitle, ordinal } from "@/lib/live/format";
+import { agoLabel, formatWhen, genderLabel, matchTitle, ordinal, stageLabel } from "@/lib/live/format";
 
 /** One fixture on the public board: score card for team matches, placings for events. */
 
@@ -55,7 +55,7 @@ export default function MatchCard({ match, now }) {
         <div className="min-w-0">
           <p className="font-display text-sm font-bold uppercase tracking-wide text-brand-primary">{match.sportName}</p>
           <p className="meta">
-            {[genderLabel(match.gender), match.eventName, match.round].filter(Boolean).join(" · ")}
+            {[genderLabel(match.gender), match.eventName, stageLabel(match)].filter(Boolean).join(" · ")}
           </p>
         </div>
         <StatusChip match={match} />

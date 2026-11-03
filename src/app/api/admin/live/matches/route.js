@@ -6,7 +6,7 @@ import { audit } from "@/lib/security/audit";
 import { getClientIp } from "@/lib/security/request";
 import { createMatch, getScope, listManageableMatches } from "@/lib/live/service";
 import { fixtureSchema } from "@/lib/live/schemas";
-import { LIVE_IIITS, ROUNDS, liveSports } from "@/lib/live/catalog";
+import { LIVE_IIITS, POOLS, ROUNDS, liveSports } from "@/lib/live/catalog";
 
 export const runtime = "nodejs";
 
@@ -27,6 +27,7 @@ export async function GET() {
         sports: liveSports(),
         iiits: LIVE_IIITS.map(({ code, name }) => ({ code, name })),
         rounds: ROUNDS,
+        pools: POOLS,
       },
     }, { headers: NO_STORE });
   } catch (error) {

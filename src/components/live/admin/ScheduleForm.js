@@ -8,7 +8,7 @@ import { fieldControl, fieldLabel, liveApi } from "./api";
  * Schedules a new match, or edits an existing one's details (super admin).
  * Times are entered and shown in IST, whatever the device's time zone.
  */
-export default function ScheduleForm({ sports, iiits, rounds, match = null, onSaved, onCancel, onConflict }) {
+export default function ScheduleForm({ sports, iiits, rounds, pools = [], match = null, onSaved, onCancel, onConflict }) {
   const editing = Boolean(match);
   const [form, setForm] = useState(() => ({
     sportId: match?.sportId || "",
@@ -17,6 +17,7 @@ export default function ScheduleForm({ sports, iiits, rounds, match = null, onSa
     sideA: match?.sideA?.code || "",
     sideB: match?.sideB?.code || "",
     round: match?.round || "",
+    pool: match?.pool || "",
     venue: match?.venue || "",
     scheduledAt: toIstInput(match?.scheduledAt),
     status: match?.status || "scheduled",
@@ -56,6 +57,7 @@ export default function ScheduleForm({ sports, iiits, rounds, match = null, onSa
       sideA: isEvent ? null : form.sideA,
       sideB: isEvent ? null : form.sideB,
       round: form.round,
+      pool: isEvent ? "" : form.pool,
       venue: form.venue.trim(),
       scheduledAt,
     };
@@ -127,6 +129,15 @@ export default function ScheduleForm({ sports, iiits, rounds, match = null, onSa
           {rounds.map((round) => <option key={round} value={round}>{round}</option>)}
         </select>
       </div>
+      {!isEvent && (
+        <div>
+          <label htmlFor={`${idPrefix}-pool`} className={fieldLabel}>Pool (group stage)</label>
+          <select id={`${idPrefix}-pool`} className={fieldControl} value={form.pool} onChange={(e) => set("pool", e.target.value)}>
+            <option value="">No pool</option>
+            {pools.map((item) => <option key={item} value={item}>Pool {item}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label htmlFor={`${idPrefix}-venue`} className={fieldLabel}>Venue</label>
         <input id={`${idPrefix}-venue`} className={fieldControl} value={form.venue} maxLength={128} onChange={(e) => set("venue", e.target.value)} placeholder="e.g. Main Ground" />

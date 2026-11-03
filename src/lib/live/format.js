@@ -61,3 +61,9 @@ export function ordinal(n) {
 export function matchTitle(match) {
   return [match.sportName, genderLabel(match.gender), match.eventName].filter(Boolean).join(" · ");
 }
+
+/** "Pool A", "Pool A · Semi-final" style stage text; the round alone when there is no pool. */
+export function stageLabel(match) {
+  if (!match.pool) return match.round || "";
+  return match.round && match.round !== "Pool" ? `Pool ${match.pool} · ${match.round}` : `Pool ${match.pool}`;
+}

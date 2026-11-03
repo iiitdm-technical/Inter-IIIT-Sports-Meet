@@ -1,0 +1,1 @@
+ALTER TABLE `matches` ADD `pool` varchar(16) DEFAULT '' NOT NULL;

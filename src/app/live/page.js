@@ -19,6 +19,7 @@ export default async function LivePage({ searchParams }) {
     sport: pick(params?.sport, sports.map((s) => s.id)),
     gender: pick(params?.gender, ["M", "F", "mixed"]),
     iiit: pick(params?.iiit, iiits.map((i) => i.code)),
+    view: pick(params?.view, ["fixtures", "pools"]) || "board",
   };
   return (
     <div className="min-h-screen bg-ivory">
@@ -26,7 +27,7 @@ export default async function LivePage({ searchParams }) {
         title="Live Results"
         label="Follow"
         badgeLabel="Live"
-        description="Scores update on their own every few seconds. Times are in IST."
+        description="Live scores, the full schedule and pool tables. Everything updates on its own; times are in IST."
       />
       <LiveBoard sports={sports} iiits={iiits} initialFilters={initialFilters} />
     </div>

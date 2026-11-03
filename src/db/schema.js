@@ -229,6 +229,7 @@ export const matches = mysqlTable("matches", {
   kind: varchar("kind", { length: 16 }).notNull(),
   eventId: varchar("event_id", { length: 64 }),
   round: varchar("round", { length: 64 }).default("").notNull(),
+  pool: varchar("pool", { length: 16 }).default("").notNull(), // "A", "B"… for group-stage matches
   venue: varchar("venue", { length: 128 }).default("").notNull(),
   scheduledAt: utcDateTime("scheduled_at").notNull(),
   status: varchar("status", { length: 16 }).default("scheduled").notNull(),

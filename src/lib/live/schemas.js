@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COORDINATOR_GENDERS, ROUNDS } from "./catalog.js";
+import { COORDINATOR_GENDERS, POOLS, ROUNDS } from "./catalog.js";
 
 /** Request bodies for the live results API. Business checks live in service.js. */
 
@@ -9,6 +9,7 @@ const score = z.number().int().min(0).max(9999);
 const text = (max) => z.string().trim().max(max);
 const isoDateTime = z.string().refine((value) => !Number.isNaN(Date.parse(value)), "Enter a valid date and time");
 const version = z.number().int().min(1);
+const pool = z.enum(POOLS).or(z.literal(""));
 
 export const fixtureSchema = z.object({
   sportId: code,
@@ -17,6 +18,7 @@ export const fixtureSchema = z.object({
   sideA: code.optional().nullable(),
   sideB: code.optional().nullable(),
   round: z.enum(ROUNDS).or(z.literal("")).default(""),
+  pool: pool.default(""),
   venue: text(128).default(""),
   scheduledAt: isoDateTime,
 });
@@ -46,6 +48,7 @@ export const matchActionSchema = z.discriminatedUnion("action", [
     sideA: code.optional().nullable(),
     sideB: code.optional().nullable(),
     round: z.enum(ROUNDS).or(z.literal("")).optional(),
+    pool: pool.optional(),
     venue: text(128).optional(),
     scheduledAt: isoDateTime.optional(),
     status: z.enum(["scheduled", "postponed", "cancelled"]).optional(),

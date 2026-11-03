@@ -226,7 +226,7 @@ export default function LiveAdminPage() {
                     {visible.map((match) => (
                       <MatchPanel
                         key={match.id} match={match} isSuper={data.isSuper}
-                        sports={data.sports} iiits={data.iiits} rounds={data.rounds}
+                        sports={data.sports} iiits={data.iiits} rounds={data.rounds} pools={data.pools}
                         onChanged={onChanged} onConflict={onConflict} onNotice={setNotice}
                       />
                     ))}
@@ -241,7 +241,7 @@ export default function LiveAdminPage() {
           <section className="card p-4 sm:p-5" aria-labelledby="schedule-title">
             <h2 id="schedule-title" className="heading-card mb-4">Schedule a match</h2>
             <ScheduleForm
-              sports={data.sports} iiits={data.iiits} rounds={data.rounds}
+              sports={data.sports} iiits={data.iiits} rounds={data.rounds} pools={data.pools}
               onSaved={() => { setNotice("Match added to the schedule"); load(); }}
             />
           </section>

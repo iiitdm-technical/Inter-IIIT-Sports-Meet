@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatWhen, genderLabel, ordinal } from "@/lib/live/format";
+import { formatWhen, genderLabel, ordinal, stageLabel } from "@/lib/live/format";
 import ScheduleForm from "./ScheduleForm";
 import { fieldControl, fieldLabel, liveApi } from "./api";
 
@@ -94,7 +94,7 @@ function ChangeLog({ matchId }) {
  * One match on the scoring screen: start, update the score or placings,
  * finish; the super admin can also edit, reopen, delete and see the history.
  */
-export default function MatchPanel({ match, isSuper, sports, iiits, rounds, onChanged, onConflict, onNotice }) {
+export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pools, onChanged, onConflict, onNotice }) {
   const isVersus = match.kind === "versus";
   const [scoreA, setScoreA] = useState(match.scoreA ?? 0);
   const [scoreB, setScoreB] = useState(match.scoreB ?? 0);
@@ -182,7 +182,7 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, onCh
             {isVersus ? `${match.sideA?.name || "?"} vs ${match.sideB?.name || "?"}` : match.eventName}
           </h3>
           <p className="meta mt-0.5">
-            {[match.sportName, genderLabel(match.gender), match.round, match.venue, formatWhen(match.scheduledAt)].filter(Boolean).join(" · ")}
+            {[match.sportName, genderLabel(match.gender), stageLabel(match), match.venue, formatWhen(match.scheduledAt)].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -287,7 +287,7 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, onCh
         {isSuper && mode === "edit" && (
           <ScheduleForm
             key={match.version}
-            sports={sports} iiits={iiits} rounds={rounds} match={match}
+            sports={sports} iiits={iiits} rounds={rounds} pools={pools} match={match}
             onSaved={(result) => { onChanged(result.data); onNotice("Match details saved"); setMode(""); }}
             onConflict={onConflict}
             onCancel={() => setMode("")}
