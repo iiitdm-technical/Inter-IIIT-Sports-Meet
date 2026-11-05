@@ -160,6 +160,15 @@ p {
   100% { transform: translateX(-50%); }
 }
 
+/* Team carousel: track holds the list twice; pauses on hover/focus. */
+.team-carousel-track { animation: marquee 90s linear infinite; }
+.team-carousel:hover .team-carousel-track,
+.team-carousel:focus-within .team-carousel-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .team-carousel { overflow-x: auto; }
+  .team-carousel-track { animation: none; }
+}
+
 /* Animation: fadeUp */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(24px); }

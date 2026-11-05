@@ -36,6 +36,25 @@ const organizingTeam = [
   { name: "Sriram", image: "/assets/team/sriram.jpg" },
   { name: "Varshini", image: "/assets/team/varshini.jpg" },
   { name: "Sainatha", image: "/assets/team/sainath.jpg" },
+  { name: "Ashrith", image: "/assets/team/ashrith.jpg" },
+  { name: "Nikil", image: "/assets/team/nikil.jpg" },
+  { name: "Krithika", image: "/assets/team/krithika.jpg" },
+  { name: "K Shashank Reddy", image: "/assets/team/shashank-reddy.jpg" },
+  { name: "Nithish", image: "/assets/team/nithish.jpg" },
+  { name: "Saimanohar", image: "/assets/team/saimanohar.jpg" },
+  { name: "Mohammed Eesa S M", image: "/assets/team/mohammed-eesa.jpg" },
+  { name: "Rakesh Tubati", image: "/assets/team/rakesh-tubati.jpg" },
+  { name: "Chanakya Swaraj", image: "/assets/team/chanakya-swaraj.jpg" },
+  { name: "Akhil IVS", image: "/assets/team/akhil-ivs.jpg" },
+  { name: "Rupkatha Suter", image: "/assets/team/rupkatha-suter.jpg" },
+  { name: "Chiranthan S", image: "/assets/team/chiranthan-s.jpg" },
+  { name: "Sai Akshay", image: "/assets/team/sai-akshay.jpg" },
+  { name: "Sai Shreyansh", image: "/assets/team/sai-shreyansh.jpg" },
+  { name: "Sankeerth Koritala", image: "/assets/team/sankeerth-koritala.jpg" },
+  { name: "Bhargav Sai", image: "/assets/team/bhargav-sai.jpg" },
+  { name: "Priyank Jain", image: "/assets/team/priyank-jain.jpg" },
+  { name: "Someshwar Raj", image: "/assets/team/someshwar-raj.jpg" },
+  { name: "Yaswitha Nandu", image: "/assets/team/yaswitha-nandu.jpg" },
 ];
 
 // One row per array, in the organizers' order.
@@ -126,9 +145,17 @@ export default function Team() {
 
         <section aria-labelledby="team-organizing-team">
           <SectionHeading id="team-organizing-team">Organizing Team</SectionHeading>
-          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-12 sm:gap-x-12 sm:gap-y-14">
-            {organizingTeam.map((member) => <MemberCard key={member.name} member={member} />)}
-          </ul>
+          {/* Slow marquee: the list is rendered twice so the loop is seamless;
+              the copy is hidden from assistive tech. Pauses on hover/focus. */}
+          <div className="team-carousel -mx-4 overflow-hidden py-2 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] sm:-mx-6 lg:-mx-8">
+            <div className="team-carousel-track flex w-max">
+              {[0, 1].map((copy) => (
+                <ul key={copy} aria-hidden={copy === 1 || undefined} className="flex shrink-0 gap-x-6 pr-6 sm:gap-x-12 sm:pr-12">
+                  {organizingTeam.map((member) => <MemberCard key={member.name} member={member} />)}
+                </ul>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section aria-labelledby="team-website-team">
