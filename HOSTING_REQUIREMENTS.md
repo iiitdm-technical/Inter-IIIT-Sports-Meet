@@ -15,7 +15,7 @@ Figures were measured on 21 October 2026 from the repository and the current pro
 | Uploaded files (payment proofs) | 0 | up to 50 MB | 1 GB |
 | **Total disk for the application** | | | **5 GB, plus space for backups** |
 
-The site's photographs and logos are static files shipped with the build (`public/`, 5.6 MB). They are not user uploads. The only uploaded files are payment proofs. The rulebook is not published on the site; developers have it as `reference/rulebook.md`.
+The site's photographs and logos are static files shipped with the build (`public/`, 5.6 MB). They are not user uploads. The only uploaded files are payment proofs. The rulebook PDF is served from `public/assets/docs/rulebook.pdf`.
 
 ## What the application is
 
