@@ -427,7 +427,7 @@ export default function AdminDashboardPage() {
 
         {/* KPI Cards */}
         {stats && (
-          <dl className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <dl className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             <div className="card card-accent p-5">
               <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Rosters saved</dt>
               <dd className="mt-2 flex items-baseline gap-1.5">
@@ -448,6 +448,14 @@ export default function AdminDashboardPage() {
             <div className="card p-5">
               <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique students</dt>
               <dd className="stat-number mt-2 text-5xl text-ink">{stats.totalStudents}</dd>
+            </div>
+            <div className="card p-5">
+              <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique boys</dt>
+              <dd className="stat-number mt-2 text-5xl text-ink">{stats.totalBoys ?? 0}</dd>
+            </div>
+            <div className="card p-5">
+              <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique girls</dt>
+              <dd className="stat-number mt-2 text-5xl text-ink">{stats.totalGirls ?? 0}</dd>
             </div>
             <div className="card p-5">
               <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Event entries</dt>

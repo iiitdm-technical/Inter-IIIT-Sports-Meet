@@ -314,9 +314,10 @@ export async function getAdminStats() {
   const [totalIIITsResult, registrationCounts, totalStudentsResult, totalEntriesResult, verifiedResult, storage] = await Promise.all([
     db.select({ count: count() }).from(users).where(eq(users.role, "iiit")),
     db.select({ status: registrations.status, count: count() }).from(registrations).where(lockedStatuses).groupBy(registrations.status),
-    db.select({ count: count() }).from(students)
+    db.select({ gender: students.gender, count: count() }).from(students)
       .innerJoin(registrations, eq(students.registrationId, registrations.id))
-      .where(lockedStatuses),
+      .where(lockedStatuses)
+      .groupBy(students.gender),
     db.select({ count: count() }).from(studentEventParticipations)
       .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
       .where(lockedStatuses),
@@ -327,13 +328,17 @@ export async function getAdminStats() {
 
   const byStatus = Object.fromEntries(registrationCounts.map((row) => [row.status, Number(row.count)]));
   const paymentsSubmitted = byStatus.submitted || 0;
+  const studentsByGender = Object.fromEntries(totalStudentsResult.map((row) => [row.gender, Number(row.count)]));
+  const totalStudents = totalStudentsResult.reduce((sum, row) => sum + Number(row.count), 0);
 
   return {
     totalIIITs: Number(totalIIITsResult[0]?.count || 0),
     lockedIIITs: paymentsSubmitted + (byStatus.payment_pending || 0),
     paymentsSubmitted,
     paymentsVerified: Number(verifiedResult[0]?.count || 0),
-    totalStudents: Number(totalStudentsResult[0]?.count || 0),
+    totalStudents,
+    totalBoys: studentsByGender.M || 0,
+    totalGirls: studentsByGender.F || 0,
     totalEventEntries: Number(totalEntriesResult[0]?.count || 0),
     storage,
   };
