@@ -13,7 +13,7 @@ import { getLiveValidationErrors, getStudentRegistry, getSlotInputId, parseSlotK
 
 const EMPTY_CONTACT = {
   contactName: "", contactEmail: "", contactPhone: "",
-  arrivalDate: "", arrivalTime: "", travelMode: "", arrivalPoint: "", departureDate: "", notes: "",
+  arrivalDate: "", arrivalTime: "", travelMode: "", arrivalPoint: "", trainNumber: "", departureDate: "", notes: "",
   boysSecretaryName: "", boysSecretaryPhone: "", boysSecretaryEmail: "",
   girlsSecretaryName: "", girlsSecretaryPhone: "", girlsSecretaryEmail: "",
   boysTravelling: "", girlsTravelling: "", staffCount: "",

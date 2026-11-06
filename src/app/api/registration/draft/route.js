@@ -23,6 +23,7 @@ const draftSchema = z.object({
     arrivalTime: z.string().max(5).optional(),
     travelMode: z.string().max(32).optional(),
     arrivalPoint: z.string().max(128).optional(),
+    trainNumber: z.string().max(64).optional(),
     departureDate: z.string().max(10).optional(),
     boysSecretaryName: z.string().max(128).optional(),
     boysSecretaryPhone: z.string().max(32).optional(),

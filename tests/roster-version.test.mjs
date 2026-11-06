@@ -15,6 +15,7 @@ const registration = {
   arrivalDate: "2026-12-18",
   arrivalTime: "07:30",
   travelMode: "Train",
+  trainNumber: "12635",
   arrivalPoint: "Tambaram",
   departureDate: "2026-12-23",
   boysSecretaryName: "Boys Secretary",

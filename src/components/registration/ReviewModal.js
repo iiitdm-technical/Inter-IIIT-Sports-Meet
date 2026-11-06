@@ -17,6 +17,8 @@ function formatError(raw) {
     "contactDetails.arrivalDate:": "Travel — Arrival date:",
     "contactDetails.arrivalTime:": "Travel — Arrival time:",
     "contactDetails.travelMode:": "Travel — Mode:",
+    "contactDetails.trainNumber:": "Travel — Train number:",
+    "contactDetails.arrivalPoint:": "Travel — Arriving at:",
     "contactDetails.departureDate:": "Travel — Exit date:",
     "contactDetails.boysSecretary": "Boys' sports secretary —",
     "contactDetails.girlsSecretary": "Girls' sports secretary —",

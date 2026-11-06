@@ -145,6 +145,7 @@ export async function generateAdminMasterCSV(filters = {}) {
       arrivalDate: registrations.arrivalDate,
       arrivalTime: registrations.arrivalTime,
       travelMode: registrations.travelMode,
+      trainNumber: registrations.trainNumber,
       arrivalPoint: registrations.arrivalPoint,
       departureDate: registrations.departureDate,
       boysSecretaryName: registrations.boysSecretaryName,
@@ -180,6 +181,7 @@ export async function generateAdminMasterCSV(filters = {}) {
     "Arrival Date",
     "Arrival Time",
     "Mode of Travel",
+    "Train Number",
     "Arriving At",
     "Exit Date",
     "Boys Sports Secretary",
@@ -222,6 +224,7 @@ export async function generateAdminMasterCSV(filters = {}) {
       entry.arrivalDate || "",
       entry.arrivalTime || "",
       entry.travelMode || "",
+      entry.trainNumber || "",
       entry.arrivalPoint || "",
       entry.departureDate || "",
       entry.boysSecretaryName || "",
@@ -269,6 +272,7 @@ export async function generateAdminStudentsCSV(filters = {}) {
       arrivalDate: registrations.arrivalDate,
       arrivalTime: registrations.arrivalTime,
       travelMode: registrations.travelMode,
+      trainNumber: registrations.trainNumber,
       arrivalPoint: registrations.arrivalPoint,
       departureDate: registrations.departureDate,
     })
@@ -296,6 +300,7 @@ export async function generateAdminStudentsCSV(filters = {}) {
     "Arrival Date",
     "Arrival Time",
     "Mode of Travel",
+    "Train Number",
     "Arriving At",
     "Exit Date",
   ];
@@ -314,6 +319,7 @@ export async function generateAdminStudentsCSV(filters = {}) {
       student.arrivalDate || "",
       student.arrivalTime || "",
       student.travelMode || "",
+      student.trainNumber || "",
       student.arrivalPoint || "",
       student.departureDate || "",
     ];

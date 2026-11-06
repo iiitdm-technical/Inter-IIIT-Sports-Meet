@@ -129,6 +129,7 @@ const CONTACT_FIELD_IDS = {
   arrivalTime: "contact-arrival-time",
   travelMode: "contact-travel-mode",
   arrivalPoint: "contact-arrival-point",
+  trainNumber: "contact-train-number",
   departureDate: "contact-departure-date",
   boysSecretaryName: "contact-boys-secretary-name",
   boysSecretaryPhone: "contact-boys-secretary-phone",

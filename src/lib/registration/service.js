@@ -96,6 +96,7 @@ function registrationValues(iiitCode, iiitName, username, payload, submittedAt) 
     arrivalTime: contactDetails.arrivalTime,
     travelMode: contactDetails.travelMode,
     arrivalPoint: contactDetails.arrivalPoint || null,
+    trainNumber: contactDetails.trainNumber || null,
     departureDate: contactDetails.departureDate || null,
     boysSecretaryName: contactDetails.boysSecretaryName,
     boysSecretaryPhone: contactDetails.boysSecretaryPhone,

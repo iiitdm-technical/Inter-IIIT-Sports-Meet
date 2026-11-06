@@ -62,6 +62,8 @@ export const registrations = mysqlTable("registrations", {
   arrivalTime: varchar("arrival_time", { length: 5 }),
   travelMode: varchar("travel_mode", { length: 32 }),
   arrivalPoint: varchar("arrival_point", { length: 128 }),
+  // Only for travel by train; may list several trains if the contingent splits.
+  trainNumber: varchar("train_number", { length: 64 }),
   departureDate: varchar("departure_date", { length: 10 }),
   // Contingent: the IIIT's sports secretaries, students by gender (counted
   // from the roster at each save) and accompanying staff.

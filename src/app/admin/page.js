@@ -6,7 +6,7 @@ import { getCategoryLabel, getEventName, getRegistrationFee, getSportName } from
 import { useRouter } from "next/navigation";
 import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
-import { formatTravelDate } from "@/lib/registration/arrival";
+import { formatTravelDate, formatTravelMode } from "@/lib/registration/arrival";
 import { totalTravelling } from "@/lib/registration/contingent";
 
 const formatMB = (bytes) => {
@@ -870,7 +870,7 @@ export default function AdminDashboardPage() {
                         {row.arrivalDate ? (
                           <div className="space-y-0.5 whitespace-nowrap">
                             <div className="font-semibold text-ink">{formatTravelDate(row.arrivalDate)}{row.arrivalTime ? `, ${row.arrivalTime}` : ""}</div>
-                            <div>{row.travelMode}{row.arrivalPoint ? ` · ${row.arrivalPoint}` : ""}</div>
+                            <div>{formatTravelMode(row)}{row.arrivalPoint ? ` · ${row.arrivalPoint}` : ""}</div>
                             {row.departureDate && <div className="text-xs text-ink-muted">Leaves {formatTravelDate(row.departureDate)}</div>}
                             {row.notes && <div className="max-w-[14rem] whitespace-normal text-xs text-ink-muted" title={row.notes}>{row.notes.length > 80 ? `${row.notes.slice(0, 80)}…` : row.notes}</div>}
                           </div>

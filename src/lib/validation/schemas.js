@@ -103,6 +103,7 @@ export const contactDetailsSchema = z.object({
     .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Arrival time is required"),
   travelMode: z.enum(TRAVEL_MODES, { error: "Choose the mode of travel" }),
   arrivalPoint: z.string().trim().max(128, "Arriving at is too long").optional().default(""),
+  trainNumber: z.string().trim().max(64, "Train number is too long").optional().default(""),
   departureDate: z.string({ error: "Exit date is required" }).trim().min(1, "Exit date is required")
     .refine((value) => value === "" || inRange(value, DEPARTURE_DATE_MIN, DEPARTURE_DATE_MAX),
       `Exit date must be between ${formatTravelDate(DEPARTURE_DATE_MIN)} and ${formatTravelDate(DEPARTURE_DATE_MAX)}`),
@@ -129,10 +130,18 @@ export const contactDetailsSchema = z.object({
   if (details.travelMode === "Train" && !details.arrivalPoint) {
     ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival railway station, or type it under Other" });
   }
+  if (details.travelMode === "Train" && !details.trainNumber) {
+    ctx.addIssue({ code: "custom", path: ["trainNumber"], message: "Enter the train number you are arriving by" });
+  }
   if (details.travelMode === "Bus" && !details.arrivalPoint) {
     ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival bus terminus, or type it under Other" });
   }
-}).transform((details) => (details.travelMode === "Flight" ? { ...details, arrivalPoint: CHENNAI_AIRPORT } : details));
+}).transform((details) => ({
+  ...details,
+  ...(details.travelMode === "Flight" ? { arrivalPoint: CHENNAI_AIRPORT } : {}),
+  // A train number only means something when travelling by train.
+  ...(details.travelMode === "Train" ? {} : { trainNumber: "" }),
+}));
 
 /**
  * Payment Details Schema

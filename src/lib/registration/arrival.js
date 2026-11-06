@@ -45,9 +45,14 @@ export function formatTravelDate(value) {
   return `${Number(match[3])} ${MONTHS[Number(match[2]) - 1]} ${match[1]}`;
 }
 
-/** One line such as "18 Dec 2026, 07:30 · Train · Chennai Central". */
-export function formatArrival({ arrivalDate, arrivalTime, travelMode, arrivalPoint } = {}) {
+/** "Train 12635" for train travel with a number, otherwise just the mode. */
+export function formatTravelMode({ travelMode, trainNumber } = {}) {
+  return travelMode === "Train" && trainNumber ? `Train ${trainNumber}` : travelMode || "";
+}
+
+/** One line such as "18 Dec 2026, 07:30 · Train 12635 · Chennai Central". */
+export function formatArrival({ arrivalDate, arrivalTime, travelMode, trainNumber, arrivalPoint } = {}) {
   if (!arrivalDate && !arrivalTime && !travelMode) return "";
   const when = [formatTravelDate(arrivalDate), arrivalTime].filter(Boolean).join(", ");
-  return [when, travelMode, arrivalPoint].filter(Boolean).join(" · ");
+  return [when, formatTravelMode({ travelMode, trainNumber }), arrivalPoint].filter(Boolean).join(" · ");
 }

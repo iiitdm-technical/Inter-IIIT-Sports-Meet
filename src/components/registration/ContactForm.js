@@ -68,6 +68,7 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
       [field]: value,
       // The arrival point depends on the mode: keep it only when it still fits.
       ...(field === "travelMode" ? { arrivalPoint: arrivalPointForMode(value, contactDetails.arrivalPoint) } : {}),
+      ...(field === "travelMode" && value !== "Train" ? { trainNumber: "" } : {}),
     });
   };
   const mode = contactDetails.travelMode;
@@ -202,6 +203,22 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
               </>
             )}
           </div>
+          {mode === "Train" && (
+            <div>
+              <label htmlFor="contact-train-number" className={labelClass}>Train number {required}</label>
+              <input
+                id="contact-train-number"
+                type="text"
+                required
+                maxLength={64}
+                autoComplete="off"
+                value={contactDetails.trainNumber || ""}
+                onChange={(e) => handleChange("trainNumber", e.target.value)}
+                className={fieldClass}
+                placeholder="E.g., 12635 Vaigai Express"
+              />
+            </div>
+          )}
           <div>
             <label htmlFor="contact-departure-date" className={labelClass}>Exit date {required}</label>
             <input
