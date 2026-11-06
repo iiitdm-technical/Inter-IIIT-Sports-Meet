@@ -41,7 +41,6 @@ const organizingTeam = [
   { name: "Krithika", image: "/assets/team/krithika.jpg" },
   { name: "K Shashank Reddy", image: "/assets/team/shashank-reddy.jpg" },
   { name: "Nithish", image: "/assets/team/nithish.jpg" },
-  { name: "Saimanohar", image: "/assets/team/saimanohar.jpg" },
   { name: "Mohammed Eesa S M", image: "/assets/team/mohammed-eesa.jpg" },
   { name: "Rakesh Tubati", image: "/assets/team/rakesh-tubati.jpg" },
   { name: "Chanakya Swaraj", image: "/assets/team/chanakya-swaraj.jpg" },
@@ -49,12 +48,12 @@ const organizingTeam = [
   { name: "Rupkatha Suter", image: "/assets/team/rupkatha-suter.jpg" },
   { name: "Chiranthan S", image: "/assets/team/chiranthan-s.jpg" },
   { name: "Sai Akshay", image: "/assets/team/sai-akshay.jpg" },
-  { name: "Sai Shreyansh", image: "/assets/team/sai-shreyansh.jpg" },
   { name: "Sankeerth Koritala", image: "/assets/team/sankeerth-koritala.jpg" },
   { name: "Bhargav Sai", image: "/assets/team/bhargav-sai.jpg" },
   { name: "Priyank Jain", image: "/assets/team/priyank-jain.jpg" },
   { name: "Someshwar Raj", image: "/assets/team/someshwar-raj.jpg" },
   { name: "Yaswitha Nandu", image: "/assets/team/yaswitha-nandu.jpg" },
+  { name: "Lohith", image: "/assets/team/lohith.jpg" },
 ];
 
 // One row per array, in the organizers' order.
@@ -145,7 +144,7 @@ export default function Team() {
 
         <section aria-labelledby="team-organizing-team">
           <SectionHeading id="team-organizing-team">Organizing Team</SectionHeading>
-          {/* Slow marquee: the list is rendered twice so the loop is seamless;
+          {/* Marquee: the list is rendered twice so the loop is seamless;
               the copy is hidden from assistive tech. Pauses on hover/focus. */}
           <div className="team-carousel -mx-4 overflow-hidden py-2 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)] sm:-mx-6 lg:-mx-8">
             <div className="team-carousel-track flex w-max">

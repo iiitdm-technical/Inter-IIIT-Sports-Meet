@@ -161,7 +161,7 @@ p {
 }
 
 /* Team carousel: track holds the list twice; pauses on hover/focus. */
-.team-carousel-track { animation: marquee 90s linear infinite; }
+.team-carousel-track { animation: marquee 40s linear infinite; }
 .team-carousel:hover .team-carousel-track,
 .team-carousel:focus-within .team-carousel-track { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) {
