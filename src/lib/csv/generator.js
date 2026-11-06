@@ -3,6 +3,7 @@ import { getDb } from "../../db/index.js";
 import { registrations, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
 import { totalTravelling } from "../registration/contingent.js";
+import { buildStudentFilterConditions, getParticipationsForStudents } from "../admin/service.js";
 
 /**
  * Escape a field for RFC 4180 CSV
@@ -235,6 +236,86 @@ export async function generateAdminMasterCSV(filters = {}) {
       entry.staffCount == null ? "" : totalTravelling(entry.boysCount, entry.girlsCount, entry.staffCount),
       entry.paymentMode || "",
       entry.otherPaymentMode || "",
+    ];
+  });
+
+  return formatCsv(headers, rows);
+}
+
+function describeEntry(entry) {
+  const sportConfig = getSportConfig(entry.sportId);
+  const sportName = sportConfig?.name || entry.sportId;
+  const ev = sportConfig?.events?.[entry.eventGender]?.find((e) => e.id === entry.eventId);
+  const label = ev ? `${sportName} - ${ev.name}` : sportName;
+  const category = entry.eventGender === "M" ? "Men" : entry.eventGender === "F" ? "Women" : "Mixed/Open";
+  return `${label} (${category}${entry.isReserve ? ", Reserve" : ""})`;
+}
+
+/**
+ * Generate the unique-students CSV for Admin: one row per student per IIIT.
+ */
+export async function generateAdminStudentsCSV(filters = {}) {
+  const db = getDb();
+
+  const studentRows = await db
+    .select({
+      id: students.id,
+      iiitCode: registrations.iiitCode,
+      iiitName: registrations.iiitName,
+      rollNumber: students.rollNumber,
+      studentName: students.name,
+      studentGender: students.gender,
+      submittedAt: registrations.submittedAt,
+      arrivalDate: registrations.arrivalDate,
+      arrivalTime: registrations.arrivalTime,
+      travelMode: registrations.travelMode,
+      arrivalPoint: registrations.arrivalPoint,
+      departureDate: registrations.departureDate,
+    })
+    .from(students)
+    .innerJoin(registrations, eq(students.registrationId, registrations.id))
+    .where(and(...buildStudentFilterConditions(filters)))
+    .orderBy(registrations.iiitName, students.rollNumber);
+
+  const participations = await getParticipationsForStudents(studentRows.map((row) => row.id));
+  const byStudent = new Map();
+  for (const p of participations) {
+    if (!byStudent.has(p.studentId)) byStudent.set(p.studentId, []);
+    byStudent.get(p.studentId).push(p);
+  }
+
+  const headers = [
+    "IIIT Code",
+    "IIIT Name",
+    "Roll Number",
+    "Student Name",
+    "Gender",
+    "No. of Events",
+    "Events",
+    "Submission Date",
+    "Arrival Date",
+    "Arrival Time",
+    "Mode of Travel",
+    "Arriving At",
+    "Exit Date",
+  ];
+
+  const rows = studentRows.map((student) => {
+    const entries = byStudent.get(student.id) || [];
+    return [
+      student.iiitCode,
+      student.iiitName,
+      student.rollNumber,
+      student.studentName,
+      student.studentGender,
+      entries.length,
+      entries.map(describeEntry).join("; "),
+      student.submittedAt ? new Date(student.submittedAt).toISOString() : "",
+      student.arrivalDate || "",
+      student.arrivalTime || "",
+      student.travelMode || "",
+      student.arrivalPoint || "",
+      student.departureDate || "",
     ];
   });
 

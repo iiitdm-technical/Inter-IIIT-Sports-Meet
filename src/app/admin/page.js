@@ -93,6 +93,11 @@ export default function AdminDashboardPage() {
   const [appliedFilters, setAppliedFilters] = useState({});
   const [entriesLoading, setEntriesLoading] = useState(false);
 
+  // Unique students share the entries filters; loaded when the tab is opened.
+  const [studentsData, setStudentsData] = useState({ rows: [], total: 0, page: 1, totalPages: 1 });
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState("");
+
   const sportsList = getAllSportsList();
 
   // sport.events is { M: [...], F: [...] } for individual sports, undefined for team sports.
@@ -132,6 +137,40 @@ export default function AdminDashboardPage() {
       setEntriesLoading(false);
     }
   }, []);
+
+  const loadStudents = useCallback(async (page = 1, activeFilters = {}) => {
+    setStudentsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", page.toString());
+      params.set("limit", "25");
+      for (const [key, value] of Object.entries(activeFilters)) {
+        if (value) params.set(key, value);
+      }
+
+      const res = await fetch(`/api/admin/students?${params.toString()}`);
+      if (!res.ok) throw new Error("Request failed");
+      const data = await res.json();
+      setStudentsData(data.data);
+      setStudentsError("");
+    } catch (err) {
+      console.error("Failed to filter students:", err);
+      setStudentsError("Could not load students. Check your connection and try again.");
+    } finally {
+      setStudentsLoading(false);
+    }
+  }, []);
+
+  // The two roster tabs share filters; reload whichever one is showing.
+  const loadRosterTab = (tab, activeFilters) => {
+    if (tab === "students") loadStudents(1, activeFilters);
+    else loadEntries(1, activeFilters);
+  };
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    if (tab === "students" || tab === "entries") loadRosterTab(tab, appliedFilters);
+  };
 
   const refreshStats = useCallback(async () => {
     const statsRes = await fetch("/api/admin/stats");
@@ -193,7 +232,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     const nextFilters = { ...filters };
     setAppliedFilters(nextFilters);
-    loadEntries(1, nextFilters);
+    loadRosterTab(activeTab, nextFilters);
   };
 
   // Export exactly what the table shows: the applied filters, not unsubmitted edits.
@@ -204,7 +243,8 @@ export default function AdminDashboardPage() {
         if (value) params.set(key, value);
       }
     }
-    const downloadUrl = `/api/admin/csv?${params.toString()}`;
+    const endpoint = activeTab === "students" ? "/api/admin/students/csv" : "/api/admin/csv";
+    const downloadUrl = `${endpoint}?${params.toString()}`;
     const a = document.createElement("a");
     a.href = downloadUrl;
     a.download = "";
@@ -420,13 +460,13 @@ export default function AdminDashboardPage() {
 
         {/* Tab Nav */}
         <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
-          {[["entries", "Registration Entries"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
+          {[["entries", "Registration Entries"], ["students", "Unique Students"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
             <button
               key={tab}
               type="button"
               role="tab"
               aria-selected={activeTab === tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => switchTab(tab)}
               className={`-mb-px whitespace-nowrap border-b-[3px] px-4 py-3 font-display text-lg font-bold uppercase tracking-wide transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-primary ${
                 activeTab === tab
                   ? "border-brand-highlight text-ink"
@@ -439,13 +479,16 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Filter Controls and Export */}
-        {activeTab === "entries" && (
+        {(activeTab === "entries" || activeTab === "students") && (
         <div className="mb-5 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="eyebrow">Saved rosters</p>
             <h2 className="heading-section mt-1 text-[2rem]">
-              Registration Entries
+              {activeTab === "students" ? "Unique Students" : "Registration Entries"}
             </h2>
+            {activeTab === "students" && (
+              <p className="mt-1 text-sm text-ink-soft">One row per student per IIIT. Sport and event filters show students entered in them.</p>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -466,7 +509,7 @@ export default function AdminDashboardPage() {
         </div>
         )}
 
-        {activeTab === "entries" && (
+        {(activeTab === "entries" || activeTab === "students") && (
         <div className="card mb-6 p-5">
           <form onSubmit={handleSearchSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -552,7 +595,7 @@ export default function AdminDashboardPage() {
                 onClick={() => {
                   setFilters({ iiit: "", sport: "", event: "", gender: "", rollNumber: "", name: "" });
                   setAppliedFilters({});
-                  loadEntries(1, {});
+                  loadRosterTab(activeTab, {});
                 }}
                 className="btn btn-outline btn-sm"
               >
@@ -560,10 +603,10 @@ export default function AdminDashboardPage() {
               </button>
               <button
                 type="submit"
-                disabled={entriesLoading}
+                disabled={activeTab === "students" ? studentsLoading : entriesLoading}
                 className="btn btn-primary btn-sm px-5"
               >
-                {entriesLoading ? "Searching..." : "Apply Filters"}
+                {(activeTab === "students" ? studentsLoading : entriesLoading) ? "Searching..." : "Apply Filters"}
               </button>
             </div>
           </form>
@@ -646,6 +689,98 @@ export default function AdminDashboardPage() {
               <button
                 disabled={entriesData.page >= entriesData.totalPages}
                 onClick={() => loadEntries(entriesData.page + 1, appliedFilters)}
+                className="btn btn-outline btn-sm"
+              >
+                Next &rarr;
+              </button>
+            </div>
+          )}
+        </div>
+        )}
+
+        {/* Unique Students Table */}
+        {activeTab === "students" && (
+        <div className="card overflow-hidden">
+          {studentsError && (
+            <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">{studentsError}</div>
+          )}
+          <div className="flex items-center justify-between border-b border-line px-4 py-3 text-sm text-ink-soft" aria-live="polite">
+            <span className="font-semibold text-ink">Matching Students: {studentsData.total || 0}</span>
+            {studentsData.totalPages > 0 && (
+              <span className="meta">Page {studentsData.page} of {studentsData.totalPages}</span>
+            )}
+          </div>
+          <div className="max-h-[70vh] overflow-auto" tabIndex={0} role="region" aria-label="Unique students table">
+            <table className="w-full border-collapse whitespace-nowrap text-left text-sm">
+              <thead>
+                <tr>
+                  <th scope="col" className={`${tableHead}`}>IIIT Name</th>
+                  <th scope="col" className={`${tableHead}`}>Roll Number</th>
+                  <th scope="col" className={`${tableHead}`}>Student Name</th>
+                  <th scope="col" className={`${tableHead} text-center`}>Gender</th>
+                  <th scope="col" className={`${tableHead} text-center`}>Events</th>
+                  <th scope="col" className={`${tableHead} w-full`}>Entered In</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line bg-paper">
+                {!studentsData.rows || studentsData.rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-ink-muted">
+                      {studentsLoading ? "Searching database..." : (
+                        <div className="flex flex-col items-center gap-2">
+                          <svg className="w-8 h-8 text-ink-muted/50" fill="none" aria-hidden="true" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p>No students found matching your criteria.</p>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  studentsData.rows.map((row) => (
+                    <tr key={row.id} className="align-top transition-colors hover:bg-ivory/80">
+                      <td className="max-w-[200px] truncate px-4 py-3 font-semibold text-ink" title={row.iiitName}>{row.iiitName}</td>
+                      <td className="px-4 py-3 font-mono text-ink-soft">{row.rollNumber}</td>
+                      <td className="px-4 py-3 font-semibold text-ink">{row.studentName}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`chip ${row.studentGender === 'F' ? 'chip-gold' : ''}`}>
+                          {row.studentGender}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center font-semibold text-ink">{row.events.length}</td>
+                      <td className="px-4 py-3 whitespace-normal text-ink-soft">
+                        {row.events.length === 0 ? <span className="text-ink-muted">—</span> : (
+                          <ul className="flex flex-wrap gap-1.5">
+                            {row.events.map((ev) => (
+                              <li key={`${ev.sportId}:${ev.eventId}`} className={`chip ${ev.isReserve ? 'chip-gold' : ''}`}>
+                                {getSportName(ev.sportId)}
+                                {ev.eventId !== "team" && ` · ${getEventName(ev.sportId, ev.eventId, ev.eventGender)}`}
+                                {` (${getCategoryLabel(ev.eventGender)}${ev.isReserve ? ", Reserve" : ""})`}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {studentsData.totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-line bg-ivory px-4 py-3 text-sm">
+              <button
+                disabled={studentsData.page <= 1}
+                onClick={() => loadStudents(studentsData.page - 1, appliedFilters)}
+                className="btn btn-outline btn-sm"
+              >
+                &larr; Previous
+              </button>
+              <span className="font-medium text-ink-soft">Page {studentsData.page} of {studentsData.totalPages}</span>
+              <button
+                disabled={studentsData.page >= studentsData.totalPages}
+                onClick={() => loadStudents(studentsData.page + 1, appliedFilters)}
                 className="btn btn-outline btn-sm"
               >
                 Next &rarr;

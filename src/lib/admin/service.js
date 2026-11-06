@@ -207,6 +207,102 @@ export async function getAdminFilteredEntries({
 }
 
 /**
+ * Filters for the unique-students view. Each student row is already unique per
+ * (IIIT, roll number); sport and event match students with at least one such entry.
+ */
+export function buildStudentFilterConditions({ iiit, sport, event, gender, rollNumber, name } = {}) {
+  const conditions = [inArray(registrations.status, ["payment_pending", "submitted"])];
+
+  if (iiit) {
+    conditions.push(
+      sql`(${registrations.iiitCode} = ${iiit} OR LOWER(${registrations.iiitName}) LIKE LOWER(${`%${iiit}%`}))`
+    );
+  }
+  if (sport || event) {
+    const participationFilters = [eq(studentEventParticipations.studentId, students.id)];
+    if (sport) participationFilters.push(eq(studentEventParticipations.sportId, sport.toLowerCase()));
+    if (event) participationFilters.push(eq(studentEventParticipations.eventId, event.toLowerCase()));
+    conditions.push(sql`EXISTS (SELECT 1 FROM ${studentEventParticipations} WHERE ${and(...participationFilters)})`);
+  }
+  if (gender) {
+    conditions.push(eq(students.gender, gender.toUpperCase()));
+  }
+  if (rollNumber) {
+    conditions.push(sql`LOWER(${students.rollNumber}) LIKE LOWER(${`%${rollNumber.trim()}%`})`);
+  }
+  if (name) {
+    conditions.push(sql`LOWER(${students.name}) LIKE LOWER(${`%${name.trim()}%`})`);
+  }
+  return conditions;
+}
+
+/** Every event entry for the given students, ordered for display. */
+export async function getParticipationsForStudents(studentIds) {
+  if (studentIds.length === 0) return [];
+  return getDb()
+    .select({
+      studentId: studentEventParticipations.studentId,
+      sportId: studentEventParticipations.sportId,
+      eventId: studentEventParticipations.eventId,
+      eventGender: studentEventParticipations.gender,
+      isReserve: studentEventParticipations.isReserve,
+    })
+    .from(studentEventParticipations)
+    .where(inArray(studentEventParticipations.studentId, studentIds))
+    .orderBy(studentEventParticipations.sportId, studentEventParticipations.eventId);
+}
+
+/**
+ * One row per attending student (per IIIT), with the events they are entered in.
+ */
+export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filters } = {}) {
+  const db = getDb();
+  const where = and(...buildStudentFilterConditions(filters));
+
+  page = Number.isSafeInteger(page) ? Math.max(1, page) : 1;
+  limit = Number.isSafeInteger(limit) ? Math.min(100, Math.max(1, limit)) : 50;
+  const offset = Math.max(0, (page - 1) * limit);
+
+  const countResult = await db
+    .select({ count: count() })
+    .from(students)
+    .innerJoin(registrations, eq(students.registrationId, registrations.id))
+    .where(where);
+  const total = Number(countResult[0]?.count || 0);
+
+  const studentRows = await db
+    .select({
+      id: students.id,
+      iiitCode: registrations.iiitCode,
+      iiitName: registrations.iiitName,
+      rollNumber: students.rollNumber,
+      studentName: students.name,
+      studentGender: students.gender,
+    })
+    .from(students)
+    .innerJoin(registrations, eq(students.registrationId, registrations.id))
+    .where(where)
+    .orderBy(registrations.iiitName, students.rollNumber)
+    .limit(limit)
+    .offset(offset);
+
+  const participations = await getParticipationsForStudents(studentRows.map((row) => row.id));
+  const byStudent = new Map();
+  for (const p of participations) {
+    if (!byStudent.has(p.studentId)) byStudent.set(p.studentId, []);
+    byStudent.get(p.studentId).push(p);
+  }
+
+  return {
+    rows: studentRows.map((row) => ({ ...row, events: byStudent.get(row.id) || [] })),
+    total,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(total / limit) || 1,
+  };
+}
+
+/**
  * Get aggregate statistics across all submitted registrations
  */
 export async function getAdminStats() {
