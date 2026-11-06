@@ -265,11 +265,13 @@ export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filter
   const offset = Math.max(0, (page - 1) * limit);
 
   const countResult = await db
-    .select({ count: count() })
+    .select({ gender: students.gender, count: count() })
     .from(students)
     .innerJoin(registrations, eq(students.registrationId, registrations.id))
-    .where(where);
-  const total = Number(countResult[0]?.count || 0);
+    .where(where)
+    .groupBy(students.gender);
+  const byGender = Object.fromEntries(countResult.map((row) => [row.gender, Number(row.count)]));
+  const total = countResult.reduce((sum, row) => sum + Number(row.count), 0);
 
   const studentRows = await db
     .select({
@@ -297,6 +299,8 @@ export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filter
   return {
     rows: studentRows.map((row) => ({ ...row, events: byStudent.get(row.id) || [] })),
     total,
+    boys: byGender.M || 0,
+    girls: byGender.F || 0,
     page: Number(page),
     limit: Number(limit),
     totalPages: Math.ceil(total / limit) || 1,

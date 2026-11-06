@@ -713,7 +713,10 @@ export default function AdminDashboardPage() {
             <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800">{studentsError}</div>
           )}
           <div className="flex items-center justify-between border-b border-line px-4 py-3 text-sm text-ink-soft" aria-live="polite">
-            <span className="font-semibold text-ink">Matching Students: {studentsData.total || 0}</span>
+            <span className="font-semibold text-ink">
+              Matching Students: {studentsData.total || 0}
+              <span className="ml-2 font-normal text-ink-soft">({studentsData.boys || 0} boys · {studentsData.girls || 0} girls)</span>
+            </span>
             {studentsData.totalPages > 0 && (
               <span className="meta">Page {studentsData.page} of {studentsData.totalPages}</span>
             )}
@@ -727,7 +730,7 @@ export default function AdminDashboardPage() {
                   <th scope="col" className={`${tableHead}`}>Student Name</th>
                   <th scope="col" className={`${tableHead} text-center`}>Gender</th>
                   <th scope="col" className={`${tableHead} text-center`}>Events</th>
-                  <th scope="col" className={`${tableHead} w-full`}>Entered In</th>
+                  <th scope="col" className={`${tableHead} w-full min-w-[22rem]`}>Entered In</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line bg-paper">
@@ -756,7 +759,7 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center font-semibold text-ink">{row.events.length}</td>
-                      <td className="px-4 py-3 whitespace-normal text-ink-soft">
+                      <td className="min-w-[22rem] px-4 py-3 whitespace-normal text-ink-soft">
                         {row.events.length === 0 ? <span className="text-ink-muted">—</span> : (
                           <ul className="flex flex-wrap gap-1.5">
                             {row.events.map((ev) => (
