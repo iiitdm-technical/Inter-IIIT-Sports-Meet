@@ -15,6 +15,7 @@ export const eventInfo = {
   shortName: "All India Inter-IIIT Sports Meet 2026",
   host: "IIITDM Kancheepuram",
   dates: "19 December to 23 December 2026",
+  instagram: { handle: "aiiitsm", url: "https://www.instagram.com/aiiitsm" },
   stats: [
     { label: "Student-Athletes", value: "2,000+" },
     { label: "Participating IIITs", value: String(iiits.length) },

@@ -64,6 +64,20 @@ export default function Footer() {
               <a href={`tel:${contactNumbers[0].tel}`} className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
                 {contactNumbers[0].role}: {contactNumbers[0].display}
               </a>
+              <a
+                href={eventInfo.instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
+                </svg>
+                @{eventInfo.instagram.handle}
+                <span className="sr-only">on Instagram (opens in a new tab)</span>
+              </a>
             </address>
             <Link href="/register" className="btn btn-accent btn-sm px-5">
               Register now

@@ -69,6 +69,20 @@ export default function Contact() {
               </h2>
               <p className="meta mt-3">5 days · {sports.length} sports</p>
             </section>
+
+            <section className="card p-6 sm:p-8" aria-labelledby="contact-social-title">
+              <p className="eyebrow">Follow us</p>
+              <h2 id="contact-social-title" className="heading-card mt-2 text-xl">Instagram</h2>
+              <a
+                href={eventInfo.instagram.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-sm font-bold text-brand-primary underline-offset-4 hover:underline"
+              >
+                @{eventInfo.instagram.handle} <span aria-hidden="true">↗</span>
+                <span className="sr-only">(opens Instagram in a new tab)</span>
+              </a>
+            </section>
           </div>
         </div>
 
