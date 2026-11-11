@@ -223,7 +223,13 @@ describe("arrival point by mode of travel", () => {
     assert.ok(missing.error.issues.some((issue) => issue.path.join(".") === "contactDetails.trainNumber"));
     assert.equal(parse({ ...station, trainNumber: "   " }).success, false);
     assert.equal(parse({ ...station, trainNumber: "x".repeat(65) }).success, false);
-    assert.equal(parse({ ...station, trainNumber: " 12635 Vaigai Express " }).data.contactDetails.trainNumber, "12635 Vaigai Express");
+    assert.equal(parse({ ...station, trainNumber: " 12635 " }).data.contactDetails.trainNumber, "12635");
+    assert.equal(parse({ ...station, trainNumber: "12635,12637 , 12639" }).data.contactDetails.trainNumber, "12635, 12637, 12639");
+    for (const bad of ["1263", "126355", "12635 Vaigai Express", "12635,", "12635, 12637, 12639, 12641", "1263A"]) {
+      const result = parse({ ...station, trainNumber: bad });
+      assert.equal(result.success, false, bad);
+      assert.ok(result.error.issues.some((issue) => issue.path.join(".") === "contactDetails.trainNumber"), bad);
+    }
     assert.equal(parse({ travelMode: "Flight", trainNumber: "12635" }).data.contactDetails.trainNumber, "");
     assert.equal(parse({ travelMode: "Own vehicle" }).data.contactDetails.trainNumber, "");
   });

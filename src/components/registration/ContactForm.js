@@ -210,12 +210,14 @@ export default function ContactForm({ contactDetails, onChange, studentCounts = 
                 id="contact-train-number"
                 type="text"
                 required
+                inputMode="numeric"
                 maxLength={64}
                 autoComplete="off"
                 value={contactDetails.trainNumber || ""}
-                onChange={(e) => handleChange("trainNumber", e.target.value)}
+                // Indian train numbers are 5 digits; commas separate trains if the contingent splits.
+                onChange={(e) => handleChange("trainNumber", e.target.value.replace(/[^\d,\s]/g, ""))}
                 className={fieldClass}
-                placeholder="E.g., 12635 Vaigai Express"
+                placeholder="E.g., 12635 (or 12635, 12637)"
               />
             </div>
           )}

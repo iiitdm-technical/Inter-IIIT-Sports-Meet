@@ -69,6 +69,8 @@ export const eventEntrySchema = z.object({
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const inRange = (value, min, max) => isoDate.test(value) && value >= min && value <= max;
 const PHONE = /^\+?[0-9()\-\s]{6,32}$/;
+// One to three 5-digit Indian Railways train numbers, comma-separated.
+const TRAIN_NUMBERS_PATTERN = /^\d{5}(\s*,\s*\d{5}){0,2}$/;
 
 /** Name, phone and institute email of one sports secretary ("Boys" or "Girls"). */
 function secretaryFields(prefix, label) {
@@ -132,6 +134,8 @@ export const contactDetailsSchema = z.object({
   }
   if (details.travelMode === "Train" && !details.trainNumber) {
     ctx.addIssue({ code: "custom", path: ["trainNumber"], message: "Enter the train number you are arriving by" });
+  } else if (details.travelMode === "Train" && !TRAIN_NUMBERS_PATTERN.test(details.trainNumber)) {
+    ctx.addIssue({ code: "custom", path: ["trainNumber"], message: "Enter a 5-digit train number (separate up to 3 trains with commas)" });
   }
   if (details.travelMode === "Bus" && !details.arrivalPoint) {
     ctx.addIssue({ code: "custom", path: ["arrivalPoint"], message: "Choose the arrival bus terminus, or type it under Other" });
@@ -139,8 +143,8 @@ export const contactDetailsSchema = z.object({
 }).transform((details) => ({
   ...details,
   ...(details.travelMode === "Flight" ? { arrivalPoint: CHENNAI_AIRPORT } : {}),
-  // A train number only means something when travelling by train.
-  ...(details.travelMode === "Train" ? {} : { trainNumber: "" }),
+  // A train number only means something when travelling by train. Stored as "12635, 12637".
+  trainNumber: details.travelMode === "Train" ? details.trainNumber.split(",").map((n) => n.trim()).join(", ") : "",
 }));
 
 /**
