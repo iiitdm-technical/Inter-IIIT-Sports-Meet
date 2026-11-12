@@ -4,6 +4,7 @@ import { sports } from '@/data/sports';
 import Link from 'next/link';
 
 const SPORTS_EMAIL = 'sports@iiitdm.ac.in';
+const CONTACT_EMAILS = ['dean-sa@iiitdm.ac.in', 'pic-sports@iiitdm.ac.in', SPORTS_EMAIL];
 
 const enquiryTopics = ['Event enquiries', 'Registration help', 'Travel support', 'Sponsorship'];
 
@@ -19,7 +20,7 @@ export default function Contact() {
             <p className="eyebrow">Sports Cell · IIITDM Kancheepuram</p>
             <h2 id="contact-email-title" className="heading-section mt-3">Write to the organisers</h2>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-ink-soft">
-              One inbox handles every question about the meet. Include your institute name so the right coordinator can reply.
+              Write to us with any question about the meet. Include your institute name so the right coordinator can reply.
             </p>
 
             <ul className="mt-5 flex flex-wrap gap-2" aria-label="Topics handled">
@@ -30,14 +31,20 @@ export default function Contact() {
 
             <div className="mt-8 border-t border-line pt-6">
               <p className="meta">Email</p>
-              <a
-                href={`mailto:${SPORTS_EMAIL}`}
-                className="mt-1 inline-block break-all font-display text-3xl font-bold text-brand-primary underline decoration-brand-primary/30 decoration-2 underline-offset-4 transition-colors hover:decoration-brand-primary sm:text-4xl"
-              >
-                {SPORTS_EMAIL}
-              </a>
+              <ul className="mt-1 space-y-2">
+                {CONTACT_EMAILS.map((email) => (
+                  <li key={email}>
+                    <a
+                      href={`mailto:${email}`}
+                      className="inline-block break-all font-display text-2xl font-bold text-brand-primary underline decoration-brand-primary/30 decoration-2 underline-offset-4 transition-colors hover:decoration-brand-primary sm:text-3xl"
+                    >
+                      {email}
+                    </a>
+                  </li>
+                ))}
+              </ul>
               <div className="mt-6 flex flex-wrap gap-3">
-                <a href={`mailto:${SPORTS_EMAIL}`} className="btn btn-primary">Send an email</a>
+                <a href={`mailto:${CONTACT_EMAILS[0]}`} className="btn btn-primary">Send an email</a>
                 <Link href="/location" className="btn btn-outline">Travel guide &amp; map</Link>
               </div>
             </div>

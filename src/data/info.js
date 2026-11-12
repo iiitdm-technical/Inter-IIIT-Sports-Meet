@@ -3,10 +3,12 @@ import { sports } from "./sports";
 
 /** Phone contacts listed on the Contact page. `tel` is the dialable form; `name` is optional. */
 export const contactNumbers = [
+  { name: "Dr. Naveen Kumar", role: "Dean SA", display: "+91 63694 38985", tel: "+916369438985" },
+  { name: "Dr. K. P. Pradhan", role: "PIC Sports", display: "+91 70083 25721", tel: "+917008325721" },
   { name: "Mr. Alaguraj P", role: "PTI", display: "+91 86106 96546", tel: "+918610696546" },
   { name: "Tarun", role: "Sports Secretary", display: "+91 73494 29692", tel: "+917349429692" },
-  { name: "Sri Charan", role: "Sports Joint Secretary", display: "+91 63044 03973", tel: "+916304403973" },
-  { name: "Sanshrey", role: "Organising Team", display: "+91 91107 49788", tel: "+919110749788" },
+  // { name: "Sri Charan", role: "Sports Joint Secretary", display: "+91 63044 03973", tel: "+916304403973" },
+  // { name: "Sanshrey", role: "Organising Team", display: "+91 91107 49788", tel: "+919110749788" },
   { name: "Sriram", role: "Organising Team", display: "+91 98494 56070", tel: "+919849456070" },
 ];
 
