@@ -8,11 +8,13 @@ import { fieldControl, fieldLabel, liveApi } from "./api";
  * Schedules a new match, or edits an existing one's details (super admin).
  * Times are entered and shown in IST, whatever the device's time zone.
  */
-export default function ScheduleForm({ sports, iiits, rounds, pools = [], match = null, onSaved, onCancel, onConflict }) {
+export default function ScheduleForm({ sports, iiits, rounds, pools = [], match = null, tournament = null, onSaved, onCancel, onConflict }) {
   const editing = Boolean(match);
+  // Tournament matches may wait for a team (the winner of an earlier match).
+  const tournamentId = match?.tournamentId || tournament?.id || null;
   const [form, setForm] = useState(() => ({
-    sportId: match?.sportId || "",
-    gender: match?.gender || "",
+    sportId: match?.sportId || tournament?.sportId || "",
+    gender: match?.gender || tournament?.gender || "",
     eventId: match?.eventId || "",
     sideA: match?.sideA?.code || "",
     sideB: match?.sideB?.code || "",
@@ -45,12 +47,12 @@ export default function ScheduleForm({ sports, iiits, rounds, pools = [], match 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
-    const scheduledAt = fromIstInput(form.scheduledAt);
+    const scheduledAt = form.scheduledAt ? fromIstInput(form.scheduledAt) : null;
     if (!form.sportId || !form.gender) return setError("Choose the sport and category");
     if (isEvent && !form.eventId) return setError("Choose the event");
-    if (!isEvent && (!form.sideA || !form.sideB)) return setError("Choose both IIITs");
-    if (!isEvent && form.sideA === form.sideB) return setError("An IIIT cannot play itself");
-    if (!scheduledAt) return setError("Enter the date and time");
+    if (!isEvent && !tournamentId && (!form.sideA || !form.sideB)) return setError("Choose both IIITs");
+    if (!isEvent && form.sideA && form.sideA === form.sideB) return setError("An IIIT cannot play itself");
+    if (form.scheduledAt && !scheduledAt) return setError("Enter a valid date and time, or leave it empty");
 
     const common = {
       eventId: isEvent ? form.eventId : null,
@@ -67,7 +69,7 @@ export default function ScheduleForm({ sports, iiits, rounds, pools = [], match 
         method: "PATCH",
         body: { action: "details", version: match.version, ...common, ...(canChangeStatus ? { status: form.status } : {}) },
       })
-      : await liveApi("/api/admin/live/matches", { method: "POST", body: { sportId: form.sportId, gender: form.gender, ...common } });
+      : await liveApi("/api/admin/live/matches", { method: "POST", body: { sportId: form.sportId, gender: form.gender, ...common, ...(tournamentId ? { tournamentId } : {}) } });
     setBusy(false);
     if (!result.ok) {
       setError(result.error);
@@ -82,14 +84,14 @@ export default function ScheduleForm({ sports, iiits, rounds, pools = [], match 
     <form onSubmit={submit} className="grid grid-cols-1 gap-4 sm:grid-cols-2" noValidate>
       <div>
         <label htmlFor={`${idPrefix}-sport`} className={fieldLabel}>Sport</label>
-        <select id={`${idPrefix}-sport`} className={fieldControl} value={form.sportId} disabled={editing} onChange={(e) => set("sportId", e.target.value)}>
+        <select id={`${idPrefix}-sport`} className={fieldControl} value={form.sportId} disabled={editing || Boolean(tournament)} onChange={(e) => set("sportId", e.target.value)}>
           <option value="">Choose a sport</option>
           {sports.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
       </div>
       <div>
         <label htmlFor={`${idPrefix}-gender`} className={fieldLabel}>Category</label>
-        <select id={`${idPrefix}-gender`} className={fieldControl} value={form.gender} disabled={editing || !sport} onChange={(e) => set("gender", e.target.value)}>
+        <select id={`${idPrefix}-gender`} className={fieldControl} value={form.gender} disabled={editing || Boolean(tournament) || !sport} onChange={(e) => set("gender", e.target.value)}>
           <option value="">Choose a category</option>
           {(sport?.genders || []).map((gender) => <option key={gender} value={gender}>{genderLabel(gender)}</option>)}
         </select>
@@ -108,14 +110,14 @@ export default function ScheduleForm({ sports, iiits, rounds, pools = [], match 
           <div>
             <label htmlFor={`${idPrefix}-side-a`} className={fieldLabel}>IIIT (side A)</label>
             <select id={`${idPrefix}-side-a`} className={fieldControl} value={form.sideA} onChange={(e) => set("sideA", e.target.value)}>
-              <option value="">Choose an IIIT</option>
+              <option value="">{tournamentId ? "To be decided" : "Choose an IIIT"}</option>
               {iiits.map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor={`${idPrefix}-side-b`} className={fieldLabel}>IIIT (side B)</label>
             <select id={`${idPrefix}-side-b`} className={fieldControl} value={form.sideB} onChange={(e) => set("sideB", e.target.value)}>
-              <option value="">Choose an IIIT</option>
+              <option value="">{tournamentId ? "To be decided" : "Choose an IIIT"}</option>
               {iiits.filter((item) => item.code !== form.sideA).map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
             </select>
           </div>
@@ -143,7 +145,7 @@ export default function ScheduleForm({ sports, iiits, rounds, pools = [], match 
         <input id={`${idPrefix}-venue`} className={fieldControl} value={form.venue} maxLength={128} onChange={(e) => set("venue", e.target.value)} placeholder="e.g. Main Ground" />
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-when`} className={fieldLabel}>Date and time (IST)</label>
+        <label htmlFor={`${idPrefix}-when`} className={fieldLabel}>Date and time (IST, optional)</label>
         <input id={`${idPrefix}-when`} type="datetime-local" className={fieldControl} value={form.scheduledAt} onChange={(e) => set("scheduledAt", e.target.value)} />
       </div>
       {editing && canChangeStatus && (

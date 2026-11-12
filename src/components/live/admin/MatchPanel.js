@@ -5,7 +5,6 @@ import { formatWhen, genderLabel, ordinal, stageLabel } from "@/lib/live/format"
 import ScheduleForm from "./ScheduleForm";
 import { fieldControl, fieldLabel, liveApi } from "./api";
 
-const MEDAL_ROUNDS = ["Final", "3rd place"];
 const STATUS_LABEL = { scheduled: "Scheduled", live: "Live", completed: "Finished", postponed: "Postponed", cancelled: "Cancelled" };
 
 function Stepper({ label, value, onChange, disabled }) {
@@ -172,17 +171,17 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
     onNotice("Match deleted");
   };
 
-  const finalRound = MEDAL_ROUNDS.includes(match.round);
+  const sidesKnown = !isVersus || (match.sideA && match.sideB);
 
   return (
     <article className={`card p-4 sm:p-5 ${match.status === "live" ? "ring-2 ring-red-600/60" : ""}`} aria-labelledby={`${idPrefix}-title`}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 id={`${idPrefix}-title`} className="font-display text-lg font-bold uppercase leading-tight text-ink">
-            {isVersus ? `${match.sideA?.name || "?"} vs ${match.sideB?.name || "?"}` : match.eventName}
+            {isVersus ? `${match.sideA?.name || "To be decided"} vs ${match.sideB?.name || "To be decided"}` : match.eventName}
           </h3>
           <p className="meta mt-0.5">
-            {[match.sportName, genderLabel(match.gender), stageLabel(match), match.venue, formatWhen(match.scheduledAt)].filter(Boolean).join(" · ")}
+            {[match.sportName, genderLabel(match.gender), stageLabel(match), match.bracketSlot, match.venue, match.scheduledAt ? formatWhen(match.scheduledAt) : "Time TBA"].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -192,7 +191,10 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
       </header>
 
       <div className="mt-4 space-y-4">
-        {["scheduled", "postponed"].includes(match.status) && (
+        {["scheduled", "postponed"].includes(match.status) && !sidesKnown && (
+          <p className="text-sm text-ink-soft">Waiting for both teams: the winners of the earlier matches move here when those finish{isSuper ? ", or set them with Edit details" : ""}.</p>
+        )}
+        {["scheduled", "postponed"].includes(match.status) && sidesKnown && (
           <button type="button" className="btn btn-primary w-full sm:w-auto" disabled={busy} onClick={() => act({ action: "start" }, "Match started: it is now live on the board")}>
             {busy ? "Starting…" : isVersus ? "Start match" : "Start event"}
           </button>
@@ -241,7 +243,7 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
                       <span>{side.name} won</span>
                     </label>
                   ))}
-                  {!finalRound && (
+                  {match.drawAllowed && (
                     <label className="flex min-h-12 items-center gap-2 rounded-control border border-line bg-white px-3 py-2">
                       <input type="radio" name={`${idPrefix}-winner`} value="draw" checked={winner === "draw"} onChange={() => setWinner("draw")} />
                       <span>Draw</span>
@@ -276,7 +278,8 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
           <div className="flex flex-wrap gap-2 border-t border-line pt-4">
             {match.status === "completed" && (
               <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => {
-                if (window.confirm("Reopen this match? It goes back to live and leaves the results and medal tally until finished again.")) act({ action: "reopen" }, "Match reopened");
+                const advance = match.nextMatchId ? " Its winner is taken back out of the next match, unless that match has started (then change it by hand)." : "";
+                if (window.confirm(`Reopen this match? It goes back to live and leaves the results and medal tally until finished again.${advance}`)) act({ action: "reopen" }, "Match reopened");
               }}>Reopen</button>
             )}
             <button type="button" className="btn btn-outline btn-sm" aria-expanded={mode === "edit"} onClick={() => setMode(mode === "edit" ? "" : "edit")}>Edit details</button>

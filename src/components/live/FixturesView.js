@@ -18,26 +18,26 @@ function Result({ match }) {
 function Sides({ match }) {
   if (match.kind === "event") return <p className="font-semibold text-ink">{match.eventName}</p>;
   const showScore = match.status === "live" || match.status === "completed";
-  const line = (side, score) => (
+  const line = (side, score, placeholder) => (
     <span className={`flex items-baseline justify-between gap-3 ${match.status === "completed" && match.winner === side?.code ? "font-bold text-ink" : "text-ink-soft"}`}>
-      <span className="min-w-0">{side?.name || "To be decided"}</span>
+      <span className="min-w-0">{side?.name || placeholder || "To be decided"}</span>
       {showScore && <span className="shrink-0 font-display text-lg font-bold tabular-nums text-ink">{score ?? 0}</span>}
     </span>
   );
   return (
     <div className="space-y-0.5">
-      {line(match.sideA, match.scoreA)}
-      {line(match.sideB, match.scoreB)}
+      {line(match.sideA, match.scoreA, match.placeholderA)}
+      {line(match.sideB, match.scoreB, match.placeholderB)}
     </div>
   );
 }
 
-/** The whole schedule, grouped by day (IST), in time order. */
+/** The whole schedule, grouped by day (IST), in time order; untimed matches last. */
 export default function FixturesView({ matches }) {
   const days = [];
   for (const match of matches) {
-    const key = dayKey.format(new Date(match.scheduledAt));
-    if (days.at(-1)?.key !== key) days.push({ key, label: formatDay(match.scheduledAt), matches: [] });
+    const key = match.scheduledAt ? dayKey.format(new Date(match.scheduledAt)) : "tba";
+    if (days.at(-1)?.key !== key) days.push({ key, label: match.scheduledAt ? formatDay(match.scheduledAt) : "Time to be announced", matches: [] });
     days.at(-1).matches.push(match);
   }
   if (!days.length) return <p className="card-tint rounded-card px-4 py-5 text-sm text-ink-soft">The schedule will appear here.</p>;
@@ -49,7 +49,7 @@ export default function FixturesView({ matches }) {
           <ol className="card divide-y divide-line">
             {day.matches.map((match) => (
               <li key={match.id} className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-1 p-3 sm:grid-cols-[5.5rem_minmax(0,14rem)_minmax(0,1fr)_auto] sm:items-center sm:p-4">
-                <p className="font-display text-sm font-bold text-ink sm:text-base">{formatTime(match.scheduledAt)}</p>
+                <p className="font-display text-sm font-bold text-ink sm:text-base">{match.scheduledAt ? formatTime(match.scheduledAt) : "TBA"}</p>
                 <div className="min-w-0">
                   <p className="font-display text-sm font-bold uppercase tracking-wide text-brand-primary">{match.sportName}</p>
                   <p className="meta">{[genderLabel(match.gender), stageLabel(match), match.venue].filter(Boolean).join(" · ")}</p>

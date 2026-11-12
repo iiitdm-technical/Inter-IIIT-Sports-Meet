@@ -12,13 +12,24 @@ export const MATCH_KINDS = ["versus", "event"];
 export const COORDINATOR_GENDERS = ["all", "M", "F", "mixed"];
 
 // "Final" and "3rd place" decide medals; the rest are earlier stages.
-export const ROUNDS = ["League", "Pool", "Round of 16", "Quarter-final", "Semi-final", "3rd place", "Final", "Heat"];
+export const ROUNDS = ["League", "Pool", "Round of 32", "Round of 16", "Quarter-final", "Semi-final", "3rd place", "Final", "Heat", "Replay"];
 export const MEDAL_ROUNDS = { final: "Final", bronze: "3rd place" };
 
-// Group stage: pools A–H and the points a pool table awards.
-// Placeholder until the Sports Board confirms the rules (LIVE_RESULTS_PLAN.md, open question 2).
-export const POOLS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+// Group stage: pools A–Z and the default points a pool table awards. Each
+// tournament sets its own points; these apply to pool matches outside one.
+export const POOLS = Array.from({ length: 26 }, (_, i) => String.fromCharCode(65 + i));
 export const POOL_POINTS = { win: 3, draw: 1, loss: 0, confirmed: false };
+
+// Knockout brackets: sizes the Sports SAC can choose, and round names by the
+// number of teams left in the round.
+export const BRACKET_SIZES = [2, 4, 8, 16, 32];
+export function knockoutRoundName(teams) {
+  return { 2: "Final", 4: "Semi-final", 8: "Quarter-final", 16: "Round of 16", 32: "Round of 32" }[teams] || `Round of ${teams}`;
+}
+export function knockoutSlotPrefix(teams) {
+  return { 2: "F", 4: "SF", 8: "QF", 16: "R16-", 32: "R32-" }[teams] || `R${teams}-`;
+}
+export const THIRD_PLACE_SLOT = "3P";
 
 function slugify(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");

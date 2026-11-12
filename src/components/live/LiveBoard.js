@@ -184,6 +184,7 @@ export default function LiveBoard({ sports, iiits, initialFilters }) {
           <span>Loading live results…</span>
         )}
         {lastOk && <span>Last updated {agoLabel(new Date(lastOk).toISOString(), now)}</span>}
+        <a href="/brackets" className="font-semibold text-brand-primary underline underline-offset-2">Brackets</a>
         {filtered && (
           <button type="button" className="font-semibold text-brand-primary underline underline-offset-2" onClick={() => {
             const next = { sport: "", gender: "", iiit: "", view: values.view };
