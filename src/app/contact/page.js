@@ -1,10 +1,9 @@
 import PageHeader from '@/components/PageHeader';
-import { eventInfo, contactNumbers } from '@/data/info';
+import { eventInfo, contactNumbers, contactEmails as CONTACT_EMAILS } from '@/data/info';
 import { sports } from '@/data/sports';
 import Link from 'next/link';
 
 const SPORTS_EMAIL = 'sports@iiitdm.ac.in';
-const CONTACT_EMAILS = ['dean-sa@iiitdm.ac.in', 'pic-sports@iiitdm.ac.in', SPORTS_EMAIL];
 
 const enquiryTopics = ['Event enquiries', 'Registration help', 'Travel support', 'Sponsorship'];
 

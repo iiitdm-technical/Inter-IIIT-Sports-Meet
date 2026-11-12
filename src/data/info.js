@@ -1,6 +1,9 @@
 import { iiits } from "./iiits";
 import { sports } from "./sports";
 
+/** Contact emails, in display order. */
+export const contactEmails = ["dean-sa@iiitdm.ac.in", "pic-sports@iiitdm.ac.in", "sports@iiitdm.ac.in"];
+
 /** Phone contacts listed on the Contact page. `tel` is the dialable form; `name` is optional. */
 export const contactNumbers = [
   { name: "Dr. Naveen Kumar", role: "Dean SA", display: "+91 63694 38985", tel: "+916369438985" },

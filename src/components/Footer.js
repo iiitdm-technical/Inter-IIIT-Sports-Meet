@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { eventInfo, contactNumbers } from '@/data/info';
+import { eventInfo, contactNumbers, contactEmails } from '@/data/info';
 import { iiits } from '@/data/iiits';
 
 const footerLinks = [
@@ -34,6 +34,12 @@ export default function Footer() {
             <p className="mt-5 font-display text-lg font-bold uppercase tracking-[0.04em] text-brand-highlight">
               {eventInfo.dates}
             </p>
+            <p className="mt-4 text-sm text-white/75">
+              Hosted by <span className="font-semibold text-white">{eventInfo.host}</span>
+            </p>
+            <Link href="/register" className="btn btn-accent btn-sm mt-5 px-5">
+              Register now
+            </Link>
           </div>
 
           {/* Quick links */}
@@ -53,17 +59,17 @@ export default function Footer() {
           {/* Contact + CTA */}
           <div className="md:col-span-3">
             <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.16em] text-brand-highlight">Contact</h2>
-            <address className="mb-6 space-y-3 not-italic">
-              <p className="text-sm text-white/75">
-                <span className="mb-0.5 block font-semibold text-white">{eventInfo.host}</span>
-                Kancheepuram, Tamil Nadu
-              </p>
-              <a href="mailto:sports@iiitdm.ac.in" className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
-                sports@iiitdm.ac.in
-              </a>
-              <a href={`tel:${contactNumbers[0].tel}`} className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
-                {contactNumbers[0].role}: {contactNumbers[0].display}
-              </a>
+            <address className="space-y-3 not-italic">
+              {contactEmails.map((email) => (
+                <a key={email} href={`mailto:${email}`} className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
+                  {email}
+                </a>
+              ))}
+              {[contactNumbers[1], contactNumbers[2]].map((contact) => (
+                <a key={contact.tel} href={`tel:${contact.tel}`} className="block text-sm text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline">
+                  {contact.name}: {contact.display}
+                </a>
+              ))}
               <a
                 href={eventInfo.instagram.url}
                 target="_blank"
@@ -79,18 +85,12 @@ export default function Footer() {
                 <span className="sr-only">on Instagram (opens in a new tab)</span>
               </a>
             </address>
-            <Link href="/register" className="btn btn-accent btn-sm px-5">
-              Register now
-            </Link>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-8 md:flex-row">
-          <p className="text-xs text-white/65">© 2026 All India Inter-IIIT Sports Meet. All rights reserved.</p>
-          <p className="text-xs text-white/65">
-            Hosted by <span className="font-semibold text-white/85">{eventInfo.host}</span> · Website by <span className="font-semibold text-white/85">CS Club, IIITDM Kancheepuram</span>
-          </p>
+        <div className="border-t border-white/10 pt-8 text-center">
+          <p className="text-xs text-white/65">© 2026 IIITDM Kancheepuram. All rights reserved.</p>
         </div>
       </div>
     </footer>
