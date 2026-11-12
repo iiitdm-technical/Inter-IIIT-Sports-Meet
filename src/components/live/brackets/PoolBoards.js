@@ -64,6 +64,7 @@ export default function PoolBoards({ pools, tournament, highlight }) {
                         <td className="px-4 py-2.5 text-ink-muted">{row.rank}</td>
                         <th scope="row" className="px-2 py-2.5 text-left font-semibold text-ink">
                           {row.iiitName}
+                          {row.adjustment && <span className="ml-1 text-gold-text" title="Corrected by the Sports Board">*</span>}
                           {row.qualifies && <span className="ml-1.5 text-xs font-bold text-brand-primary" title="Qualifies">Q</span>}
                         </th>
                         <td className="px-2 py-2.5 text-center tabular-nums">{row.played}</td>
@@ -77,6 +78,13 @@ export default function PoolBoards({ pools, tournament, highlight }) {
                   </tbody>
                 </table>
               </div>
+              {pool.rows.some((row) => row.adjustment) && (
+                <ul className="meta border-t border-line px-4 py-2">
+                  {pool.rows.filter((row) => row.adjustment).map((row) => (
+                    <li key={row.iiitCode}>* {row.iiitName}: record corrected by the Sports Board{row.adjustment.note ? ` (${row.adjustment.note})` : ""}.</li>
+                  ))}
+                </ul>
+              )}
               <details className="group border-t border-line">
                 <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-semibold text-brand-primary">
                   <span className="group-open:hidden">Show matches ({pool.matches.filter((m) => m.status !== "cancelled").length})</span>

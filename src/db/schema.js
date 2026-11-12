@@ -248,6 +248,9 @@ export const tournaments = mysqlTable("tournaments", {
 /**
  * tournament_teams: the IIITs in a tournament and their pool. manual_rank,
  * when set for every team in a pool, replaces the computed standings order.
+ * adj_won / adj_drawn / adj_lost are hand corrections added to the wins,
+ * draws and losses counted from results (e.g. a walkover or a Sports Board
+ * decision); points follow from them. adj_note says why.
  */
 export const tournamentTeams = mysqlTable("tournament_teams", {
   id: int("id").autoincrement().primaryKey(),
@@ -256,6 +259,10 @@ export const tournamentTeams = mysqlTable("tournament_teams", {
   pool: varchar("pool", { length: 16 }).default("").notNull(),
   position: int("position").default(0).notNull(),
   manualRank: int("manual_rank"),
+  adjWon: int("adj_won").default(0).notNull(),
+  adjDrawn: int("adj_drawn").default(0).notNull(),
+  adjLost: int("adj_lost").default(0).notNull(),
+  adjNote: varchar("adj_note", { length: 255 }).default("").notNull(),
 }, (table) => [
   uniqueIndex("tournament_team_unique").on(table.tournamentId, table.iiitCode),
 ]);

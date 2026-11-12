@@ -249,7 +249,8 @@ export async function getTournament(id) {
     const manualOrder = members.length && members.every((team) => team.manualRank !== null)
       ? members.slice().sort((a, b) => a.manualRank - b.manualRank).map((team) => team.iiitCode)
       : null;
-    const { rows, manual } = rankPool(members.map((team) => ({ code: team.iiitCode, name: iiitName(team.iiitCode) })), counted, points, manualOrder);
+    const adjustments = new Map(members.map((team) => [team.iiitCode, { won: team.adjWon, drawn: team.adjDrawn, lost: team.adjLost, note: team.adjNote }]));
+    const { rows, manual } = rankPool(members.map((team) => ({ code: team.iiitCode, name: iiitName(team.iiitCode) })), counted, points, manualOrder, adjustments);
     return {
       pool,
       teams: members.map((team) => ({ code: team.iiitCode, name: iiitName(team.iiitCode) })),
@@ -415,9 +416,48 @@ export async function setTeams(id, { version, teams }, actor) {
     const pools = new Set([...before.map((t) => t.pool), ...cleaned.map((t) => t.pool)]);
     const unchanged = new Set([...pools].filter((pool) => membership(before, pool) === membership(cleaned, pool)));
     const keepRank = new Map(before.filter((team) => unchanged.has(team.pool)).map((team) => [team.iiitCode, team.manualRank]));
+    // Hand corrections stay with a team while it stays in the same pool.
+    const keepAdjustment = new Map(cleaned.map((team) => {
+      const old = before.find((item) => item.iiitCode === team.iiitCode && item.pool === team.pool);
+      return [team.iiitCode, old ? { adjWon: old.adjWon, adjDrawn: old.adjDrawn, adjLost: old.adjLost, adjNote: old.adjNote } : {}];
+    }));
     await tx.delete(tournamentTeams).where(eq(tournamentTeams.tournamentId, id));
     if (cleaned.length) {
-      await tx.insert(tournamentTeams).values(cleaned.map((team) => ({ ...team, tournamentId: id, manualRank: keepRank.get(team.iiitCode) ?? null })));
+      await tx.insert(tournamentTeams).values(cleaned.map((team) => ({ ...team, ...keepAdjustment.get(team.iiitCode), tournamentId: id, manualRank: keepRank.get(team.iiitCode) ?? null })));
+    }
+    await bumpTournament(tx, row, actor);
+  });
+  invalidateBoard();
+}
+
+/**
+ * Sets a pool's wins, draws and losses by hand. `teams` gives the totals the
+ * Sports SAC wants shown; what is stored is the difference from the results
+ * counted right now, so results entered later still count on top. Totals
+ * equal to the counted ones clear the correction.
+ */
+export async function setPoolRecords(id, { pool, teams }, actor) {
+  const db = getDb();
+  await db.transaction(async (tx) => {
+    const row = await loadTournamentRow(id, tx);
+    const members = await tx.select().from(tournamentTeams).where(and(eq(tournamentTeams.tournamentId, id), eq(tournamentTeams.pool, pool)));
+    if (!members.length) throw httpError(404, "Pool not found");
+    const codes = new Set(members.map((team) => team.iiitCode));
+    const poolMatches = await withPlacings(
+      (await tx.select().from(matches).where(and(eq(matches.tournamentId, id), eq(matches.pool, pool), eq(matches.bracketSlot, ""))))
+        .filter((match) => match.status !== "cancelled" && codes.has(match.sideA) && codes.has(match.sideB)),
+      new Map([[row.id, row]]),
+    );
+    const counted = new Map(rankPool(members.map((team) => ({ code: team.iiitCode, name: iiitName(team.iiitCode) })), poolMatches, tournamentPoints(row)).rows
+      .map((standing) => [standing.iiitCode, standing]));
+    for (const item of teams) {
+      if (!codes.has(item.iiitCode)) throw httpError(400, `${iiitName(item.iiitCode)} is not in Pool ${pool}`);
+      const base = counted.get(item.iiitCode);
+      const changes = item.reset
+        ? { adjWon: 0, adjDrawn: 0, adjLost: 0, adjNote: "" }
+        : { adjWon: item.won - base.won, adjDrawn: item.drawn - base.drawn, adjLost: item.lost - base.lost, adjNote: item.note || "" };
+      if (!changes.adjWon && !changes.adjDrawn && !changes.adjLost) changes.adjNote = "";
+      await tx.update(tournamentTeams).set(changes).where(and(eq(tournamentTeams.tournamentId, id), eq(tournamentTeams.iiitCode, item.iiitCode)));
     }
     await bumpTournament(tx, row, actor);
   });

@@ -41,7 +41,10 @@ export default function PoolTables({ pools, points, highlight }) {
                     {group.rows.map((row, index) => (
                       <tr key={row.iiitCode} className={`border-t border-line ${row.iiitCode === highlight ? "bg-gold-wash" : ""}`}>
                         <td className="px-4 py-2.5 text-ink-muted">{index + 1}</td>
-                        <th scope="row" className="px-2 py-2.5 text-left font-semibold text-ink">{row.iiitName}</th>
+                        <th scope="row" className="px-2 py-2.5 text-left font-semibold text-ink">
+                          {row.iiitName}
+                          {row.adjustment && <span className="ml-1 text-gold-text" title={`Corrected by the Sports Board${row.adjustment.note ? `: ${row.adjustment.note}` : ""}`}>*</span>}
+                        </th>
                         <td className="px-2 py-2.5 text-center tabular-nums">{row.played}</td>
                         <td className="px-2 py-2.5 text-center tabular-nums">{row.won}</td>
                         <td className="px-2 py-2.5 text-center tabular-nums">{row.drawn}</td>

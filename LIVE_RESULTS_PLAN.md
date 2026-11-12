@@ -17,7 +17,7 @@ Status: **phase 1 built** on branch `feature/live-results` (3 Nov 2026), not yet
 - **Admin** (`/admin/live` → Brackets, super admin only):
   1. Teams and pools: any number of pools and teams; "Spread evenly" is a helper.
   2. Pool matches: round-robin; preview, then apply. Played matches are never removed.
-  3. Standings: points, then head-to-head, score difference, score; any pool's order can be set by hand.
+  3. Standings: points, then head-to-head, score difference, score; any pool's order can be set by hand, and any team's wins, draws and losses can be corrected by hand with a public reason (stored as a correction on top of the results, so later results still count; migration `0007_standings_adjustments`).
   4. Knockout: 2–32 teams placed by hand (pre-fill from standings is a suggestion); empty positions are byes. Winners, and semi-final losers to the 3rd-place match, move on automatically; reopening a match takes them back out if the next match has not started.
   5. Schedule (optional): times and venues in play order within a daily window. Every match stays editable and deletable one by one.
 - **Public** `/brackets?t=<id>&view=bracket|schedule|list`: pool leaderboards with match logs, the knockout tree, the schedule and the full match log; linked from `/live` (not in the navbar while Live is hidden).

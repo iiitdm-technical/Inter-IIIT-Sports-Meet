@@ -109,6 +109,19 @@ export const poolOrderSchema = z.object({
   order: z.array(code).max(64).nullable(), // null clears the manual order
 });
 
+const tally = z.number().int().min(0).max(99);
+export const poolRecordsSchema = z.object({
+  pool,
+  teams: z.array(z.object({
+    iiitCode: code,
+    won: tally.default(0),
+    drawn: tally.default(0),
+    lost: tally.default(0),
+    note: text(255).optional().default(""),
+    reset: z.boolean().optional().default(false),
+  })).min(1).max(64),
+});
+
 export const poolMatchesSchema = z.object({ apply: z.boolean().default(false) });
 
 export const bracketSchema = z.object({

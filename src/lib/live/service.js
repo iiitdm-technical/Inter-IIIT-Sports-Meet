@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { coordinatorSports, eventPlacings, matchChanges, matches, sessions, tournaments, users } from "../../db/schema.js";
+import { coordinatorSports, eventPlacings, matchChanges, matches, sessions, tournamentTeams, tournaments, users } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
 import { httpError } from "../security/request.js";
 import { getSportName } from "../registration/labels.js";
@@ -176,9 +176,11 @@ const countsInTable = (match) => match.kind === "versus" && match.status === "co
  * among the teams level on points, then score difference, then score, then
  * name. `teams` lists every team drawn into the pool (code and name), so a
  * team appears before it plays; `manualOrder` (codes) replaces the order when
- * the Sports SAC has set it by hand.
+ * the Sports SAC has set it by hand. `adjustments` (code → { won, drawn,
+ * lost, note }) are hand corrections added to the counted wins, draws and
+ * losses; points follow from them. Head-to-head uses results only.
  */
-export function rankPool(teams, poolMatches, points, manualOrder = null) {
+export function rankPool(teams, poolMatches, points, manualOrder = null, adjustments = null) {
   const rows = new Map();
   for (const team of teams) rows.set(team.code, emptyStanding(team.code, team.name));
   const ensure = (side) => {
@@ -200,6 +202,18 @@ export function rankPool(teams, poolMatches, points, manualOrder = null) {
       team.diff = team.scored - team.conceded;
       team.points += result === "won" ? points.win : result === "drawn" ? points.draw : points.loss;
     }
+  }
+
+  for (const row of rows.values()) {
+    const adj = adjustments?.get(row.iiitCode);
+    row.adjustment = null;
+    if (!adj || (!adj.won && !adj.drawn && !adj.lost)) continue;
+    row.adjustment = { won: adj.won, drawn: adj.drawn, lost: adj.lost, note: adj.note || "" };
+    row.won += adj.won;
+    row.drawn += adj.drawn;
+    row.lost += adj.lost;
+    row.played += adj.won + adj.drawn + adj.lost;
+    row.points += adj.won * points.win + adj.drawn * points.draw + adj.lost * points.loss;
   }
 
   const list = [...rows.values()];
@@ -229,12 +243,32 @@ export function rankPool(teams, poolMatches, points, manualOrder = null) {
   return { rows: list, manual };
 }
 
+function adjustmentsFor(all, tournamentId) {
+  if (!tournamentId) return null;
+  const map = new Map();
+  for (const [key, value] of all) {
+    const [id, code] = key.split("|");
+    if (Number(id) === tournamentId) map.set(code, value);
+  }
+  return map;
+}
+
+/** Hand corrections to pool standings, keyed "tournamentId|iiitCode". */
+export async function loadAdjustments(tournamentIds) {
+  const ids = [...new Set(tournamentIds.filter(Boolean))];
+  if (!ids.length) return new Map();
+  const rows = await getDb().select().from(tournamentTeams).where(inArray(tournamentTeams.tournamentId, ids));
+  return new Map(rows
+    .filter((row) => row.adjWon || row.adjDrawn || row.adjLost)
+    .map((row) => [`${row.tournamentId}|${row.iiitCode}`, { won: row.adjWon, drawn: row.adjDrawn, lost: row.adjLost, note: row.adjNote }]));
+}
+
 /**
  * Pool (group-stage) tables per tournament (or sport and category, for pool
  * matches outside a tournament) and pool, from completed pool matches. Each
  * tournament's own points apply. Every IIIT with a pool match is listed.
  */
-export function computePoolTables(list, tournamentMap = new Map()) {
+export function computePoolTables(list, tournamentMap = new Map(), adjustments = new Map()) {
   const groups = new Map();
   for (const match of list) {
     if (match.kind !== "versus" || !match.pool || match.status === "cancelled") continue;
@@ -257,7 +291,7 @@ export function computePoolTables(list, tournamentMap = new Map()) {
       ...group,
       played: poolMatches.filter(countsInTable).length,
       total: poolMatches.length,
-      rows: rankPool([...teams.values()], poolMatches, group.points).rows,
+      rows: rankPool([...teams.values()], poolMatches, group.points, null, adjustmentsFor(adjustments, group.tournamentId)).rows,
     }))
     .sort((x, y) => x.sportName.localeCompare(y.sportName) || x.gender.localeCompare(y.gender) || x.tournamentName.localeCompare(y.tournamentName) || x.pool.localeCompare(y.pool));
 }
@@ -285,7 +319,7 @@ export async function getFixtures({ sport = "", gender = "", iiit = "" } = {}) {
   const cached = fixturesCache.get(key);
   if (cached && Date.now() - cached.at < FIXTURES_CACHE_MS) return cached.data;
   const { list: all, tournamentMap } = await loadBoardMatches({ sport, gender });
-  let pools = computePoolTables(all, tournamentMap);
+  let pools = computePoolTables(all, tournamentMap, await loadAdjustments([...tournamentMap.keys()]));
   if (iiit) pools = pools.filter((group) => group.rows.some((r) => r.iiitCode === iiit));
   const [sampleRow] = await getDb().select({ count: sql`COUNT(*)` }).from(matches).where(eq(matches.isSample, true));
   const data = {

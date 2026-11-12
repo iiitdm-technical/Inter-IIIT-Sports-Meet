@@ -159,3 +159,20 @@ test("tournament and bracket requests are validated", () => {
   assert.ok(!bracketSchema.safeParse({ size: 6, thirdPlace: false, slots: [] }).success);
   assert.ok(bracketSchema.safeParse({ size: 4, thirdPlace: true, slots: ["a", null, "b", "c"] }).success);
 });
+
+test("hand corrections to wins, draws and losses change played and points, not head-to-head", () => {
+  const teams = ["a", "b"].map((code) => ({ code, name: code }));
+  const matches = [played("a", "b", 2, 0)];
+  const points = { win: 3, draw: 1, loss: 0 };
+  // b is awarded a walkover win over someone else: +1 W.
+  const { rows } = rankPool(teams, matches, points, null, new Map([["b", { won: 1, drawn: 0, lost: 0, note: "Walkover" }]]));
+  const b = rows.find((r) => r.iiitCode === "b");
+  assert.deepEqual([b.played, b.won, b.lost, b.points], [2, 1, 1, 3]);
+  assert.equal(b.adjustment.note, "Walkover");
+  // Level on points; a won the match between them.
+  assert.deepEqual(rows.map((r) => r.iiitCode), ["a", "b"]);
+  // A negative correction (a result taken away).
+  const taken = rankPool(teams, matches, points, null, new Map([["a", { won: -1, drawn: 0, lost: 1, note: "" }]])).rows.find((r) => r.iiitCode === "a");
+  assert.deepEqual([taken.won, taken.lost, taken.points, taken.played], [0, 1, 0, 1]);
+  assert.equal(rankPool(teams, matches, points).rows[0].adjustment, null);
+});
