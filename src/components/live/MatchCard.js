@@ -12,7 +12,7 @@ function StatusChip({ match }) {
   }
   if (match.status === "completed") return <span className="chip">Final</span>;
   if (match.status === "postponed") return <span className="chip chip-gold">Postponed</span>;
-  return <span className="chip">{formatWhen(match.scheduledAt)}</span>;
+  return <span className="chip">{match.scheduledAt ? formatWhen(match.scheduledAt) : "Time TBA"}</span>;
 }
 
 function Side({ side, score, isWinner, showScore }) {

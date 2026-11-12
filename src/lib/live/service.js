@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { coordinatorSports, eventPlacings, matchChanges, matches, sessions, users } from "../../db/schema.js";
+import { coordinatorSports, eventPlacings, matchChanges, matches, sessions, tournaments, users } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
 import { httpError } from "../security/request.js";
 import { getSportName } from "../registration/labels.js";
@@ -41,9 +41,18 @@ export function scopeAllows(scope, match) {
 // ---------------------------------------------------------------------------
 // Reading
 
-function toPublicMatch(row, placings = []) {
+function toPublicMatch(row, placings = [], tournament = null) {
   return {
     id: row.id,
+    tournamentId: row.tournamentId || null,
+    bracketSlot: row.bracketSlot || "",
+    nextMatchId: row.nextMatchId || null,
+    nextSide: row.nextSide || null,
+    loserNextMatchId: row.loserNextMatchId || null,
+    loserNextSide: row.loserNextSide || null,
+    // A draw is never allowed in a knockout match, a final or a 3rd-place match,
+    // nor in a tournament whose pool matches must have a winner.
+    drawAllowed: drawAllowed(row, tournament),
     sportId: row.sportId,
     sportName: getSportName(row.sportId),
     gender: row.gender,
@@ -74,7 +83,36 @@ function toPublicMatch(row, placings = []) {
   };
 }
 
-async function withPlacings(rows) {
+export function drawAllowed(row, tournament) {
+  if (row.kind !== "versus") return false;
+  if ([MEDAL_ROUNDS.final, MEDAL_ROUNDS.bronze].includes(row.round)) return false;
+  if (row.bracketSlot) return false;
+  if (tournament && !tournament.allowDraws) return false;
+  return true;
+}
+
+/** Pool points for a tournament, or the default for pool matches outside one. */
+export function tournamentPoints(tournament) {
+  return tournament
+    ? { win: tournament.pointsWin, draw: tournament.pointsDraw, loss: tournament.pointsLoss, confirmed: true }
+    : POOL_POINTS;
+}
+
+export async function loadTournamentMap(ids) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return new Map();
+  const rows = await getDb().select().from(tournaments).where(inArray(tournaments.id, unique));
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** Time-to-be-announced matches sort after timed ones. */
+export function byScheduleThenId(a, b) {
+  const x = a.scheduledAt ? new Date(a.scheduledAt).getTime() : Infinity;
+  const y = b.scheduledAt ? new Date(b.scheduledAt).getTime() : Infinity;
+  return x - y || a.id - b.id;
+}
+
+export async function withPlacings(rows, tournamentMap = null) {
   const eventIds = rows.filter((row) => row.kind === "event").map((row) => row.id);
   const placings = eventIds.length
     ? await getDb().select().from(eventPlacings).where(inArray(eventPlacings.matchId, eventIds))
@@ -84,7 +122,11 @@ async function withPlacings(rows) {
     if (!byMatch.has(placing.matchId)) byMatch.set(placing.matchId, []);
     byMatch.get(placing.matchId).push(placing);
   }
-  return rows.map((row) => toPublicMatch(row, byMatch.get(row.id) || []));
+  const map = tournamentMap || await loadTournamentMap(rows.map((row) => row.tournamentId));
+  return rows
+    .slice()
+    .sort(byScheduleThenId)
+    .map((row) => toPublicMatch(row, byMatch.get(row.id) || [], map.get(row.tournamentId) || null));
 }
 
 /** Gold/silver/bronze per IIIT, from completed finals and 3rd-place matches only. */
@@ -118,52 +160,106 @@ export function computeMedals(completed) {
     b.gold - a.gold || b.silver - a.silver || b.bronze - a.bronze || a.iiitName.localeCompare(b.iiitName));
 }
 
+function emptyStanding(code, name) {
+  return { iiitCode: code, iiitName: name || iiitName(code), played: 0, won: 0, drawn: 0, lost: 0, scored: 0, conceded: 0, diff: 0, points: 0 };
+}
+
+function resultFor(match, code) {
+  if (match.winner === "draw") return "drawn";
+  return match.winner === code ? "won" : "lost";
+}
+
+const countsInTable = (match) => match.kind === "versus" && match.status === "completed" && match.sideA?.code && match.sideB?.code && match.winner;
+
 /**
- * Pool (group-stage) tables per sport, category and pool, from completed
- * pool matches. Every IIIT drawn into a pool is listed, even before it plays.
- * Ranked by points, then score difference, then scored, then name.
+ * Ranks one pool. Teams are ordered by points, then head-to-head points
+ * among the teams level on points, then score difference, then score, then
+ * name. `teams` lists every team drawn into the pool (code and name), so a
+ * team appears before it plays; `manualOrder` (codes) replaces the order when
+ * the Sports SAC has set it by hand.
  */
-export function computePoolTables(list) {
-  const groups = new Map();
-  const row = (group, side) => {
-    if (!side?.code) return null;
-    if (!group.rows.has(side.code)) {
-      group.rows.set(side.code, { iiitCode: side.code, iiitName: side.name, played: 0, won: 0, drawn: 0, lost: 0, scored: 0, conceded: 0, diff: 0, points: 0 });
-    }
-    return group.rows.get(side.code);
+export function rankPool(teams, poolMatches, points, manualOrder = null) {
+  const rows = new Map();
+  for (const team of teams) rows.set(team.code, emptyStanding(team.code, team.name));
+  const ensure = (side) => {
+    if (!rows.has(side.code)) rows.set(side.code, emptyStanding(side.code, side.name));
+    return rows.get(side.code);
   };
-  for (const match of list) {
-    if (match.kind !== "versus" || !match.pool || match.status === "cancelled") continue;
-    const key = `${match.sportId}|${match.gender}|${match.pool}`;
-    if (!groups.has(key)) {
-      groups.set(key, { sportId: match.sportId, sportName: match.sportName, gender: match.gender, pool: match.pool, rows: new Map(), played: 0, total: 0 });
-    }
-    const group = groups.get(key);
-    group.total += 1;
-    const a = row(group, match.sideA);
-    const b = row(group, match.sideB);
-    if (match.status !== "completed" || !a || !b || !match.winner) continue;
-    group.played += 1;
+  const played = poolMatches.filter(countsInTable);
+  for (const match of played) {
+    const a = ensure(match.sideA);
+    const b = ensure(match.sideB);
     const scoreA = match.scoreA ?? 0;
     const scoreB = match.scoreB ?? 0;
-    for (const [team, scored, conceded, result] of [
-      [a, scoreA, scoreB, match.winner === "draw" ? "drawn" : match.winner === a.iiitCode ? "won" : "lost"],
-      [b, scoreB, scoreA, match.winner === "draw" ? "drawn" : match.winner === b.iiitCode ? "won" : "lost"],
-    ]) {
+    for (const [team, scored, conceded] of [[a, scoreA, scoreB], [b, scoreB, scoreA]]) {
+      const result = resultFor(match, team.iiitCode);
       team.played += 1;
       team[result] += 1;
       team.scored += scored;
       team.conceded += conceded;
       team.diff = team.scored - team.conceded;
-      team.points += result === "won" ? POOL_POINTS.win : result === "drawn" ? POOL_POINTS.draw : POOL_POINTS.loss;
+      team.points += result === "won" ? points.win : result === "drawn" ? points.draw : points.loss;
     }
   }
+
+  const list = [...rows.values()];
+  // Head-to-head points among each group of teams level on points.
+  const h2h = new Map(list.map((row) => [row.iiitCode, 0]));
+  const byPoints = new Map();
+  for (const row of list) {
+    if (!byPoints.has(row.points)) byPoints.set(row.points, new Set());
+    byPoints.get(row.points).add(row.iiitCode);
+  }
+  for (const level of byPoints.values()) {
+    if (level.size < 2) continue;
+    for (const match of played) {
+      if (!level.has(match.sideA.code) || !level.has(match.sideB.code)) continue;
+      for (const code of [match.sideA.code, match.sideB.code]) {
+        const result = resultFor(match, code);
+        h2h.set(code, h2h.get(code) + (result === "won" ? points.win : result === "drawn" ? points.draw : points.loss));
+      }
+    }
+  }
+  for (const row of list) row.headToHead = h2h.get(row.iiitCode);
+
+  list.sort((x, y) => y.points - x.points || y.headToHead - x.headToHead || y.diff - x.diff || y.scored - x.scored || x.iiitName.localeCompare(y.iiitName));
+
+  const manual = Array.isArray(manualOrder) && manualOrder.length === list.length && list.every((row) => manualOrder.includes(row.iiitCode));
+  if (manual) list.sort((x, y) => manualOrder.indexOf(x.iiitCode) - manualOrder.indexOf(y.iiitCode));
+  return { rows: list, manual };
+}
+
+/**
+ * Pool (group-stage) tables per tournament (or sport and category, for pool
+ * matches outside a tournament) and pool, from completed pool matches. Each
+ * tournament's own points apply. Every IIIT with a pool match is listed.
+ */
+export function computePoolTables(list, tournamentMap = new Map()) {
+  const groups = new Map();
+  for (const match of list) {
+    if (match.kind !== "versus" || !match.pool || match.status === "cancelled") continue;
+    const key = `${match.tournamentId || ""}|${match.sportId}|${match.gender}|${match.pool}`;
+    if (!groups.has(key)) {
+      const tournament = tournamentMap.get(match.tournamentId) || null;
+      groups.set(key, {
+        tournamentId: match.tournamentId || null,
+        tournamentName: tournament?.name || "",
+        sportId: match.sportId, sportName: match.sportName, gender: match.gender, pool: match.pool,
+        points: tournamentPoints(tournament), teams: new Map(), matches: [],
+      });
+    }
+    const group = groups.get(key);
+    group.matches.push(match);
+    for (const side of [match.sideA, match.sideB]) if (side?.code) group.teams.set(side.code, side);
+  }
   return [...groups.values()]
-    .map(({ rows, ...group }) => ({
+    .map(({ teams, matches: poolMatches, ...group }) => ({
       ...group,
-      rows: [...rows.values()].sort((x, y) => y.points - x.points || y.diff - x.diff || y.scored - x.scored || x.iiitName.localeCompare(y.iiitName)),
+      played: poolMatches.filter(countsInTable).length,
+      total: poolMatches.length,
+      rows: rankPool([...teams.values()], poolMatches, group.points).rows,
     }))
-    .sort((x, y) => x.sportName.localeCompare(y.sportName) || x.gender.localeCompare(y.gender) || x.pool.localeCompare(y.pool));
+    .sort((x, y) => x.sportName.localeCompare(y.sportName) || x.gender.localeCompare(y.gender) || x.tournamentName.localeCompare(y.tournamentName) || x.pool.localeCompare(y.pool));
 }
 
 async function loadBoardMatches({ sport, gender, iiit }) {
@@ -171,7 +267,8 @@ async function loadBoardMatches({ sport, gender, iiit }) {
   if (sport) conditions.push(eq(matches.sportId, sport));
   if (gender) conditions.push(eq(matches.gender, gender));
   const rows = await getDb().select().from(matches).where(and(...conditions)).orderBy(asc(matches.scheduledAt), asc(matches.id));
-  return withPlacings(rows);
+  const tournamentMap = await loadTournamentMap(rows.map((row) => row.tournamentId));
+  return { list: await withPlacings(rows, tournamentMap), tournamentMap };
 }
 
 const involves = (iiit) => (match) => match.sideA?.code === iiit || match.sideB?.code === iiit || match.placings.some((p) => p.iiitCode === iiit);
@@ -187,8 +284,8 @@ export async function getFixtures({ sport = "", gender = "", iiit = "" } = {}) {
   const key = `${sport}|${gender}|${iiit}`;
   const cached = fixturesCache.get(key);
   if (cached && Date.now() - cached.at < FIXTURES_CACHE_MS) return cached.data;
-  const all = await loadBoardMatches({ sport, gender });
-  let pools = computePoolTables(all);
+  const { list: all, tournamentMap } = await loadBoardMatches({ sport, gender });
+  let pools = computePoolTables(all, tournamentMap);
   if (iiit) pools = pools.filter((group) => group.rows.some((r) => r.iiitCode === iiit));
   const [sampleRow] = await getDb().select({ count: sql`COUNT(*)` }).from(matches).where(eq(matches.isSample, true));
   const data = {
@@ -205,10 +302,18 @@ export async function getFixtures({ sport = "", gender = "", iiit = "" } = {}) {
 const boardCache = new Map();
 const BOARD_CACHE_MS = 4000;
 
+const invalidateListeners = new Set();
+
+/** Lets other caches (the brackets page) be cleared with the board's. */
+export function onInvalidate(listener) {
+  invalidateListeners.add(listener);
+}
+
 /** Forget cached boards after any change, so the next poll sees it. */
 export function invalidateBoard() {
   boardCache.clear();
   fixturesCache.clear();
+  for (const listener of invalidateListeners) listener();
 }
 
 /**
@@ -221,11 +326,14 @@ export async function getPublicBoard({ sport = "", gender = "", iiit = "" } = {}
   if (cached && Date.now() - cached.at < BOARD_CACHE_MS) return cached.data;
 
   const db = getDb();
-  let all = await loadBoardMatches({ sport, gender });
+  let { list: all } = await loadBoardMatches({ sport, gender });
   if (iiit) all = all.filter(involves(iiit));
 
   const live = all.filter((match) => match.status === "live");
-  const upcoming = all.filter((match) => match.status === "scheduled" || match.status === "postponed").slice(0, 30);
+  // Knockout matches still waiting for a team are left out of "Up next".
+  const upcoming = all
+    .filter((match) => (match.status === "scheduled" || match.status === "postponed") && (match.kind !== "versus" || (match.sideA && match.sideB)))
+    .slice(0, 30);
   const completed = all.filter((match) => match.status === "completed");
   const results = completed
     .slice()
@@ -273,25 +381,36 @@ export async function getMatchChanges(id, limit = 30) {
 // ---------------------------------------------------------------------------
 // Writing
 
-function checkSides(kind, sideA, sideB) {
+function checkSides(kind, sideA, sideB, { allowEmpty = false } = {}) {
   if (kind !== "versus") return;
-  if (!sideA || !sideB) throw httpError(400, "Choose both IIITs");
-  if (!isIiitCode(sideA) || !isIiitCode(sideB)) throw httpError(400, "Unknown IIIT");
-  if (sideA === sideB) throw httpError(400, "An IIIT cannot play itself");
+  if (!allowEmpty && (!sideA || !sideB)) throw httpError(400, "Choose both IIITs");
+  if ((sideA && !isIiitCode(sideA)) || (sideB && !isIiitCode(sideB))) throw httpError(400, "Unknown IIIT");
+  if (sideA && sideA === sideB) throw httpError(400, "An IIIT cannot play itself");
 }
 
-/** Validates a new or edited fixture and returns the columns to store. */
-export function normalizeFixture(input) {
+/** A date for scheduled_at, or null when the time is to be announced. */
+export function parseScheduledAt(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) throw httpError(400, "Enter a valid date and time");
+  return date;
+}
+
+/**
+ * Validates a new or edited fixture and returns the columns to store.
+ * The time may be left empty (to be announced). A tournament match may leave
+ * a side empty while it waits for the winner of an earlier match.
+ */
+export function normalizeFixture(input, { allowEmptySides = false } = {}) {
   const { sportId, gender } = input;
   if (!isValidSportGender(sportId, gender)) throw httpError(400, "Unknown sport or category");
   const kind = kindForSport(sportId);
   const eventId = kind === "event" ? input.eventId : null;
   if (kind === "event" && !isValidEvent(sportId, gender, eventId)) throw httpError(400, "Choose the event");
-  const sideA = kind === "versus" ? input.sideA : null;
-  const sideB = kind === "versus" ? input.sideB : null;
-  checkSides(kind, sideA, sideB);
-  const scheduledAt = new Date(input.scheduledAt);
-  if (Number.isNaN(scheduledAt.getTime())) throw httpError(400, "Enter the date and time");
+  const sideA = kind === "versus" ? input.sideA || null : null;
+  const sideB = kind === "versus" ? input.sideB || null : null;
+  checkSides(kind, sideA, sideB, { allowEmpty: allowEmptySides });
+  const scheduledAt = parseScheduledAt(input.scheduledAt);
   return {
     sportId, gender, kind, eventId, sideA, sideB, scheduledAt,
     round: input.round || "",
@@ -313,15 +432,59 @@ function snapshot(row) {
 }
 
 export async function createMatch(input, actor, { isSample = false } = {}) {
-  const fixture = normalizeFixture(input);
   const db = getDb();
+  let tournamentId = null;
+  if (input.tournamentId) {
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, input.tournamentId)).limit(1);
+    if (!tournament) throw httpError(404, "Tournament not found");
+    if (tournament.sportId !== input.sportId || tournament.gender !== input.gender) throw httpError(400, "The match must be in the tournament's sport and category");
+    tournamentId = tournament.id;
+  }
+  const fixture = normalizeFixture(input, { allowEmptySides: Boolean(tournamentId) });
   const id = await db.transaction(async (tx) => {
-    const [inserted] = await tx.insert(matches).values({ ...fixture, isSample, createdBy: actor, updatedBy: actor }).$returningId();
+    const [inserted] = await tx.insert(matches).values({ ...fixture, tournamentId, isSample, createdBy: actor, updatedBy: actor }).$returningId();
     await recordChange(tx, inserted.id, actor, "created", null, snapshot(fixture));
     return inserted.id;
   });
   invalidateBoard();
   return id;
+}
+
+function loserOf(row) {
+  if (!row.winner || row.winner === "draw") return null;
+  return row.winner === row.sideA ? row.sideB : row.winner === row.sideB ? row.sideA : null;
+}
+
+/**
+ * Puts `code` into side A or B of a later match, unless that match has
+ * started (the Sports SAC can still change it by hand).
+ */
+async function placeInto(tx, matchId, side, code, actor, expected = undefined) {
+  if (!matchId || !["A", "B"].includes(side)) return false;
+  const [next] = await tx.select().from(matches).where(eq(matches.id, matchId)).limit(1).for("update");
+  if (!next || !["scheduled", "postponed"].includes(next.status)) return false;
+  const column = side === "A" ? "sideA" : "sideB";
+  if (expected !== undefined && next[column] !== expected) return false; // changed by hand since
+  if (next[column] === code) return false;
+  const other = side === "A" ? next.sideB : next.sideA;
+  if (code && other === code) return false;
+  await tx.update(matches).set({ [column]: code, version: next.version + 1, updatedBy: actor, updatedAt: new Date() }).where(eq(matches.id, next.id));
+  await recordChange(tx, next.id, actor, code ? "advanced" : "withdrawn", snapshot(next), snapshot({ ...next, [column]: code }));
+  return true;
+}
+
+export async function advanceFrom(tx, row, actor) {
+  if (row.kind !== "versus" || !row.winner || row.winner === "draw") return;
+  await placeInto(tx, row.nextMatchId, row.nextSide, row.winner, actor);
+  const loser = loserOf(row);
+  if (loser) await placeInto(tx, row.loserNextMatchId, row.loserNextSide, loser, actor);
+}
+
+async function retractFrom(tx, row, actor) {
+  if (row.kind !== "versus" || !row.winner || row.winner === "draw") return;
+  await placeInto(tx, row.nextMatchId, row.nextSide, null, actor, row.winner);
+  const loser = loserOf(row);
+  if (loser) await placeInto(tx, row.loserNextMatchId, row.loserNextSide, null, actor, loser);
 }
 
 /**
@@ -343,10 +506,14 @@ export async function updateMatch(id, { action, version, ...payload }, { actor, 
     const changes = {};
     let placings = null;
     const now = new Date();
+    const [tournament] = row.tournamentId
+      ? await tx.select().from(tournaments).where(eq(tournaments.id, row.tournamentId)).limit(1)
+      : [null];
 
     switch (action) {
       case "start": {
         if (!["scheduled", "postponed"].includes(row.status)) throw httpError(400, "Only a scheduled match can be started");
+        if (row.kind === "versus" && (!row.sideA || !row.sideB)) throw httpError(400, "Both teams must be known before the match starts");
         changes.status = "live";
         changes.startedAt = now;
         if (row.kind === "versus") {
@@ -374,8 +541,10 @@ export async function updateMatch(id, { action, version, ...payload }, { actor, 
         if (row.kind === "versus") {
           const winner = payload.winner;
           if (![row.sideA, row.sideB, "draw"].includes(winner)) throw httpError(400, "Choose the winner");
-          if (winner === "draw" && [MEDAL_ROUNDS.final, MEDAL_ROUNDS.bronze].includes(row.round)) {
-            throw httpError(400, "A final or 3rd-place match needs a winner");
+          if (winner === "draw" && !drawAllowed(row, tournament)) {
+            throw httpError(400, row.bracketSlot || [MEDAL_ROUNDS.final, MEDAL_ROUNDS.bronze].includes(row.round)
+              ? "A knockout match needs a winner"
+              : "Draws are not allowed in this tournament; choose the winner");
           }
           changes.winner = winner;
           if (payload.scoreA !== undefined) changes.scoreA = payload.scoreA;
@@ -404,7 +573,8 @@ export async function updateMatch(id, { action, version, ...payload }, { actor, 
       }
       case "details": {
         if (!isSuper) throw httpError(403, "Only the Sports SAC can edit the schedule");
-        const fixture = normalizeFixture({ ...row, ...payload, sportId: row.sportId, gender: row.gender });
+        const fixture = normalizeFixture({ ...row, ...payload, sportId: row.sportId, gender: row.gender }, { allowEmptySides: Boolean(row.tournamentId) });
+        if (row.status === "live" && row.kind === "versus" && (!fixture.sideA || !fixture.sideB)) throw httpError(400, "A live match needs both teams");
         Object.assign(changes, {
           eventId: fixture.eventId, sideA: fixture.sideA, sideB: fixture.sideB,
           scheduledAt: fixture.scheduledAt, round: fixture.round, pool: fixture.pool, venue: fixture.venue,
@@ -435,6 +605,11 @@ export async function updateMatch(id, { action, version, ...payload }, { actor, 
       if (placings.length) await tx.insert(eventPlacings).values(placings.map((p) => ({ ...p, matchId: row.id })));
     }
     await recordChange(tx, row.id, actor, action, snapshot(row), { ...snapshot({ ...row, ...changes }), ...(placings ? { placings } : {}) });
+
+    // Knockout: a finished match sends its winner (and a semi-final's loser)
+    // on; reopening takes them back out of matches that have not started.
+    if (action === "finish") await advanceFrom(tx, { ...row, ...changes }, actor);
+    if (action === "reopen") await retractFrom(tx, row, actor);
     return row.id;
   });
   invalidateBoard();
@@ -557,7 +732,9 @@ export async function deleteCoordinator(userId) {
 // Sample data (shown with a banner until the real schedule arrives)
 
 export async function clearSampleMatches() {
-  const result = await getDb().delete(matches).where(eq(matches.isSample, true));
+  const db = getDb();
+  const result = await db.delete(matches).where(eq(matches.isSample, true));
+  await db.delete(tournaments).where(eq(tournaments.isSample, true));
   invalidateBoard();
   return affectedRows(result);
 }

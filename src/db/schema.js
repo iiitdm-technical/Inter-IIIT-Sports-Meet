@@ -219,13 +219,64 @@ export const coordinatorSports = mysqlTable("coordinator_sports", {
 ]);
 
 /**
+ * tournaments: one pool-and-knockout competition for a sport and category
+ * (optionally named, e.g. "Singles"). Points for a pool win, draw and loss
+ * are set per tournament. qualify_per_pool only highlights the teams expected
+ * to go through; the Sports SAC places knockout teams by hand.
+ */
+export const tournaments = mysqlTable("tournaments", {
+  id: int("id").autoincrement().primaryKey(),
+  sportId: varchar("sport_id", { length: 64 }).notNull(),
+  gender: varchar("gender", { length: 10 }).notNull(),
+  name: varchar("name", { length: 128 }).default("").notNull(),
+  pointsWin: int("points_win").default(3).notNull(),
+  pointsDraw: int("points_draw").default(1).notNull(),
+  pointsLoss: int("points_loss").default(0).notNull(),
+  allowDraws: boolean("allow_draws").default(true).notNull(),
+  qualifyPerPool: int("qualify_per_pool").default(2).notNull(),
+  thirdPlace: boolean("third_place").default(true).notNull(),
+  isSample: boolean("is_sample").default(false).notNull(),
+  version: int("version").default(1).notNull(),
+  createdBy: varchar("created_by", { length: 254 }),
+  updatedBy: varchar("updated_by", { length: 254 }),
+  createdAt: currentUtcDateTime("created_at").notNull(),
+  updatedAt: currentUtcDateTime("updated_at").notNull(),
+}, (table) => [
+  uniqueIndex("tournament_unique").on(table.sportId, table.gender, table.name),
+]);
+
+/**
+ * tournament_teams: the IIITs in a tournament and their pool. manual_rank,
+ * when set for every team in a pool, replaces the computed standings order.
+ */
+export const tournamentTeams = mysqlTable("tournament_teams", {
+  id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournament_id").notNull().references(() => tournaments.id, { onDelete: "cascade" }),
+  iiitCode: varchar("iiit_code", { length: 64 }).notNull(),
+  pool: varchar("pool", { length: 16 }).default("").notNull(),
+  position: int("position").default(0).notNull(),
+  manualRank: int("manual_rank"),
+}, (table) => [
+  uniqueIndex("tournament_team_unique").on(table.tournamentId, table.iiitCode),
+]);
+
+/**
  * matches: one fixture or one individual event (heat/final).
  * kind "versus" has sides A and B with a score; kind "event" has placings.
  * status: scheduled | live | completed | postponed | cancelled.
  * version increases on every change so concurrent edits are refused.
+ * Tournament matches link to their tournament; knockout matches also carry a
+ * bracket slot ("QF1") and the match (and side) their winner, or a
+ * semi-final's loser, moves on to.
  */
 export const matches = mysqlTable("matches", {
   id: int("id").autoincrement().primaryKey(),
+  tournamentId: int("tournament_id").references(() => tournaments.id, { onDelete: "cascade" }),
+  bracketSlot: varchar("bracket_slot", { length: 16 }).default("").notNull(),
+  nextMatchId: int("next_match_id"),
+  nextSide: varchar("next_side", { length: 1 }),
+  loserNextMatchId: int("loser_next_match_id"),
+  loserNextSide: varchar("loser_next_side", { length: 1 }),
   sportId: varchar("sport_id", { length: 64 }).notNull(),
   gender: varchar("gender", { length: 10 }).notNull(),
   kind: varchar("kind", { length: 16 }).notNull(),
@@ -233,7 +284,7 @@ export const matches = mysqlTable("matches", {
   round: varchar("round", { length: 64 }).default("").notNull(),
   pool: varchar("pool", { length: 16 }).default("").notNull(), // "A", "B"… for group-stage matches
   venue: varchar("venue", { length: 128 }).default("").notNull(),
-  scheduledAt: utcDateTime("scheduled_at").notNull(),
+  scheduledAt: utcDateTime("scheduled_at"), // null: time to be announced
   status: varchar("status", { length: 16 }).default("scheduled").notNull(),
   sideA: varchar("side_a", { length: 64 }),
   sideB: varchar("side_b", { length: 64 }),
@@ -254,6 +305,7 @@ export const matches = mysqlTable("matches", {
   index("matches_sport_idx").on(table.sportId, table.gender),
   index("matches_schedule_idx").on(table.scheduledAt),
   index("matches_status_idx").on(table.status),
+  index("matches_tournament_idx").on(table.tournamentId),
 ]);
 
 /** event_placings: finishing positions for kind "event" matches. */

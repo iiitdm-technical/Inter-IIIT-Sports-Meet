@@ -11,6 +11,19 @@ Status: **phase 1 built** on branch `feature/live-results` (3 Nov 2026), not yet
 - Medals are counted from completed Finals and 3rd-place matches. Championship points wait for the Sports Board's rules (open question 2).
 - Not yet built: undo button (the change history is recorded), CSV schedule import, points table, big-screen mode.
 
+### Brackets (branch `feature/brackets`, 12 Nov 2026)
+
+- **Tournaments** per sport and category (optionally named, e.g. "Singles"), each with its own pool points (win/draw/loss), whether pool draws are allowed, how many go through from each pool (highlighted only) and a 3rd-place match.
+- **Admin** (`/admin/live` → Brackets, super admin only):
+  1. Teams and pools: any number of pools and teams; "Spread evenly" is a helper.
+  2. Pool matches: round-robin; preview, then apply. Played matches are never removed.
+  3. Standings: points, then head-to-head, score difference, score; any pool's order can be set by hand.
+  4. Knockout: 2–32 teams placed by hand (pre-fill from standings is a suggestion); empty positions are byes. Winners, and semi-final losers to the 3rd-place match, move on automatically; reopening a match takes them back out if the next match has not started.
+  5. Schedule (optional): times and venues in play order within a daily window. Every match stays editable and deletable one by one.
+- **Public** `/brackets?t=<id>&view=bracket|schedule|list`: pool leaderboards with match logs, the knockout tree, the schedule and the full match log; linked from `/live` (not in the navbar while Live is hidden).
+- Matches may now have no time ("Time TBA"); pools go up to Z. Migration `0006_tournaments` (add-only, plus `matches.scheduled_at` made nullable).
+- Sample data now includes a 20-team sample football tournament.
+
 A public, live-updating results board for the 9th All India Inter-IIIT Sports Meet (19–23 Dec 2026), in the spirit of IIITDM Jabalpur's Employee Sports Meet `/live` page. The reference page (`employee-sportsmeet.iiitdmj.ac.in/live`) did not respond from our network or from our server when this plan was written; screenshots of it would help match its layout.
 
 ## Goals

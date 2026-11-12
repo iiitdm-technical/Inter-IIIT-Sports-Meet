@@ -1,8 +1,10 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { eventPlacings, matches } from "../../db/schema.js";
-import { invalidateBoard } from "./service.js";
-import { kindForSport } from "./catalog.js";
+import { eventPlacings, matches, tournaments } from "../../db/schema.js";
+import { invalidateBoard, updateMatch } from "./service.js";
+import { LIVE_IIITS, kindForSport } from "./catalog.js";
+import { buildBracket, createTournament, getTournament, scheduleMatches, setTeams, syncPoolMatches } from "./tournaments.js";
+import { suggestSlots } from "./bracket-seeding.js";
 
 /**
  * A realistic day of sample fixtures between real IIITs, timed around "now"
@@ -80,5 +82,55 @@ export async function seedSampleMatches(actor, now = new Date()) {
     }
   });
   invalidateBoard();
-  return list.length;
+  const tournamentMatches = await seedSampleTournament(actor, now);
+  return list.length + tournamentMatches;
+}
+
+/**
+ * A sample football tournament: 20 IIITs in 4 pools of 5, every pool match
+ * played, the quarter-finals played, one semi-final live. Returns how many
+ * matches it has.
+ */
+async function seedSampleTournament(actor, now) {
+  await getDb().delete(tournaments).where(eq(tournaments.isSample, true));
+  const scope = { all: true, sports: [] };
+  const id = await createTournament({
+    sportId: "football", gender: "M", name: "Sample draw",
+    pointsWin: 3, pointsDraw: 1, pointsLoss: 0, allowDraws: true, qualifyPerPool: 2, thirdPlace: true,
+  }, actor, { isSample: true });
+  let detail = await getTournament(id);
+  const codes = LIVE_IIITS.slice(0, 20).map((iiit) => iiit.code);
+  await setTeams(id, { version: detail.tournament.version, teams: codes.map((code, i) => ({ iiitCode: code, pool: "ABCD"[i % 4] })) }, actor);
+  await syncPoolMatches(id, { apply: true }, actor);
+  await scheduleMatches(id, {
+    start: new Date(now.getTime() - 30 * HOUR).toISOString(), minutesPerMatch: 60, venues: ["Main Ground", "Ground 2"],
+    stage: "all", onlyUnscheduled: true,
+  }, actor);
+
+  // Scores from a fixed pattern, so the sample looks the same every time.
+  let n = 0;
+  const play = async (match, { draws = true } = {}) => {
+    n += 1;
+    const started = await updateMatch(match.id, { action: "start", version: match.version }, { actor, scope, isSuper: true });
+    const a = (n * 7) % 4;
+    let b = (n * 5) % 3;
+    if (!draws && a === b) b = (b + 1) % 4;
+    const winner = a === b ? "draw" : a > b ? match.sideA.code : match.sideB.code;
+    await updateMatch(match.id, { action: "finish", version: started.version, winner, scoreA: a, scoreB: b }, { actor, scope, isSuper: true });
+  };
+  detail = await getTournament(id);
+  for (const pool of detail.pools) for (const match of pool.matches) await play(match);
+
+  detail = await getTournament(id);
+  await buildBracket(id, { size: 8, thirdPlace: true, slots: suggestSlots(detail.pools, 2, 8) }, actor);
+  detail = await getTournament(id);
+  for (const match of detail.knockout.rounds[0].matches) await play(match, { draws: false });
+  detail = await getTournament(id);
+  const semi = detail.knockout.rounds[1].matches[0];
+  if (semi?.sideA && semi?.sideB) {
+    const started = await updateMatch(semi.id, { action: "start", version: semi.version }, { actor, scope, isSuper: true });
+    await updateMatch(semi.id, { action: "score", version: started.version, scoreA: 1, scoreB: 0, scoreDetail: "First half" }, { actor, scope, isSuper: true });
+  }
+  detail = await getTournament(id);
+  return detail.matches.length;
 }
