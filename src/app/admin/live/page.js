@@ -7,6 +7,7 @@ import MatchPanel from "@/components/live/admin/MatchPanel";
 import ScheduleForm from "@/components/live/admin/ScheduleForm";
 import CoordinatorsPanel from "@/components/live/admin/CoordinatorsPanel";
 import BracketsPanel from "@/components/live/admin/brackets/BracketsPanel";
+import PhotosPanel from "@/components/live/admin/PhotosPanel";
 import { fieldControl, fieldLabel, liveApi } from "@/components/live/admin/api";
 import { genderLabel } from "@/lib/live/format";
 
@@ -76,7 +77,7 @@ export default function LiveAdminPage() {
       if (!current) return current;
       const matches = removedId
         ? current.matches.filter((m) => m.id !== removedId)
-        : current.matches.map((m) => (m.id === updated.id ? updated : m));
+        : current.matches.map((m) => (m.id === updated.id ? { ...updated, photoCount: updated.photoCount ?? m.photoCount } : m));
       return { ...current, matches };
     });
   }, []);
@@ -124,7 +125,7 @@ export default function LiveAdminPage() {
   const hasSample = data?.matches.some((m) => m.isSample);
 
   const tabs = data?.isSuper
-    ? [{ id: "matches", label: "Matches" }, { id: "brackets", label: "Brackets" }, { id: "schedule", label: "Schedule a match" }, { id: "coordinators", label: "Coordinators" }]
+    ? [{ id: "matches", label: "Matches" }, { id: "brackets", label: "Brackets" }, { id: "schedule", label: "Schedule a match" }, { id: "photos", label: "Photos" }, { id: "coordinators", label: "Coordinators" }]
     : [];
 
   return (
@@ -228,6 +229,7 @@ export default function LiveAdminPage() {
                       <MatchPanel
                         key={match.id} match={match} isSuper={data.isSuper}
                         sports={data.sports} iiits={data.iiits} rounds={data.rounds} pools={data.pools}
+                        photosRequired={data.photosRequired}
                         onChanged={onChanged} onConflict={onConflict} onNotice={setNotice}
                       />
                     ))}
@@ -251,6 +253,8 @@ export default function LiveAdminPage() {
         {data?.isSuper && tab === "brackets" && (
           <BracketsPanel sports={data.sports} iiits={data.iiits} rounds={data.rounds} pools={data.pools} onNotice={setNotice} onMatchesChanged={load} />
         )}
+
+        {data?.isSuper && tab === "photos" && <PhotosPanel />}
 
         {data?.isSuper && tab === "coordinators" && <CoordinatorsPanel sports={data.sports} onNotice={setNotice} />}
       </main>

@@ -20,7 +20,7 @@ export async function GET() {
   }
 }
 
-/** Adds a coordinator; the response carries their password once. */
+/** Adds a coordinator with the username and password the Sports SAC chose. */
 export async function POST(request) {
   try {
     const session = await requireAuth(["admin"]);
@@ -31,7 +31,7 @@ export async function POST(request) {
     }
     const sports = normalizeAssignments(parsed.data.sports);
     const created = await createCoordinator({ ...parsed.data, sports });
-    await audit({ actor: session.username, role: session.role, action: "coordinator_created", target: created.email, ip: await getClientIp(), details: { sports } });
+    await audit({ actor: session.username, role: session.role, action: "coordinator_created", target: created.username, ip: await getClientIp(), details: { sports } });
     return NextResponse.json({ data: created }, { status: 201, headers: NO_STORE });
   } catch (error) {
     return errorResponse(error, "Unable to add the coordinator");

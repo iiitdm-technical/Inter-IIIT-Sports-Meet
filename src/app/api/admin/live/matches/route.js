@@ -6,7 +6,8 @@ import { audit } from "@/lib/security/audit";
 import { getClientIp } from "@/lib/security/request";
 import { createMatch, getScope, listManageableMatches } from "@/lib/live/service";
 import { fixtureSchema } from "@/lib/live/schemas";
-import { LIVE_IIITS, POOLS, ROUNDS, liveSports } from "@/lib/live/catalog";
+import { LIVE_IIITS, PHOTOS_PER_MATCH, POOLS, ROUNDS, liveSports } from "@/lib/live/catalog";
+import { photoCounts } from "@/lib/live/photos";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,9 @@ export async function GET() {
   try {
     const session = await requireAuth(["admin", "coordinator"]);
     const scope = await getScope(session);
-    const matches = await listManageableMatches(scope);
+    const list = await listManageableMatches(scope);
+    const counts = await photoCounts(list.map((match) => match.id));
+    const matches = list.map((match) => ({ ...match, photoCount: counts[match.id] || 0 }));
     return NextResponse.json({
       data: {
         user: { username: session.username, displayName: session.displayName, role: session.role },
@@ -28,6 +31,7 @@ export async function GET() {
         iiits: LIVE_IIITS.map(({ code, name }) => ({ code, name })),
         rounds: ROUNDS,
         pools: POOLS,
+        photosRequired: PHOTOS_PER_MATCH,
       },
     }, { headers: NO_STORE });
   } catch (error) {

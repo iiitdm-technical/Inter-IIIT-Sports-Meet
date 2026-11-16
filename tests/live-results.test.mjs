@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeMedals, computePoolTables, makeCoordinatorPassword, normalizeAssignments, normalizeFixture, scopeAllows } from "../src/lib/live/service.js";
+import { computeMedals, computePoolTables, normalizeAssignments, normalizeFixture, scopeAllows } from "../src/lib/live/service.js";
 import { LIVE_IIITS, isIiitCode, kindForSport } from "../src/lib/live/catalog.js";
 import { coordinatorCreateSchema, matchActionSchema } from "../src/lib/live/schemas.js";
 import { fromIstInput, ordinal, stageLabel, toIstInput } from "../src/lib/live/format.js";
@@ -79,25 +79,22 @@ test("coordinator assignments are checked and de-duplicated", () => {
   assert.throws(() => normalizeAssignments([]), /at least one/);
 });
 
-test("coordinator passwords are long and avoid look-alike characters", () => {
-  const seen = new Set();
-  for (let i = 0; i < 50; i += 1) {
-    const password = makeCoordinatorPassword();
-    assert.match(password, /^[A-HJ-NP-Za-km-z2-9]{4}-[A-HJ-NP-Za-km-z2-9]{4}-[A-HJ-NP-Za-km-z2-9]{4}$/);
-    seen.add(password);
-  }
-  assert.equal(seen.size, 50);
-});
-
 test("API bodies are validated strictly", () => {
   assert.ok(matchActionSchema.safeParse({ action: "score", version: 3, scoreA: 2, scoreB: 1 }).success);
   assert.ok(!matchActionSchema.safeParse({ action: "score", version: 3, scoreA: -1, scoreB: 1 }).success);
   assert.ok(!matchActionSchema.safeParse({ action: "score", scoreA: 1, scoreB: 1 }).success, "version is required");
   assert.ok(!matchActionSchema.safeParse({ action: "delete-everything", version: 1 }).success);
   assert.ok(!matchActionSchema.safeParse({ action: "details", version: 1, status: "completed" }).success);
-  assert.ok(coordinatorCreateSchema.safeParse({ email: "a@iiitdm.ac.in", name: "A", sports: [{ sportId: "football" }] }).success);
-  assert.ok(!coordinatorCreateSchema.safeParse({ email: "not-an-email", name: "A", sports: [{ sportId: "football" }] }).success);
-  assert.ok(!coordinatorCreateSchema.safeParse({ email: "a@iiitdm.ac.in", name: "A", sports: [] }).success);
+  const ok = { username: "football", password: "Football@2026", name: "A", sports: [{ sportId: "football" }] };
+  assert.ok(coordinatorCreateSchema.safeParse(ok).success);
+  assert.equal(coordinatorCreateSchema.parse({ ...ok, username: "  Scores " }).username, "scores", "usernames are trimmed and lower-cased");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, username: "a@iiitdm.ac.in" }).success, "not an email");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, username: "ab" }).success, "too short");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, username: "foot ball" }).success, "no spaces");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, username: "-football" }).success, "starts with a letter or digit");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, password: "short" }).success, "at least 8 characters");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, password: " Football@2026" }).success, "no spaces at the ends");
+  assert.ok(!coordinatorCreateSchema.safeParse({ ...ok, sports: [] }).success);
 });
 
 test("times are entered and shown in IST whatever the device's zone", () => {

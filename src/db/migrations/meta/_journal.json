@@ -57,6 +57,13 @@
       "when": 1794508270509,
       "tag": "0007_standings_adjustments",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1794799279824,
+      "tag": "0008_match_photos",
+      "breakpoints": true
     }
   ]
 }

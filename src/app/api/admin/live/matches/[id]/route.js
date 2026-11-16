@@ -6,6 +6,7 @@ import { audit } from "@/lib/security/audit";
 import { getClientIp, httpError } from "@/lib/security/request";
 import { deleteMatch, getMatchChanges, getScope, scopeAllows, updateMatch } from "@/lib/live/service";
 import { matchActionSchema } from "@/lib/live/schemas";
+import { photoCounts } from "@/lib/live/photos";
 import { getDb } from "@/db/index";
 import { matches } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -47,7 +48,8 @@ export async function PATCH(request, { params }) {
     if (["finish", "reopen", "details"].includes(parsed.data.action)) {
       await audit({ actor: session.username, role: session.role, action: `live_match_${parsed.data.action}`, target: String(id), ip: await getClientIp() });
     }
-    return NextResponse.json({ data: match });
+    const counts = await photoCounts([id]);
+    return NextResponse.json({ data: { ...match, photoCount: counts[id] || 0 } });
   } catch (error) {
     if (!(error?.statusCode >= 400 && error?.statusCode < 500)) console.error("Live match update failed:", error);
     return errorResponse(error, "Unable to update the match");

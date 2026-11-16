@@ -61,11 +61,27 @@ export const matchActionSchema = z.discriminatedUnion("action", [
 
 const assignment = z.object({ sportId: code, gender: z.enum(COORDINATOR_GENDERS).default("all") });
 
+// Login names: lower-case letters, digits, dot, dash or underscore. Never an
+// email (the login form treats "@" specially) and never with spaces.
+export const coordinatorUsername = z.string().trim().toLowerCase()
+  .min(3, "Use at least 3 characters for the username")
+  .max(32, "Use at most 32 characters for the username")
+  .regex(/^[a-z0-9][a-z0-9._-]*$/, "Use only letters, digits, dots, dashes or underscores in the username, starting with a letter or digit");
+
+// The Sports SAC picks the password; sign-in trims spaces, so none at the ends.
+export const coordinatorPassword = z.string()
+  .min(8, "Use at least 8 characters for the password")
+  .max(128, "Use at most 128 characters for the password")
+  .refine((value) => value === value.trim(), "The password cannot start or end with a space");
+
 export const coordinatorCreateSchema = z.object({
-  email: z.email("Enter a valid email").max(64),
+  username: coordinatorUsername,
+  password: coordinatorPassword,
   name: z.string().trim().min(1, "Enter the coordinator's name").max(128),
   sports: z.array(assignment).min(1, "Assign at least one sport").max(40),
 });
+
+export const coordinatorPasswordSchema = z.object({ password: coordinatorPassword });
 
 export const coordinatorSportsSchema = z.object({
   sports: z.array(assignment).min(1, "Assign at least one sport").max(40),

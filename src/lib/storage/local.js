@@ -5,7 +5,8 @@ import { Readable } from "node:stream";
 import { randomUUID } from "node:crypto";
 
 /**
- * Payment proofs stored as files on this server, under PROOF_STORAGE_DIR.
+ * Payment proofs (and match photos) stored as files on this server, under
+ * PROOF_STORAGE_DIR.
  *
  * The directory must be outside the app's release folder so deployments and
  * rollbacks never remove it, and it is never served directly: proofs are
@@ -13,7 +14,8 @@ import { randomUUID } from "node:crypto";
  * checked against the exact shape the upload API creates, so a key can never
  * reach a file outside the directory.
  */
-const KEY_PATTERN = /^payment-proofs\/[a-z0-9-]{1,64}\/[0-9a-f-]{36}\.(pdf|jpg|png)$/;
+// Payment proofs, and match photos (with a small "-t" thumbnail beside each).
+const KEY_PATTERN = /^(payment-proofs\/[a-z0-9-]{1,64}\/[0-9a-f-]{36}\.(pdf|jpg|png)|match-photos\/[1-9][0-9]{0,9}\/[0-9a-f-]{36}(-t)?\.(jpg|png))$/;
 const PREFIX_PATTERN = /^payment-proofs\/[a-z0-9-]{1,64}\/$/;
 const CONTENT_TYPES = { pdf: "application/pdf", jpg: "image/jpeg", png: "image/png" };
 

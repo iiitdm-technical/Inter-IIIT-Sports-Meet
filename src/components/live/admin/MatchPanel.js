@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatWhen, genderLabel, ordinal, stageLabel } from "@/lib/live/format";
 import ScheduleForm from "./ScheduleForm";
+import MatchPhotos from "./MatchPhotos";
 import { fieldControl, fieldLabel, liveApi } from "./api";
 
 const STATUS_LABEL = { scheduled: "Scheduled", live: "Live", completed: "Finished", postponed: "Postponed", cancelled: "Cancelled" };
@@ -93,7 +94,7 @@ function ChangeLog({ matchId }) {
  * One match on the scoring screen: start, update the score or placings,
  * finish; the super admin can also edit, reopen, delete and see the history.
  */
-export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pools, onChanged, onConflict, onNotice }) {
+export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pools, photosRequired = 5, onChanged, onConflict, onNotice }) {
   const isVersus = match.kind === "versus";
   const [scoreA, setScoreA] = useState(match.scoreA ?? 0);
   const [scoreB, setScoreB] = useState(match.scoreB ?? 0);
@@ -105,6 +106,16 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
   const [error, setError] = useState("");
   const [mode, setMode] = useState(""); // "", "edit", "history"
   const [syncedVersion, setSyncedVersion] = useState(match.version);
+  const [photoCount, setPhotoCount] = useState(match.photoCount || 0);
+  const [syncedPhotoCount, setSyncedPhotoCount] = useState(match.photoCount || 0);
+
+  // The list refresh brings counts from other devices too.
+  if (syncedPhotoCount !== (match.photoCount || 0)) {
+    setSyncedPhotoCount(match.photoCount || 0);
+    setPhotoCount(match.photoCount || 0);
+  }
+  const photosMissing = Math.max(0, photosRequired - photoCount);
+  const photosBlockFinish = !isSuper && photosMissing > 0;
 
   // A newer version from the server (another device, or our own save) replaces the local draft.
   if (syncedVersion !== match.version) {
@@ -148,15 +159,17 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
   };
 
   const finish = async () => {
+    if (photosBlockFinish) return setError(`Upload ${photosMissing} more photo${photosMissing === 1 ? "" : "s"} before finishing.`);
+    const photoWarning = photosMissing > 0 ? ` Only ${photoCount} of ${photosRequired} photos are uploaded.` : "";
     if (isVersus) {
       if (!winner) return setError("Choose the winner first");
       const name = winner === "draw" ? "a draw" : `${winner === match.sideA?.code ? match.sideA.name : match.sideB.name} winning`;
-      if (!window.confirm(`Finish this match ${scoreA}–${scoreB}, with ${name}? Only the Sports SAC can reopen it.`)) return;
+      if (!window.confirm(`Finish this match ${scoreA}–${scoreB}, with ${name}? Only the Sports SAC can reopen it.${photoWarning}`)) return;
       await act({ action: "finish", winner, scoreA, scoreB, scoreDetail: detail.trim(), resultNote: note.trim() }, "Match finished");
     } else {
       const placings = placingsPayload();
       if (!placings?.length) return setError("Enter at least the winner before finishing");
-      if (!window.confirm(`Finish this event with ${placings.length} placing${placings.length === 1 ? "" : "s"}? Only the Sports SAC can reopen it.`)) return;
+      if (!window.confirm(`Finish this event with ${placings.length} placing${placings.length === 1 ? "" : "s"}? Only the Sports SAC can reopen it.${photoWarning}`)) return;
       await act({ action: "finish", placings, resultNote: note.trim() }, "Event finished");
     }
   };
@@ -231,6 +244,10 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
           </div>
         )}
 
+        {["live", "completed"].includes(match.status) && (
+          <MatchPhotos match={match} isSuper={isSuper} required={photosRequired} count={photoCount} onCountChange={setPhotoCount} />
+        )}
+
         {match.status === "live" && (
           <div className="space-y-3 border-t border-line pt-4">
             {isVersus && (
@@ -256,9 +273,14 @@ export default function MatchPanel({ match, isSuper, sports, iiits, rounds, pool
               <label htmlFor={`${idPrefix}-note`} className={fieldLabel}>Result note (optional)</label>
               <input id={`${idPrefix}-note`} className={fieldControl} maxLength={255} value={note} onChange={(e) => setNote(e.target.value)} placeholder={isVersus ? "e.g. Won on penalties 4–3" : "e.g. New meet record"} />
             </div>
-            <button type="button" className="btn btn-primary w-full sm:w-auto" disabled={busy} onClick={finish}>
+            <button type="button" className="btn btn-primary w-full sm:w-auto" disabled={busy || photosBlockFinish} aria-describedby={photosBlockFinish ? `${idPrefix}-finish-hint` : undefined} onClick={finish}>
               {isVersus ? "Finish match" : "Finish event"}
             </button>
+            {photosBlockFinish && (
+              <p id={`${idPrefix}-finish-hint`} className="text-sm text-ink-soft">
+                Add {photosMissing} more photo{photosMissing === 1 ? "" : "s"} above to finish.
+              </p>
+            )}
           </div>
         )}
 

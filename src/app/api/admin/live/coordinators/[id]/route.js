@@ -4,8 +4,8 @@ import { requireAuth } from "@/lib/auth/session";
 import { LIMITS, enforce } from "@/lib/security/rate-limit";
 import { audit } from "@/lib/security/audit";
 import { getClientIp, httpError } from "@/lib/security/request";
-import { deleteCoordinator, normalizeAssignments, resetCoordinatorPassword, setCoordinatorSports } from "@/lib/live/service";
-import { coordinatorSportsSchema } from "@/lib/live/schemas";
+import { deleteCoordinator, normalizeAssignments, setCoordinatorPassword, setCoordinatorSports } from "@/lib/live/service";
+import { coordinatorPasswordSchema, coordinatorSportsSchema } from "@/lib/live/schemas";
 
 export const runtime = "nodejs";
 
@@ -41,16 +41,20 @@ export async function PUT(request, { params }) {
   }
 }
 
-/** Issues a new password and signs the coordinator out everywhere. */
-export async function POST(_request, { params }) {
+/** Sets the password the Sports SAC chose and signs the coordinator out everywhere. */
+export async function POST(request, { params }) {
   try {
     const session = await guard();
     const id = parseId((await params).id);
-    const result = await resetCoordinatorPassword(id);
-    await audit({ actor: session.username, role: session.role, action: "coordinator_password_reset", target: String(id), ip: await getClientIp() });
-    return NextResponse.json({ data: result }, { headers: NO_STORE });
+    const parsed = coordinatorPasswordSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check the password" }, { status: 400 });
+    }
+    await setCoordinatorPassword(id, parsed.data.password);
+    await audit({ actor: session.username, role: session.role, action: "coordinator_password_set", target: String(id), ip: await getClientIp() });
+    return NextResponse.json({ data: { id } }, { headers: NO_STORE });
   } catch (error) {
-    return errorResponse(error, "Unable to reset the password");
+    return errorResponse(error, "Unable to change the password");
   }
 }
 

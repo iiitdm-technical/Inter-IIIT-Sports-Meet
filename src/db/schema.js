@@ -339,3 +339,23 @@ export const matchChanges = mysqlTable("match_changes", {
 }, (table) => [
   index("match_changes_match_idx").on(table.matchId),
 ]);
+
+/**
+ * match_photos: pictures a volunteer takes of a match (5 are needed before a
+ * coordinator can finish it). Files live in proof storage under
+ * match-photos/<matchId>/. A photo belongs to every IIIT in its match, so the
+ * per-IIIT folders are worked out when they are read. When a match is
+ * deleted, match_id becomes NULL and the files are removed by a sweep.
+ */
+export const matchPhotos = mysqlTable("match_photos", {
+  id: int("id").autoincrement().primaryKey(),
+  matchId: int("match_id").references(() => matches.id, { onDelete: "set null" }),
+  storageKey: varchar("storage_key", { length: 128 }).notNull(),
+  thumbKey: varchar("thumb_key", { length: 128 }).notNull(),
+  contentType: varchar("content_type", { length: 32 }).notNull(),
+  sizeBytes: int("size_bytes").notNull(),
+  uploadedBy: varchar("uploaded_by", { length: 254 }),
+  createdAt: currentUtcDateTime("created_at").notNull(),
+}, (table) => [
+  index("match_photos_match_idx").on(table.matchId),
+]);

@@ -1,13 +1,13 @@
-import { randomInt } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { coordinatorSports, eventPlacings, matchChanges, matches, sessions, tournamentTeams, tournaments, users } from "../../db/schema.js";
+import { coordinatorSports, eventPlacings, matchChanges, matchPhotos, matches, sessions, tournamentTeams, tournaments, users } from "../../db/schema.js";
 import { getSportConfig } from "../sports/config.js";
 import { httpError } from "../security/request.js";
 import { getSportName } from "../registration/labels.js";
+import { sweepDetachedPhotos } from "./photo-files.js";
 import {
-  MEDAL_ROUNDS, POOL_POINTS, eventName, iiitName, isIiitCode, isValidEvent, isValidSportGender, kindForSport,
+  MEDAL_ROUNDS, PHOTOS_PER_MATCH, POOL_POINTS, eventName, iiitName, isIiitCode, isValidEvent, isValidSportGender, kindForSport,
 } from "./catalog.js";
 
 /**
@@ -348,6 +348,8 @@ export function invalidateBoard() {
   boardCache.clear();
   fixturesCache.clear();
   for (const listener of invalidateListeners) listener();
+  // A deleted match leaves its photos detached; remove their files.
+  sweepDetachedPhotos();
 }
 
 /**
@@ -572,6 +574,13 @@ export async function updateMatch(id, { action, version, ...payload }, { actor, 
       }
       case "finish": {
         if (row.status !== "live") throw httpError(400, "Only a live match can be finished");
+        // Volunteers must photograph every match; the Sports SAC may finish without.
+        if (!isSuper) {
+          const [{ count }] = await tx.select({ count: sql`COUNT(*)` }).from(matchPhotos).where(eq(matchPhotos.matchId, row.id));
+          if (Number(count) < PHOTOS_PER_MATCH) {
+            throw httpError(400, `Upload ${PHOTOS_PER_MATCH} photos of this ${row.kind === "versus" ? "match" : "event"} before finishing it (${Number(count)} of ${PHOTOS_PER_MATCH} so far).`);
+          }
+        }
         if (row.kind === "versus") {
           const winner = payload.winner;
           if (![row.sideA, row.sideB, "draw"].includes(winner)) throw httpError(400, "Choose the winner");
@@ -681,7 +690,7 @@ export async function deleteMatch(id) {
 
 export async function listCoordinators() {
   const db = getDb();
-  const people = await db.select({ id: users.id, email: users.email, displayName: users.displayName, createdAt: users.createdAt })
+  const people = await db.select({ id: users.id, username: users.username, email: users.email, displayName: users.displayName, createdAt: users.createdAt })
     .from(users).where(eq(users.role, "coordinator")).orderBy(asc(users.displayName));
   if (!people.length) return [];
   const assignments = await db.select().from(coordinatorSports).where(inArray(coordinatorSports.userId, people.map((p) => p.id)));
@@ -717,43 +726,35 @@ export async function setCoordinatorSports(userId, assignments) {
   });
 }
 
-// No 0/O or 1/l/I: these passwords are read out or typed from a message.
-const PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-
-export function makeCoordinatorPassword() {
-  const chars = Array.from({ length: 12 }, () => PASSWORD_ALPHABET[randomInt(PASSWORD_ALPHABET.length)]).join("");
-  return `${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8)}`;
-}
-
-/** Creates a coordinator who signs in with their email; returns the one-time password. */
-export async function createCoordinator({ email, name, sports: assignments }) {
+/**
+ * Creates a coordinator who signs in with a username and the password the
+ * Sports SAC chose (both checked by coordinatorCreateSchema).
+ */
+export async function createCoordinator({ username, password, name, sports: assignments }) {
   const db = getDb();
-  const normalizedEmail = email.trim().toLowerCase();
-  if (normalizedEmail.length > 64) throw httpError(400, "Use an email of at most 64 characters");
-  const password = makeCoordinatorPassword();
+  const login = username.trim().toLowerCase();
   const passwordHash = await bcrypt.hash(password, 12);
   const id = await db.transaction(async (tx) => {
     const [taken] = await tx.select({ id: users.id }).from(users)
-      .where(sql`${users.username} = ${normalizedEmail} OR ${users.email} = ${normalizedEmail}`).limit(1);
-    if (taken) throw httpError(409, "An account with this email already exists");
+      .where(sql`${users.username} = ${login} OR ${users.email} = ${login}`).limit(1);
+    if (taken) throw httpError(409, `The username "${login}" is already taken; choose another`);
     const [inserted] = await tx.insert(users).values({
-      username: normalizedEmail, email: normalizedEmail, displayName: name.trim(), passwordHash, role: "coordinator",
+      username: login, email: null, displayName: name.trim(), passwordHash, role: "coordinator",
     }).$returningId();
     await tx.insert(coordinatorSports).values(assignments.map((a) => ({ ...a, userId: inserted.id })));
     return inserted.id;
   });
-  return { id, email: normalizedEmail, password };
+  return { id, username: login };
 }
 
-export async function resetCoordinatorPassword(userId) {
+/** Sets the password the Sports SAC chose and signs the coordinator out everywhere. */
+export async function setCoordinatorPassword(userId, password) {
   const db = getDb();
-  const password = makeCoordinatorPassword();
   const passwordHash = await bcrypt.hash(password, 12);
   const result = await db.update(users).set({ passwordHash, updatedAt: new Date() })
     .where(and(eq(users.id, userId), eq(users.role, "coordinator")));
   if (affectedRows(result) === 0) throw httpError(404, "Coordinator not found");
   await db.delete(sessions).where(eq(sessions.userId, userId));
-  return { password };
 }
 
 /** Removes a coordinator; their sessions and sport assignments go with the account. */

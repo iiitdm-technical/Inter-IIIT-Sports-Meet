@@ -16,6 +16,8 @@ export const LIMITS = {
   // Live scoring: a busy match can need many updates in an hour.
   liveWrite: { limit: 1500, windowSeconds: 60 * 60 },
   download: { limit: 300, windowSeconds: 60 * 60 },
+  // Match photos: 5 per match, retakes included.
+  photoUpload: { limit: 300, windowSeconds: 60 * 60 },
 };
 
 /**

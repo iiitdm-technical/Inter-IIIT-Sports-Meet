@@ -23,6 +23,9 @@ export const POOL_POINTS = { win: 3, draw: 1, loss: 0, confirmed: false };
 // Knockout brackets: sizes the Sports SAC can choose, and round names by the
 // number of teams left in the round.
 export const BRACKET_SIZES = [2, 4, 8, 16, 32];
+
+/** A coordinator uploads exactly this many photos of a match before finishing it. */
+export const PHOTOS_PER_MATCH = 5;
 export function knockoutRoundName(teams) {
   return { 2: "Final", 4: "Semi-final", 8: "Quarter-final", 16: "Round of 16", 32: "Round of 32" }[teams] || `Round of ${teams}`;
 }
