@@ -23,7 +23,7 @@ import { scopeAllows } from "./service.js";
 const MB = 1024 * 1024;
 export const MAX_PHOTO_BYTES = 4 * MB;
 export const MAX_THUMB_BYTES = 512 * 1024;
-export const PHOTO_STORAGE_MAX_BYTES = (Number(process.env.PHOTO_STORAGE_MAX_MB) || 1000) * MB;
+export const PHOTO_STORAGE_MAX_BYTES = (Number(process.env.PHOTO_STORAGE_MAX_MB) || 1400) * MB;
 
 const EXTENSIONS = { "image/jpeg": "jpg", "image/png": "png" };
 
