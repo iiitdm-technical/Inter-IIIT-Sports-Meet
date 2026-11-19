@@ -15,7 +15,8 @@ export const GLOBAL_RULES = {
   REGISTRATION_FEE_PER_STUDENT: 2500,
   REGISTRATION_GST_PERCENT: 18,
   REFUNDABLE_CAUTION_DEPOSIT: 25000,
-  EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics'],
+  // These sports do not count towards the 2-sport limit (each has its own).
+  EXEMPT_SPORTS_FROM_2_SPORT_LIMIT: ['athletics', 'aquatics', 'powerlifting'],
 };
 
 // Mixed relays run with exactly 2 men and 2 women; each runner slot has a fixed gender.
@@ -121,7 +122,7 @@ export const SPORTS_CONFIG = {
     id: 'powerlifting',
     name: 'Powerlifting',
     type: 'weight_category_based',
-    isExemptFromSportLimit: false,
+    isExemptFromSportLimit: true,
     genders: ['M', 'F'],
     events: {
       M: [

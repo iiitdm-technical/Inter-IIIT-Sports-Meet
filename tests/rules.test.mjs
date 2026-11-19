@@ -42,6 +42,7 @@ describe("sport catalogue", () => {
     assert.equal(GLOBAL_RULES.MAX_NORMAL_SPORTS_PER_STUDENT, 2);
     assert.equal(GLOBAL_RULES.MAX_ATHLETICS_INDIVIDUAL_EVENTS, 3);
     assert.equal(GLOBAL_RULES.MAX_AQUATICS_INDIVIDUAL_EVENTS, 3);
+    assert.deepEqual(GLOBAL_RULES.EXEMPT_SPORTS_FROM_2_SPORT_LIMIT, ["athletics", "aquatics", "powerlifting"]);
     assert.equal(getSportConfig("athletics").events.M.length, 15);
     assert.equal(getSportConfig("athletics").events.F.length, 12);
     assert.equal(getSportConfig("aquatics").events.M.length, 15);
@@ -473,5 +474,26 @@ describe("same student in several events", () => {
     const blank = { rollNumber: "CS21B001", name: "", gender: "M" };
     const result = getLiveValidationErrors(contact, { "aquatics|50m_freestyle|M|main|0": blank, "aquatics|100m_freestyle|M|main|0": blank });
     assert.equal(result.issues.some((issue) => /name is required/i.test(issue.message)), true);
+  });
+});
+
+describe("powerlifting and the 2-sport limit", () => {
+  test("powerlifting does not count towards the 2 sports", () => {
+    const result = validate([student("P1")], [
+      entry("cricket", "team", "M", "P1"),
+      entry("volleyball", "team", "M", "P1"),
+      entry("powerlifting", "up_to_66kg", "M", "P1"),
+      entry("athletics", "100m", "M", "P1"),
+    ]);
+    assert.equal(hasError(result, "Multi-sport rule"), false, result.errors.join("\n"));
+  });
+
+  test("a third normal sport is still refused", () => {
+    const result = validate([student("P2")], [
+      entry("cricket", "team", "M", "P2"),
+      entry("volleyball", "team", "M", "P2"),
+      entry("football", "team", "M", "P2"),
+    ]);
+    assert.ok(hasError(result, "Multi-sport rule"));
   });
 });

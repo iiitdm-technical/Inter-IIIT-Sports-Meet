@@ -171,6 +171,8 @@ export function validateRegistrationRules({ students, entries }) {
       if (evDef && !evDef.isRelay) {
         studentTrack.aquaticsIndividualEvents.add(eventId);
       }
+    } else if (sportId === "powerlifting") {
+      // Outside the 2-sport limit, like athletics and aquatics.
     } else {
       // Normal sport
       studentTrack.normalSports.add(sportId);

@@ -51,7 +51,7 @@ function EventSummary() {
           </h2>
         </div>
         <p className="max-w-2xl text-[0.9375rem] leading-relaxed text-ink-soft">
-          Each student may enter at most two sports other than athletics and aquatics, plus up to three individual events each in athletics and aquatics (relays excluded). The rulebook is the final authority.
+          Each student may enter at most two sports other than athletics, aquatics and powerlifting. On top of that they may enter up to three individual events each in athletics and aquatics (relays excluded). The rulebook is the final authority.
         </p>
       </div>
       <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
