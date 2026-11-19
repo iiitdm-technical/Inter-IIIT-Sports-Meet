@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/security/respond";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/session";
 import { getDb } from "@/db/index";
-import { registrations, paymentTransactions } from "@/db/schema";
+import { registrations, paymentTransactions, earlierPayments } from "@/db/schema";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,11 @@ export async function GET() {
     if (!payment) {
       return NextResponse.json({ error: "Payment has not been submitted" }, { status: 404 });
     }
-    return NextResponse.json({ data: payment }, { headers: { "Cache-Control": "private, no-store" } });
+    // Payments made before a reopen must be verified too.
+    const [pendingEarlier] = await getDb().select({ id: earlierPayments.id }).from(earlierPayments)
+      .where(and(eq(earlierPayments.iiitCode, session.iiitCode), eq(earlierPayments.verificationStatus, "pending"))).limit(1);
+    const data = pendingEarlier ? { verificationStatus: "pending", verifiedAt: null } : payment;
+    return NextResponse.json({ data }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     return errorResponse(error, "Unable to load payment status");
   }

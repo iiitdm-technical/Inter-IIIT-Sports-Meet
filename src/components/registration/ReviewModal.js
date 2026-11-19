@@ -4,7 +4,7 @@ import { useState } from "react";
 import useModalFocus from "@/components/useModalFocus";
 import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
 import { countByGender, describeContingent, totalTravelling } from "@/lib/registration/contingent";
-import { formatRupees, getCategoryLabel, getEventName, getRegistrationFee, getSportName } from "@/lib/registration/labels";
+import { formatRupees, getCategoryLabel, getEventName, getPaymentBalance, getSportName } from "@/lib/registration/labels";
 
 /**
  * Cleans up Zod validation error strings into readable labels.
@@ -65,7 +65,7 @@ function summarizeRoster(payload) {
 export default function ReviewModal({
   onClose, onSubmit,
   isSubmitting, payload, issues,
-  submitError, uniqueStudentsCount,
+  submitError, uniqueStudentsCount, paidEarlier = 0,
   onGoToIssue,
 }) {
   const [confirmed, setConfirmed] = useState(false);
@@ -151,7 +151,14 @@ export default function ReviewModal({
                     ["Unique students", uniqueStudentsCount || 0, `${boys} boys · ${girls} girls`],
                     ["Event entries", payload?.entries?.length || 0, `${teams.length} teams / events`],
                     ["People travelling", totalTravelling(boys, girls, staff), `incl. ${staff || 0} staff`],
-                    ["Amount to pay", formatRupees(getRegistrationFee(uniqueStudentsCount || 0)), "incl. GST and deposit"],
+                    paidEarlier > 0
+                      ? (() => {
+                          const { total, balance, refund } = getPaymentBalance(uniqueStudentsCount || 0, paidEarlier);
+                          return refund > 0
+                            ? ["Refund due", formatRupees(refund), `fee ${formatRupees(total)} − paid ${formatRupees(paidEarlier)}`]
+                            : ["Balance to pay", formatRupees(balance), `fee ${formatRupees(total)} − paid ${formatRupees(paidEarlier)}`];
+                        })()
+                      : ["Amount to pay", formatRupees(getPaymentBalance(uniqueStudentsCount || 0).total), "incl. GST and deposit"],
                   ].map(([label, value, note]) => (
                     <div key={label} className="card-tint rounded-control p-4">
                       <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">{label}</dt>

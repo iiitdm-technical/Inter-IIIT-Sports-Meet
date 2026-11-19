@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/security/respond";
 import { requireAuth } from "@/lib/auth/session";
 import { getDb } from "@/db/index";
-import { paymentTransactions, registrations } from "@/db/schema";
+import { earlierPayments, paymentTransactions, registrations } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { deleteProof, listProofs, putProof } from "@/lib/storage";
 import { PROOF_STORAGE_MAX_BYTES, proofStorageUsage } from "@/lib/storage/usage";
@@ -46,7 +46,8 @@ async function readLimited(request, limit) {
 
 /**
  * Deletes earlier uploads for this IIIT so replaced proofs do not pile up.
- * Keeps the new file and any proof already attached to a payment record.
+ * Keeps the new file, any proof already attached to a payment record, and
+ * receipts of payments made before the roster was reopened.
  */
 async function removeReplacedProofs(iiitCode, registrationId, keepKey) {
   try {
@@ -55,7 +56,9 @@ async function removeReplacedProofs(iiitCode, registrationId, keepKey) {
       .from(paymentTransactions)
       .where(eq(paymentTransactions.registrationId, registrationId))
       .limit(1);
-    const keep = new Set([keepKey, payment?.proofPathname].filter(Boolean));
+    const earlier = await getDb().select({ proofPathname: earlierPayments.proofPathname })
+      .from(earlierPayments).where(eq(earlierPayments.iiitCode, iiitCode));
+    const keep = new Set([keepKey, payment?.proofPathname, ...earlier.map((row) => row.proofPathname)].filter(Boolean));
     const keys = await listProofs(`payment-proofs/${iiitCode}/`);
     await Promise.all(keys.filter((key) => !keep.has(key)).map((key) => deleteProof(key)));
   } catch (error) {

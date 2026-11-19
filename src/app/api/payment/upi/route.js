@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/security/respond";
-import { getRegistrationFee } from "@/lib/registration/labels";
+import { getPaymentBalance } from "@/lib/registration/labels";
+import { listEarlierPayments, sumEarlierPayments } from "@/lib/registration/earlier-payments";
 import { eq } from "drizzle-orm";
 import QRCode from "qrcode";
 import { requireAuth } from "@/lib/auth/session";
@@ -27,7 +28,8 @@ export async function GET() {
       return NextResponse.json({ configured: false }, { headers: { "Cache-Control": "no-store" } });
     }
 
-    const amount = getRegistrationFee(registration.totalStudentsCount);
+    const { balance: amount } = getPaymentBalance(registration.totalStudentsCount, sumEarlierPayments(await listEarlierPayments(getDb(), session.iiitCode)));
+    if (amount <= 0) return NextResponse.json({ configured: false, nothingDue: true }, { headers: { "Cache-Control": "no-store" } });
     const query = new URLSearchParams({ pa: upiId, pn: payeeName, am: String(amount), cu: "INR" });
     const paymentUri = `upi://pay?${query.toString()}`;
     const qrDataUrl = await QRCode.toDataURL(paymentUri, { width: 280, margin: 2, errorCorrectionLevel: "M" });

@@ -150,8 +150,42 @@ export const paymentTransactions = mysqlTable("payment_transactions", {
   verificationStatus: varchar("verification_status", { length: 20 }).default("pending").notNull(), // 'pending' | 'verified'
   verifiedAt: utcDateTime("verified_at"),
   verifiedBy: varchar("verified_by", { length: 64 }),
+  // After a reopened roster: the fee for the new roster, and what had already
+  // been paid (earlier_payments) when this payment was submitted. `amount` is
+  // then only the balance paid now (0 when nothing more was due).
+  totalFee: int("total_fee"),
+  creditAmount: int("credit_amount").default(0).notNull(),
   createdAt: currentUtcDateTime("created_at").notNull(),
 });
+
+/**
+ * 5b. EARLIER PAYMENTS
+ * Payments made for a roster that the Sports SAC later reopened for edits.
+ * Reopening deletes the registration (and its payment_transactions row), so
+ * the payment is copied here first, keyed by IIIT. When the IIIT submits
+ * again, only the difference between the new fee and these payments is due.
+ */
+export const earlierPayments = mysqlTable("earlier_payments", {
+  id: int("id").autoincrement().primaryKey(),
+  iiitCode: varchar("iiit_code", { length: 64 }).notNull(),
+  amount: int("amount").notNull(),
+  uniqueStudentCount: int("unique_student_count").notNull(),
+  transactionDate: utcDateTime("transaction_date").notNull(),
+  transactionId: varchar("transaction_id", { length: 128 }).notNull(),
+  paymentMode: varchar("payment_mode", { length: 20 }),
+  proofPathname: varchar("proof_pathname", { length: 255 }), // NULL when the receipt file is no longer stored
+  proofFileName: varchar("proof_file_name", { length: 255 }),
+  proofContentType: varchar("proof_content_type", { length: 64 }),
+  verificationStatus: varchar("verification_status", { length: 20 }).default("pending").notNull(),
+  verifiedAt: utcDateTime("verified_at"),
+  verifiedBy: varchar("verified_by", { length: 64 }),
+  note: varchar("note", { length: 255 }),
+  paidAt: utcDateTime("paid_at"), // when the payment was originally submitted
+  carriedAt: currentUtcDateTime("carried_at").notNull(),
+  carriedBy: varchar("carried_by", { length: 64 }),
+}, (table) => [
+  index("earlier_payments_iiit_idx").on(table.iiitCode),
+]);
 
 /**
  * 6. SESSIONS TABLE

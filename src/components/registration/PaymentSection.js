@@ -57,8 +57,12 @@ async function shrinkImage(file) {
  *  errors               — { transactionDate?, transactionId?, proof? }
  *  onUploadBusy         — fn(bool) so parent can gate submit button
  */
-export default function PaymentSection({ uniqueStudentsCount, paymentDetails, onChange, errors = {}, onUploadBusy }) {
+export default function PaymentSection({ uniqueStudentsCount, earlierPayments = [], paidEarlier = 0, paymentDetails, onChange, errors = {}, onUploadBusy }) {
   const { registrationFee, gst, registrationWithGst, cautionDeposit, total } = getRegistrationFeeBreakdown(uniqueStudentsCount);
+  // After a reopened roster, only the difference from what was paid is due.
+  const balance = Math.max(0, total - paidEarlier);
+  const refund = Math.max(0, paidEarlier - total);
+  const nothingDue = paidEarlier > 0 && balance === 0;
   const fileInputRef = useRef(null);
 
   // idle | uploading | success | error
@@ -168,8 +172,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           <dd className="stat-number mt-1 whitespace-nowrap text-base leading-tight text-ink sm:text-3xl">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
         </div>
         <div className="rounded-control border border-[#ecd27a] bg-gold-wash p-3 sm:p-4">
-          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-gold-text">Amount payable</dt>
-          <dd className="stat-number mt-1 whitespace-nowrap text-base leading-tight text-ink sm:text-3xl">{formatRupees(total)}</dd>
+          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-gold-text">{paidEarlier > 0 ? (refund > 0 ? "Refund due" : "Balance to pay") : "Amount payable"}</dt>
+          <dd className="stat-number mt-1 whitespace-nowrap text-base leading-tight text-ink sm:text-3xl">{formatRupees(refund > 0 ? refund : balance)}</dd>
         </div>
       </dl>
 
@@ -192,12 +196,40 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             <dt className="text-ink-soft">Refundable caution deposit (one per IIIT)</dt>
             <dd className="shrink-0 font-semibold text-ink">{formatRupees(cautionDeposit)}</dd>
           </div>
-          <div className="flex items-baseline justify-between gap-3 rounded-control border border-[#ecd27a] bg-gold-wash px-3 py-2.5 sm:col-span-2">
-            <dt className="font-bold text-gold-text">Total payable</dt>
-            <dd className="stat-number whitespace-nowrap text-lg text-ink sm:text-xl">{formatRupees(total)}</dd>
-          </div>
+          {paidEarlier > 0 ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2 sm:col-span-2">
+                <dt className="font-semibold text-ink">Total fee for this roster</dt>
+                <dd className="shrink-0 font-semibold text-ink">{formatRupees(total)}</dd>
+              </div>
+              {earlierPayments.map((item) => (
+                <div key={item.id} className="flex items-baseline justify-between gap-3 border-b border-line/60 pb-2 sm:col-span-2">
+                  <dt className="text-ink-soft">
+                    Already paid{item.transactionDate ? ` on ${new Date(item.transactionDate).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""} <span className="font-mono text-xs">({item.transactionId})</span>
+                  </dt>
+                  <dd className="shrink-0 font-semibold text-brand-primary">− {formatRupees(item.amount)}</dd>
+                </div>
+              ))}
+              <div className="flex items-baseline justify-between gap-3 rounded-control border border-[#ecd27a] bg-gold-wash px-3 py-2.5 sm:col-span-2">
+                <dt className="font-bold text-gold-text">{refund > 0 ? "Refund due to your IIIT" : nothingDue ? "Nothing more to pay" : "Balance to pay now"}</dt>
+                <dd className="stat-number whitespace-nowrap text-lg text-ink sm:text-xl">{formatRupees(refund > 0 ? refund : balance)}</dd>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-baseline justify-between gap-3 rounded-control border border-[#ecd27a] bg-gold-wash px-3 py-2.5 sm:col-span-2">
+              <dt className="font-bold text-gold-text">Total payable</dt>
+              <dd className="stat-number whitespace-nowrap text-lg text-ink sm:text-xl">{formatRupees(total)}</dd>
+            </div>
+          )}
         </dl>
       </div>
+
+      {nothingDue ? (
+        <p role="note" className="rounded-control border border-[#cfe0c7] bg-green-wash p-4 text-sm leading-6 text-ink">
+          Your earlier payment covers this roster{refund > 0 ? `, with ${formatRupees(refund)} to be refunded by the Sports Cell` : ""}. No new payment or receipt is needed: confirm the roster below.
+        </p>
+      ) : (
+      <>
 
       <div className="mb-6 rounded-control border border-[#cfe0c7] bg-green-wash p-4 sm:p-5">
         <h3 className="heading-card text-brand-deep">How to pay</h3>
@@ -219,7 +251,7 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
             </a>
           </li>
           <li>Fill in all required form details, including your contact information.</li>
-          <li>Verify the details and total payable on the portal, then accept the Terms and Conditions.</li>
+          <li>{paidEarlier > 0 ? <>Enter <strong>{formatRupees(balance)}</strong> (the balance only), check the details, then accept the Terms and Conditions.</> : "Verify the details and total payable on the portal, then accept the Terms and Conditions."}</li>
           <li>Click Pay Now and choose the applicable payment option on the portal.</li>
           <li>For NEFT/RTGS, download the portal-generated challan to complete payment.</li>
         </ol>
@@ -378,6 +410,8 @@ export default function PaymentSection({ uniqueStudentsCount, paymentDetails, on
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

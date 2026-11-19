@@ -34,6 +34,8 @@ export default function RegisterPage() {
   const [user, setUser] = useState(null);
   const [closesAt, setClosesAt] = useState(null);
   const [lockedRegistrationData, setLockedRegistrationData] = useState(null);
+  // Paid before the Sports SAC reopened the roster; only the difference is due.
+  const [paidEarlier, setPaidEarlier] = useState(0);
   const [isEditingRoster, setIsEditingRoster] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -131,6 +133,7 @@ export default function RegisterPage() {
         if (!regData?.data || typeof regData.data.submitted !== "boolean") {
           throw new Error("Registration response was incomplete. Please try again.");
         }
+        setPaidEarlier(Number(regData.data.paidEarlier) || 0);
         if (regData.data?.submitted) {
           setLockedRegistrationData(regData.data);
           if (regData.data.registration.status === "payment_pending") {
@@ -560,6 +563,7 @@ export default function RegisterPage() {
           issues={issues}
           submitError={submitError}
           uniqueStudentsCount={totalUniqueStudents}
+          paidEarlier={paidEarlier}
           onGoToIssue={handleGoToIssue}
         />
       )}

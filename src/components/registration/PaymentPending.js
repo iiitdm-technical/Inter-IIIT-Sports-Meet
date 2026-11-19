@@ -5,7 +5,7 @@ import PaymentSection from "./PaymentSection";
 import LockedHeader from "./LockedHeader";
 import RegistrationSteps from "./RegistrationSteps";
 import RosterSummary from "./RosterSummary";
-import { formatRupees, getRegistrationFee } from "@/lib/registration/labels";
+import { formatRupees, getPaymentBalance } from "@/lib/registration/labels";
 import { GLOBAL_RULES } from "@/lib/sports/config";
 
 const EMPTY_PAYMENT_DETAILS = {
@@ -53,10 +53,14 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
 
   const { registration, entries } = registrationData;
   const uniqueStudentsCount = registration.totalStudentsCount;
-  const totalPayable = getRegistrationFee(uniqueStudentsCount);
+  const earlierPayments = registrationData.earlierPayments || [];
+  const { total: totalFee, paidEarlier, balance, refund } = getPaymentBalance(uniqueStudentsCount, registrationData.paidEarlier);
+  const totalPayable = balance;
+  const nothingDue = paidEarlier > 0 && balance === 0;
 
   const validatePayment = () => {
     const errors = {};
+    if (nothingDue) return errors;
     if (!paymentDetails?.transactionDate) {
       errors.transactionDate = "Transaction date is required.";
     } else {
@@ -94,11 +98,13 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           rosterVersion: registrationData.rosterVersion,
-          paymentDetails: {
-            transactionDate: paymentDetails.transactionDate,
-            transactionId: paymentDetails.transactionId,
-            proofPathname: paymentDetails.proofPathname,
-          },
+          ...(nothingDue ? {} : {
+            paymentDetails: {
+              transactionDate: paymentDetails.transactionDate,
+              transactionId: paymentDetails.transactionId,
+              proofPathname: paymentDetails.proofPathname,
+            },
+          }),
         }),
       });
 
@@ -133,10 +139,21 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
         <section className="card card-accent overflow-hidden">
           <div className="px-5 pt-6 pb-5 sm:px-8 sm:pt-8">
             <p className="eyebrow">Step 2 of 3 · Payment</p>
-            <h1 className="heading-section mt-2">Roster saved — payment pending</h1>
-            <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
-              Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and remains editable until you submit payment details and the receipt. The total payable is <strong className="text-ink">{formatRupees(totalPayable)}</strong>, including {GLOBAL_RULES.REGISTRATION_GST_PERCENT}% GST and the refundable caution deposit. Complete payment on the portal, then submit the transaction date, reference, and receipt below.
-            </p>
+            <h1 className="heading-section mt-2">{nothingDue ? "Updated roster saved — confirm it" : "Roster saved — payment pending"}</h1>
+            {paidEarlier > 0 ? (
+              <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
+                Your updated roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} comes to <strong className="text-ink">{formatRupees(totalFee)}</strong>. You have already paid <strong className="text-ink">{formatRupees(paidEarlier)}</strong>, so{" "}
+                {balance > 0
+                  ? <>you only need to pay the balance of <strong className="text-ink">{formatRupees(balance)}</strong>. Pay it on the portal, then submit the new transaction&apos;s date, reference and receipt below.</>
+                  : refund > 0
+                    ? <>nothing more is due. The Sports Cell will refund the extra <strong className="text-ink">{formatRupees(refund)}</strong>. Confirm the roster below to lock it.</>
+                    : <>nothing more is due. Confirm the roster below to lock it.</>}
+              </p>
+            ) : (
+              <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">
+                Your roster of {uniqueStudentsCount} {uniqueStudentsCount === 1 ? "student" : "students"} is saved and remains editable until you submit payment details and the receipt. The total payable is <strong className="text-ink">{formatRupees(totalPayable)}</strong>, including {GLOBAL_RULES.REGISTRATION_GST_PERCENT}% GST and the refundable caution deposit. Complete payment on the portal, then submit the transaction date, reference, and receipt below.
+              </p>
+            )}
             <button type="button" onClick={onEditRoster} disabled={isSubmitting || uploadBusy} className="btn btn-outline mt-4">Edit roster / teams</button>
             <p className="meta mt-2">Changes to the student count will recalculate your payment total. Check your final roster before paying.</p>
           </div>
@@ -173,6 +190,8 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
         <section className="card p-5 sm:p-8">
           <PaymentSection
             uniqueStudentsCount={uniqueStudentsCount}
+            earlierPayments={earlierPayments}
+            paidEarlier={paidEarlier}
             paymentDetails={paymentDetails}
             onChange={setPaymentDetails}
             errors={paymentErrors}
@@ -181,7 +200,9 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
 
           <div className="mt-8 flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink-soft sm:max-w-md">
-              Submitting locks your roster, team entries, payment details and receipt. The organizers then check the transfer against their bank statement.
+              {nothingDue
+                ? "Confirming locks your roster and team entries. Your earlier payment covers the fee."
+                : "Submitting locks your roster, team entries, payment details and receipt. The organizers then check the transfer against their bank statement."}
             </p>
             <button
               type="button"
@@ -193,7 +214,7 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
                 ? "Submitting…"
                 : uploadBusy
                 ? "Upload in progress…"
-                : "Submit payment"}
+                : nothingDue ? "Confirm updated roster" : paidEarlier > 0 ? `Submit balance payment (${formatRupees(balance)})` : "Submit payment"}
             </button>
           </div>
         </section>

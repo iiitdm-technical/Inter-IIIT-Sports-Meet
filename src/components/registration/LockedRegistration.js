@@ -11,9 +11,11 @@ import { formatArrival, formatTravelDate } from "@/lib/registration/arrival";
 import { describeContingent } from "@/lib/registration/contingent";
 
 export default function LockedRegistration({ registrationData }) {
+  const earlierPayments = registrationData.earlierPayments || [];
+  const earlierPending = earlierPayments.some((item) => item.verificationStatus !== "verified");
   const [verification, setVerification] = useState({
-    status: registrationData.payment?.verificationStatus || "pending",
-    verifiedAt: registrationData.payment?.verifiedAt || null,
+    status: earlierPending ? "pending" : registrationData.payment?.verificationStatus || "pending",
+    verifiedAt: earlierPending ? null : registrationData.payment?.verifiedAt || null,
   });
 
   const refreshPaymentStatus = useCallback(async () => {
@@ -184,15 +186,41 @@ export default function LockedRegistration({ registrationData }) {
                   <dt className="text-sm text-ink-soft">Rate</dt>
                   <dd className="font-semibold text-ink">{formatRupees(GLOBAL_RULES.REGISTRATION_FEE_PER_STUDENT)}</dd>
                 </div>
+                {earlierPayments.length > 0 && (
+                  <>
+                    {payment.totalFee != null && (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-sm text-ink-soft">Total fee</dt>
+                        <dd className="font-semibold text-ink">{formatRupees(payment.totalFee)}</dd>
+                      </div>
+                    )}
+                    {earlierPayments.map((item) => (
+                      <div key={item.id} className="flex items-baseline justify-between gap-3">
+                        <dt className="text-sm text-ink-soft">Paid earlier <span className="font-mono text-xs">({item.transactionId})</span></dt>
+                        <dd className="font-semibold text-ink">{formatRupees(item.amount)}</dd>
+                      </div>
+                    ))}
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-sm text-ink-soft">{payment.amount > 0 ? "Balance paid now" : "Paid now"}</dt>
+                      <dd className="font-semibold text-ink">{formatRupees(payment.amount)}</dd>
+                    </div>
+                    {payment.totalFee != null && payment.creditAmount > payment.totalFee && (
+                      <div className="flex items-baseline justify-between gap-3">
+                        <dt className="text-sm font-semibold text-gold-text">Refund due to you</dt>
+                        <dd className="font-semibold text-ink">{formatRupees(payment.creditAmount - payment.totalFee)}</dd>
+                      </div>
+                    )}
+                  </>
+                )}
                 <div className="flex items-baseline justify-between gap-3 border-t border-[#ecd27a] pt-2">
-                  <dt className="text-sm font-semibold text-gold-text">Amount paid</dt>
-                  <dd className="stat-number text-3xl text-ink">{formatRupees(payment.amount)}</dd>
+                  <dt className="text-sm font-semibold text-gold-text">{earlierPayments.length > 0 ? "Total paid" : "Amount paid"}</dt>
+                  <dd className="stat-number text-3xl text-ink">{formatRupees(payment.amount + earlierPayments.reduce((sum, item) => sum + item.amount, 0))}</dd>
                 </div>
               </dl>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="col-span-2">
                   <dt className={detailLabel}>Transaction ID / UTR</dt>
-                  <dd className={`${detailValue} font-mono break-all`}>{payment.transactionId}</dd>
+                  <dd className={`${detailValue} font-mono break-all`}>{payment.amount > 0 ? payment.transactionId : "None needed: covered by your earlier payment"}</dd>
                 </div>
                 <div>
                   <dt className={detailLabel}>Transaction date</dt>

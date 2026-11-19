@@ -42,6 +42,17 @@ export function getRegistrationFee(studentCount) {
   return getRegistrationFeeBreakdown(studentCount).total;
 }
 
+/**
+ * What is still due after a reopened roster: the fee for the new roster less
+ * what was paid earlier. `balance` > 0 must be paid now; `refund` > 0 is owed
+ * back to the IIIT (the roster shrank).
+ */
+export function getPaymentBalance(studentCount, paidEarlier = 0) {
+  const total = getRegistrationFee(studentCount);
+  const paid = Math.max(0, Number(paidEarlier) || 0);
+  return { total, paidEarlier: paid, balance: Math.max(0, total - paid), refund: Math.max(0, paid - total) };
+}
+
 export function formatRupees(amount) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount || 0);
 }

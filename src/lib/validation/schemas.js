@@ -196,5 +196,7 @@ export const registrationSubmitSchema = z.object({
  */
 export const paymentSubmitSchema = z.object({
   rosterVersion: z.string().regex(/^[a-f0-9]{64}$/, "A current roster version is required"),
-  paymentDetails: paymentDetailsSchema,
+  // Left out only when a reopened roster is already paid for in full; the
+  // server checks that nothing is due before accepting it without details.
+  paymentDetails: paymentDetailsSchema.optional(),
 });

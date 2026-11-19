@@ -27,7 +27,7 @@ export async function POST(request) {
       body,
       session.username
     );
-    await audit({ actor: session.username, role: session.role, action: "payment_submitted", target: session.iiitCode, ip: await getClientIp(), details: { amount: result.amountPaid } });
+    await audit({ actor: session.username, role: session.role, action: "payment_submitted", target: session.iiitCode, ip: await getClientIp(), details: { amount: result.amountPaid, totalFee: result.totalFee, paidEarlier: result.paidEarlier } });
 
     return NextResponse.json({
       success: true,

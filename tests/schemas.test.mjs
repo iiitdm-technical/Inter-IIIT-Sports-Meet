@@ -379,3 +379,23 @@ describe("payment proof file types", () => {
     assert.equal(guessProofType({ type: "", name: "receipt.docx" }), null);
   });
 });
+
+test("after a reopen only the difference from earlier payments is due", async () => {
+  const { getPaymentBalance, getRegistrationFee } = await import("../src/lib/registration/labels.js");
+  assert.deepEqual(getPaymentBalance(10), { total: getRegistrationFee(10), paidEarlier: 0, balance: getRegistrationFee(10), refund: 0 });
+  const grew = getPaymentBalance(12, getRegistrationFee(10));
+  assert.equal(grew.balance, getRegistrationFee(12) - getRegistrationFee(10));
+  assert.equal(grew.refund, 0);
+  const shrank = getPaymentBalance(8, getRegistrationFee(10));
+  assert.equal(shrank.balance, 0);
+  assert.equal(shrank.refund, getRegistrationFee(10) - getRegistrationFee(8));
+  assert.equal(getPaymentBalance(10, getRegistrationFee(10)).balance, 0);
+  assert.equal(getPaymentBalance(10, -5).paidEarlier, 0);
+});
+
+test("payment details may be left out only for the no-balance confirmation", async () => {
+  const { paymentSubmitSchema } = await import("../src/lib/validation/schemas.js");
+  const rosterVersion = "a".repeat(64);
+  assert.ok(paymentSubmitSchema.safeParse({ rosterVersion }).success);
+  assert.ok(!paymentSubmitSchema.safeParse({ rosterVersion, paymentDetails: { transactionId: "x" } }).success);
+});

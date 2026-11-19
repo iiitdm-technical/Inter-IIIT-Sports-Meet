@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/session';
 import { getProof } from '@/lib/storage';
 import { getDb } from '@/db/index';
-import { registrations, paymentTransactions } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { registrations, paymentTransactions, earlierPayments } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
 import { errorResponse } from '@/lib/security/respond';
 import { LIMITS, enforce } from '@/lib/security/rate-limit';
 
@@ -30,6 +30,27 @@ export async function GET(request) {
 
     // 4. Retrieve payment transaction to get the exact pathname
     const db = getDb();
+
+    // A receipt of a payment made before the roster was reopened.
+    const earlierId = Number.parseInt(searchParams.get('earlier') || '', 10);
+    if (searchParams.has('earlier')) {
+      const [row] = Number.isInteger(earlierId) && earlierId > 0
+        ? await db.select({ proofPathname: earlierPayments.proofPathname }).from(earlierPayments)
+          .where(and(eq(earlierPayments.id, earlierId), eq(earlierPayments.iiitCode, targetIiitCode))).limit(1)
+        : [];
+      if (!row?.proofPathname) {
+        return NextResponse.json({ error: "No stored receipt for this earlier payment" }, { status: 404 });
+      }
+      const earlierProof = await getProof(row.proofPathname);
+      return new NextResponse(earlierProof.body, {
+        headers: {
+          'Content-Type': earlierProof.contentType || 'application/octet-stream',
+          'Content-Disposition': `inline; filename="${row.proofPathname.split('/').pop()}"`,
+          'Cache-Control': 'private, no-store',
+          'X-Content-Type-Options': 'nosniff',
+        },
+      });
+    }
     
     // Find the registration
     const regList = await db
@@ -56,6 +77,9 @@ export async function GET(request) {
     }
 
     const pathname = paymentList[0].proofPathname;
+    if (!pathname) {
+      return NextResponse.json({ error: "No receipt was needed: the earlier payment covered the fee" }, { status: 404 });
+    }
 
     // 5. Stream the private object only after the ownership check.
     const proof = await getProof(pathname);

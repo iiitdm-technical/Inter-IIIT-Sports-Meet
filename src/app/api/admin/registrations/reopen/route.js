@@ -22,7 +22,7 @@ export async function POST(request) {
     if (!parsed.success || parsed.data.iiitCode !== parsed.data.confirmIiitCode.trim()) {
       return NextResponse.json({ error: "Type the IIIT code exactly to confirm" }, { status: 400 });
     }
-    const result = await reopenRegistration(parsed.data.iiitCode);
+    const result = await reopenRegistration(parsed.data.iiitCode, admin.username);
     await audit({ actor: admin.username, role: admin.role, action: "roster_reopened", target: result.iiitCode, ip: await getClientIp(), details: result });
     return NextResponse.json({ data: result });
   } catch (error) {

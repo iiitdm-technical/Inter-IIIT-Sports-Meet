@@ -1,6 +1,7 @@
 import { eq, and, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
-import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
+import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions, earlierPayments } from "../../db/schema.js";
+import { describeEarlierPayment, earlierPaymentFrom, listEarlierPayments } from "../registration/earlier-payments.js";
 import { getSlotKey } from "../registration/client-utils.js";
 import { deleteProof, listProofs } from "../storage/index.js";
 import { getStorageSummary } from "../storage/usage.js";
@@ -68,6 +69,8 @@ export async function getAdminRegistrationsOverview() {
       paymentVerificationStatus: paymentTransactions.verificationStatus,
       paymentVerifiedAt: paymentTransactions.verifiedAt,
       paymentVerifiedBy: paymentTransactions.verifiedBy,
+      paymentTotalFee: paymentTransactions.totalFee,
+      paymentCreditAmount: paymentTransactions.creditAmount,
     })
     .from(users)
     .leftJoin(registrations, eq(users.iiitCode, registrations.iiitCode))
@@ -75,47 +78,63 @@ export async function getAdminRegistrationsOverview() {
     .where(eq(users.role, "iiit"))
     .orderBy(users.iiitName);
 
-  return results;
+  const earlier = await db.select().from(earlierPayments).orderBy(earlierPayments.id);
+  return results.map((row) => {
+    const mine = earlier.filter((item) => item.iiitCode === row.iiitCode);
+    return { ...row, earlierPayments: mine.map(describeEarlierPayment), paidEarlier: mine.reduce((sum, item) => sum + item.amount, 0) };
+  });
 }
 
+/**
+ * Marks one payment as bank-verified: the current payment, or a payment made
+ * before the roster was reopened. The UTR and amount must match one of them.
+ */
 export async function verifyPayment(iiitCode, transactionId, amount, adminUsername) {
   const db = getDb();
+  const utr = transactionId.trim().toUpperCase();
   const [registration] = await db.select({ id: registrations.id, status: registrations.status })
     .from(registrations).where(eq(registrations.iiitCode, iiitCode)).limit(1);
-  if (!registration || registration.status !== "submitted") {
-    const error = new Error("Payment proof has not been submitted for this IIIT");
-    error.statusCode = 409;
-    throw error;
-  }
+  const [payment] = registration?.status === "submitted"
+    ? await db.select().from(paymentTransactions).where(eq(paymentTransactions.registrationId, registration.id)).limit(1)
+    : [];
+  const earlier = await listEarlierPayments(db, iiitCode);
 
-  const [payment] = await db.select().from(paymentTransactions)
-    .where(eq(paymentTransactions.registrationId, registration.id)).limit(1);
-  if (!payment) {
-    const error = new Error("Payment record not found");
+  const pendingCurrent = payment && payment.amount > 0 && payment.verificationStatus !== "verified" ? payment : null;
+  const pendingEarlier = earlier.filter((row) => row.verificationStatus !== "verified");
+  if (!pendingCurrent && pendingEarlier.length === 0) {
+    const error = new Error(payment || earlier.length ? "Every payment from this IIIT is already verified" : "Payment proof has not been submitted for this IIIT");
     error.statusCode = 409;
-    throw error;
-  }
-  if (payment.verificationStatus === "verified") {
-    const error = new Error("Payment is already verified");
-    error.statusCode = 409;
-    throw error;
-  }
-  if (payment.transactionId.trim().toUpperCase() !== transactionId.trim().toUpperCase() || payment.amount !== amount) {
-    const error = new Error("Entered UTR or amount does not match the submitted payment");
-    error.statusCode = 422;
     throw error;
   }
 
   const verifiedAt = new Date();
-  const result = await db.update(paymentTransactions)
-    .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
-    .where(and(eq(paymentTransactions.id, payment.id), eq(paymentTransactions.verificationStatus, "pending")));
-  if (affectedRows(result) === 0) {
-    const error = new Error("Payment verification changed; refresh and try again");
-    error.statusCode = 409;
-    throw error;
+  const matches = (row) => row.transactionId.trim().toUpperCase() === utr && row.amount === amount;
+  if (pendingCurrent && matches(pendingCurrent)) {
+    const result = await db.update(paymentTransactions)
+      .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
+      .where(and(eq(paymentTransactions.id, pendingCurrent.id), eq(paymentTransactions.verificationStatus, "pending")));
+    if (affectedRows(result) === 0) {
+      const error = new Error("Payment verification changed; refresh and try again");
+      error.statusCode = 409;
+      throw error;
+    }
+    return { kind: "current", verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
   }
-  return { verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
+  const earlierMatch = pendingEarlier.find(matches);
+  if (earlierMatch) {
+    const result = await db.update(earlierPayments)
+      .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
+      .where(and(eq(earlierPayments.id, earlierMatch.id), eq(earlierPayments.verificationStatus, "pending")));
+    if (affectedRows(result) === 0) {
+      const error = new Error("Payment verification changed; refresh and try again");
+      error.statusCode = 409;
+      throw error;
+    }
+    return { kind: "earlier", earlierPaymentId: earlierMatch.id, verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
+  }
+  const error = new Error("Entered UTR or amount does not match any unverified payment from this IIIT");
+  error.statusCode = 422;
+  throw error;
 }
 
 /**
@@ -326,10 +345,15 @@ export async function getAdminStats() {
     db.select({ count: count() }).from(studentEventParticipations)
       .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
       .where(lockedStatuses),
-    db.select({ count: count() }).from(paymentTransactions)
+    // An IIIT counts as verified when its current payment is verified and
+    // nothing it paid before a reopen is still awaiting verification.
+    db.select({ iiitCode: registrations.iiitCode }).from(paymentTransactions)
+      .innerJoin(registrations, eq(paymentTransactions.registrationId, registrations.id))
       .where(eq(paymentTransactions.verificationStatus, "verified")),
     getStorageSummary(),
   ]);
+  const pendingEarlier = new Set((await db.select({ iiitCode: earlierPayments.iiitCode }).from(earlierPayments)
+    .where(eq(earlierPayments.verificationStatus, "pending"))).map((row) => row.iiitCode));
 
   const byStatus = Object.fromEntries(registrationCounts.map((row) => [row.status, Number(row.count)]));
   const paymentsSubmitted = byStatus.submitted || 0;
@@ -340,7 +364,7 @@ export async function getAdminStats() {
     totalIIITs: Number(totalIIITsResult[0]?.count || 0),
     lockedIIITs: paymentsSubmitted + (byStatus.payment_pending || 0),
     paymentsSubmitted,
-    paymentsVerified: Number(verifiedResult[0]?.count || 0),
+    paymentsVerified: verifiedResult.filter((row) => !pendingEarlier.has(row.iiitCode)).length,
     totalStudents,
     totalBoys: studentsByGender.M || 0,
     totalGirls: studentsByGender.F || 0,
@@ -357,7 +381,7 @@ export async function getAdminStats() {
  * entries and any submitted payment record are deleted, and the payment proof
  * files are removed from storage. The IIIT then re-submits as normal.
  */
-export async function reopenRegistration(iiitCode) {
+export async function reopenRegistration(iiitCode, adminUsername = null) {
   const db = getDb();
   const result = await db.transaction(async (tx) => {
     const [registration] = await tx.select().from(registrations)
@@ -369,10 +393,10 @@ export async function reopenRegistration(iiitCode) {
     }
     const [payment] = await tx.select().from(paymentTransactions)
       .where(eq(paymentTransactions.registrationId, registration.id)).limit(1);
-    if (payment?.verificationStatus === "verified") {
-      const error = new Error("The payment is already bank-verified, so this roster can no longer be reopened");
-      error.statusCode = 409;
-      throw error;
+    // Keep what was paid: it counts towards the fee when the IIIT submits
+    // again, so they pay (or are refunded) only the difference.
+    if (payment && payment.amount > 0) {
+      await tx.insert(earlierPayments).values(earlierPaymentFrom(payment, iiitCode, adminUsername));
     }
 
     const rows = await tx.select({
@@ -436,16 +460,19 @@ export async function reopenRegistration(iiitCode) {
       iiitCode,
       students: registration.totalStudentsCount,
       entries: rows.length,
-      removedPayment: Boolean(payment),
+      carriedPayment: payment && payment.amount > 0 ? payment.amount : 0,
     };
   });
 
-  // Storage is outside the transaction; a leftover file is harmless.
+  // Remove receipts that belong to no payment (abandoned uploads). Receipts
+  // of earlier payments stay. Storage is outside the transaction; a leftover
+  // file is harmless.
   try {
+    const keep = new Set((await listEarlierPayments(db, iiitCode)).map((row) => row.proofPathname).filter(Boolean));
     const keys = await listProofs(`payment-proofs/${iiitCode}/`);
-    await Promise.all(keys.map((key) => deleteProof(key)));
+    await Promise.all(keys.filter((key) => !keep.has(key)).map((key) => deleteProof(key)));
   } catch (error) {
-    console.error("Could not remove payment proofs after reopening:", error.message);
+    console.error("Could not tidy payment proofs after reopening:", error.message);
   }
   return result;
 }

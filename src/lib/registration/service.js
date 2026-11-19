@@ -1,5 +1,5 @@
 import { eq, and, ne, sql } from "drizzle-orm";
-import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getRegistrationFee } from "./labels.js";
+import { MAX_PROOF_BYTES, MAX_PROOF_LABEL, getPaymentBalance } from "./labels.js";
 import { assertRegistrationOpen, isUniqueViolation } from "./deadline.js";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions } from "../../db/schema.js";
@@ -8,6 +8,7 @@ import { registrationSubmitSchema, paymentSubmitSchema } from "../validation/sch
 import { countByGender } from "./contingent.js";
 import { validateRegistrationRules } from "../validation/rules.js";
 import { buildEditableDraft, createRosterVersion } from "./roster-version.js";
+import { describeEarlierPayment, listEarlierPayments, sumEarlierPayments } from "./earlier-payments.js";
 
 function affectedRows(result) {
   return Number(result?.[0]?.affectedRows ?? result?.affectedRows ?? 0);
@@ -25,9 +26,13 @@ export async function getRegistrationForIIIT(iiitCode) {
     // snapshot so the payment precondition always corresponds to this roster.
     const [reg] = await tx.select().from(registrations)
       .where(eq(registrations.iiitCode, iiitCode)).limit(1);
+    // Payments from before the Sports SAC reopened the roster count towards the fee.
+    const earlier = await listEarlierPayments(tx, iiitCode);
+    const earlierInfo = { earlierPayments: earlier.map(describeEarlierPayment), paidEarlier: sumEarlierPayments(earlier) };
 
     if (!reg) {
       return {
+        ...earlierInfo,
         submitted: false,
         isLocked: false,
         registration: null,
@@ -68,6 +73,7 @@ export async function getRegistrationForIIIT(iiitCode) {
       students: studentList,
       entries: participationList,
       payment: payment || null,
+      ...earlierInfo,
       rosterVersion: createRosterVersion(reg, studentList, participationList),
       editableDraft: buildEditableDraft(reg, participationList),
     };
@@ -280,36 +286,40 @@ export async function submitPayment(iiitCode, rawPayload, username) {
     throw error;
   }
 
-  // 3. Verify the private Neon Object Storage proof
-  let proofDetails;
-  try {
-    proofDetails = await headProof(payload.paymentDetails.proofPathname);
-  } catch {
-    const error = new Error("Payment proof not found or inaccessible");
-    error.statusCode = 400;
-    throw error;
-  }
+  // 3. Check the uploaded receipt, when one was sent. Whether a payment is
+  // needed at all (a reopened roster may already be paid for) is decided
+  // under the locks below.
+  let proofDetails = null;
+  if (payload.paymentDetails) {
+    try {
+      proofDetails = await headProof(payload.paymentDetails.proofPathname);
+    } catch {
+      const error = new Error("Payment proof not found or inaccessible");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  // Enforce isolation: Pathname must belong to this IIIT's secure folder
-  const expectedPrefix = `payment-proofs/${iiitCode}/`;
-  if (!proofDetails.pathname.startsWith(expectedPrefix)) {
-    const error = new Error("Payment proof does not belong to your IIIT");
-    error.statusCode = 403;
-    throw error;
-  }
+    // Enforce isolation: Pathname must belong to this IIIT's secure folder
+    const expectedPrefix = `payment-proofs/${iiitCode}/`;
+    if (!proofDetails.pathname.startsWith(expectedPrefix)) {
+      const error = new Error("Payment proof does not belong to your IIIT");
+      error.statusCode = 403;
+      throw error;
+    }
 
-  // Enforce content type on the stored object.
-  const allowedContentTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-  if (!allowedContentTypes.includes(proofDetails.contentType)) {
-    const error = new Error("Payment proof must be a PDF, JPG, or PNG");
-    error.statusCode = 400;
-    throw error;
-  }
+    // Enforce content type on the stored object.
+    const allowedContentTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedContentTypes.includes(proofDetails.contentType)) {
+      const error = new Error("Payment proof must be a PDF, JPG, or PNG");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  if (proofDetails.size > MAX_PROOF_BYTES) {
-    const error = new Error(`Payment proof file size exceeds the ${MAX_PROOF_LABEL} limit`);
-    error.statusCode = 400;
-    throw error;
+    if (proofDetails.size > MAX_PROOF_BYTES) {
+      const error = new Error(`Payment proof file size exceeds the ${MAX_PROOF_LABEL} limit`);
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   // 4. Execute atomic database transaction
@@ -384,43 +394,81 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       throw conflict;
     }
 
-    // One bank transaction pays for one IIIT. A reference already used by
-    // another IIIT is almost always a copy-paste mistake.
-    const transactionId = payload.paymentDetails.transactionId;
-    const [reused] = await tx
-      .select({ id: paymentTransactions.id })
-      .from(paymentTransactions)
-      .where(and(
-        sql`LOWER(${paymentTransactions.transactionId}) = LOWER(${transactionId})`,
-        ne(paymentTransactions.registrationId, lockedReg.id)
-      ))
-      .limit(1);
-    if (reused) {
-      const conflict = new Error("This transaction ID is already used by another IIIT's payment. Check the reference on your receipt, or contact the Sports Cell.");
-      conflict.statusCode = 409;
-      throw conflict;
-    }
-
-    // Insert payment transaction
     // Calculate from the authoritative roster count read while holding the
-    // registration lock, rather than trusting the original preflight read.
+    // registration lock, less anything paid before the roster was reopened.
     const uniqueStudentsCount = lockedReg.totalStudentsCount;
-    const amount = getRegistrationFee(uniqueStudentsCount);
-    await tx.insert(paymentTransactions).values({
-      registrationId: lockedReg.id,
-      uniqueStudentCount: uniqueStudentsCount,
-      amount,
-      transactionDate: new Date(payload.paymentDetails.transactionDate),
-      transactionId,
-      // Payment methods and bank details are handled entirely by the portal.
-      bankName: null,
-      paymentMode: "CCAvenue",
-      otherPaymentMode: null,
-      proofPathname: proofDetails.pathname,
-      proofFileName: proofDetails.pathname.split('/').pop(),
-      proofContentType: proofDetails.contentType,
-      proofSize: proofDetails.size,
-    });
+    const earlier = await listEarlierPayments(tx, iiitCode);
+    const { total: totalFee, paidEarlier, balance } = getPaymentBalance(uniqueStudentsCount, sumEarlierPayments(earlier));
+    const amount = balance;
+
+    if (amount > 0) {
+      if (!payload.paymentDetails || !proofDetails) {
+        const error = new Error("Enter the transaction date and ID, and upload the receipt for the amount due.");
+        error.statusCode = 400;
+        throw error;
+      }
+      // One bank transaction pays for one IIIT. A reference already used by
+      // another IIIT is almost always a copy-paste mistake.
+      const transactionId = payload.paymentDetails.transactionId;
+      const [reused] = await tx
+        .select({ id: paymentTransactions.id })
+        .from(paymentTransactions)
+        .where(and(
+          sql`LOWER(${paymentTransactions.transactionId}) = LOWER(${transactionId})`,
+          ne(paymentTransactions.registrationId, lockedReg.id)
+        ))
+        .limit(1);
+      if (reused) {
+        const conflict = new Error("This transaction ID is already used by another IIIT's payment. Check the reference on your receipt, or contact the Sports Cell.");
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+      if (earlier.some((row) => row.transactionId.trim().toLowerCase() === transactionId.trim().toLowerCase())) {
+        const conflict = new Error("This is the transaction ID of your earlier payment. Pay the balance on the portal and enter the new transaction's ID.");
+        conflict.statusCode = 409;
+        throw conflict;
+      }
+
+      await tx.insert(paymentTransactions).values({
+        registrationId: lockedReg.id,
+        uniqueStudentCount: uniqueStudentsCount,
+        amount,
+        totalFee,
+        creditAmount: paidEarlier,
+        transactionDate: new Date(payload.paymentDetails.transactionDate),
+        transactionId,
+        // Payment methods and bank details are handled entirely by the portal.
+        bankName: null,
+        paymentMode: "CCAvenue",
+        otherPaymentMode: null,
+        proofPathname: proofDetails.pathname,
+        proofFileName: proofDetails.pathname.split('/').pop(),
+        proofContentType: proofDetails.contentType,
+        proofSize: proofDetails.size,
+      });
+    } else {
+      // Already paid for (a reopened roster that did not grow): nothing to
+      // pay or verify now. Any excess is shown to the Sports SAC as a refund.
+      await tx.insert(paymentTransactions).values({
+        registrationId: lockedReg.id,
+        uniqueStudentCount: uniqueStudentsCount,
+        amount: 0,
+        totalFee,
+        creditAmount: paidEarlier,
+        transactionDate: new Date(),
+        transactionId: `NO-BALANCE-${lockedReg.id}`,
+        bankName: null,
+        paymentMode: "Earlier payment",
+        otherPaymentMode: null,
+        proofPathname: "",
+        proofFileName: "",
+        proofContentType: "",
+        proofSize: 0,
+        verificationStatus: "verified",
+        verifiedAt: new Date(),
+        verifiedBy: "no balance due",
+      });
+    }
 
     // Update registration status to submitted (permanently locked)
     const updateResult = await tx.update(registrations)
@@ -444,6 +492,8 @@ export async function submitPayment(iiitCode, rawPayload, username) {
       iiitCode,
       status: "submitted",
       amountPaid: amount,
+      totalFee,
+      paidEarlier,
     };
   }).catch((error) => {
     if (isUniqueViolation(error)) {

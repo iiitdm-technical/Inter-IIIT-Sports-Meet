@@ -341,9 +341,15 @@ export default function AdminDashboardPage() {
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error || "Could not verify payment");
-      setRegistrationsOverview((current) => current.map((row) => row.iiitCode === verificationTarget.iiitCode
-        ? { ...row, paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy }
-        : row));
+      setRegistrationsOverview((current) => current.map((row) => {
+        if (row.iiitCode !== verificationTarget.iiitCode) return row;
+        if (result.data.kind === "earlier") {
+          return { ...row, earlierPayments: row.earlierPayments.map((item) => item.id === result.data.earlierPaymentId
+            ? { ...item, verificationStatus: "verified", verifiedAt: result.data.verifiedAt, verifiedBy: result.data.verifiedBy }
+            : item) };
+        }
+        return { ...row, paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy };
+      }));
       setVerificationTarget(null);
       refreshStats().catch(() => {});
     } catch (error) {
@@ -353,10 +359,19 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Payments still to be checked against the bank: the current one (when
+  // something was paid now) and any made before the roster was reopened.
+  const pendingPayments = (row) => [
+    ...(row.status === "submitted" && row.paymentAmount > 0 && row.paymentVerificationStatus !== "verified"
+      ? [{ key: "current", label: "Payment", amount: Number(row.paymentAmount), transactionId: row.paymentTransactionId }]
+      : []),
+    ...(row.earlierPayments || []).filter((item) => item.verificationStatus !== "verified")
+      .map((item) => ({ key: `earlier-${item.id}`, label: "Earlier payment", amount: item.amount, transactionId: item.transactionId })),
+  ];
   const paymentStage = (row) => {
     if (!row.status) return "not_submitted";
     if (row.status === "payment_pending") return "awaiting_payment";
-    return row.paymentVerificationStatus === "verified" ? "verified" : "awaiting_verification";
+    return pendingPayments(row).length === 0 ? "verified" : "awaiting_verification";
   };
   const stageCounts = registrationsOverview.reduce((counts, row) => {
     const stage = paymentStage(row);
@@ -854,7 +869,7 @@ export default function AdminDashboardPage() {
                             View entries<span className="sr-only"> for {row.iiitName}</span>
                           </button>
                         )}
-                        {row.status && row.paymentVerificationStatus !== "verified" && (
+                        {row.status && (
                           <button type="button" onClick={() => openReopen(row)} className="mt-1 block text-sm font-semibold text-red-700 underline underline-offset-2 hover:text-red-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700">
                             Reopen for edits<span className="sr-only"> for {row.iiitName}</span>
                           </button>
@@ -912,7 +927,23 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="px-4 py-3 text-center font-semibold text-ink">{row.isSubmitted ? row.totalStudentsCount : "—"}</td>
                       <td className="px-4 py-3 text-center font-semibold text-ink">
-                        {row.paymentAmount
+                        {row.paidEarlier > 0 ? (
+                          (() => {
+                            const fee = row.status ? getRegistrationFee(row.totalStudentsCount) : null;
+                            const paidNow = Number(row.paymentAmount || 0);
+                            const totalPaid = row.paidEarlier + paidNow;
+                            return (
+                              <div className="space-y-0.5 whitespace-nowrap text-sm">
+                                <div>Paid earlier ₹{row.paidEarlier.toLocaleString("en-IN")}</div>
+                                {row.status === "submitted" && <div>Paid now ₹{paidNow.toLocaleString("en-IN")}</div>}
+                                {fee != null && <div className="font-normal text-ink-soft">Fee ₹{fee.toLocaleString("en-IN")}</div>}
+                                {fee != null && fee > totalPaid && <div className="text-gold-text">Balance due ₹{(fee - totalPaid).toLocaleString("en-IN")}</div>}
+                                {fee != null && fee < totalPaid && <div className="text-red-700">Refund due ₹{(totalPaid - fee).toLocaleString("en-IN")}</div>}
+                                {!row.status && <div className="font-normal text-ink-soft">Roster reopened</div>}
+                              </div>
+                            );
+                          })()
+                        ) : row.paymentAmount
                           ? `₹${Number(row.paymentAmount).toLocaleString("en-IN")}`
                           : row.status === "payment_pending"
                           ? `₹${getRegistrationFee(row.totalStudentsCount).toLocaleString("en-IN")}`
@@ -922,20 +953,22 @@ export default function AdminDashboardPage() {
                         {row.paymentMode === "OTHER" ? row.otherPaymentMode : (row.paymentMode || "—")}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {row.status === "submitted"
-                          ? <div className="flex flex-col items-center gap-2">
-                              <span className={`chip ${row.paymentVerificationStatus === "verified" ? "" : "chip-gold"}`}>
-                                {row.paymentVerificationStatus === "verified" ? "Bank Verified" : "Proof Submitted"}
+                        <div className="flex flex-col items-center gap-2">
+                          {row.status === "submitted"
+                            ? <span className={`chip ${pendingPayments(row).length === 0 ? "" : "chip-gold"}`}>
+                                {pendingPayments(row).length === 0 ? "Bank Verified" : "Proof Submitted"}
                               </span>
-                              {row.paymentVerificationStatus !== "verified" && row.paymentProofPathname && (
-                                <button type="button" onClick={() => openVerification(row)} className="btn btn-primary btn-sm">
-                                  Verify payment
-                                </button>
-                              )}
-                            </div>
-                          : row.status === "payment_pending"
-                          ? <span className="chip chip-gold">Awaiting proof</span>
-                          : <span className="text-ink-muted">—</span>}
+                            : row.status === "payment_pending"
+                            ? <span className="chip chip-gold">{row.paidEarlier > 0 ? "Awaiting balance" : "Awaiting proof"}</span>
+                            : row.paidEarlier > 0
+                            ? <span className="chip chip-gold">Reopened · editing</span>
+                            : <span className="text-ink-muted">—</span>}
+                          {pendingPayments(row).length > 0 && (
+                            <button type="button" onClick={() => openVerification(row)} className="btn btn-primary btn-sm">
+                              Verify payment{pendingPayments(row).length > 1 ? "s" : ""}
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="max-w-[140px] truncate px-4 py-3 font-mono text-ink-soft">{row.paymentTransactionId || "—"}</td>
                       <td className="px-4 py-3 text-ink-soft">
@@ -945,6 +978,13 @@ export default function AdminDashboardPage() {
                       </td>
                       <td className="max-w-[120px] truncate px-4 py-3 text-ink-soft">{row.paymentBankName || "—"}</td>
                       <td className="px-4 py-3 text-center">
+                        {(row.earlierPayments || []).map((item) => (
+                          <div key={item.id} className="mb-1 whitespace-nowrap text-xs text-ink-soft">
+                            {item.hasProof
+                              ? <a href={`/api/payment/proof?iiitCode=${row.iiitCode}&earlier=${item.id}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-primary underline underline-offset-2">Earlier receipt</a>
+                              : <span title={item.note || ""}>Earlier receipt not stored</span>}
+                          </div>
+                        ))}
                         {row.paymentProofPathname ? (
                           <a
                             href={`/api/payment/proof?iiitCode=${row.iiitCode}`}
@@ -958,7 +998,7 @@ export default function AdminDashboardPage() {
                             </svg>
                             View<span className="sr-only"> payment proof for {row.iiitName}</span>
                           </a>
-                        ) : (
+                        ) : !(row.earlierPayments || []).length && (
                           <span className="text-ink-muted">—</span>
                         )}
                       </td>
@@ -1006,7 +1046,7 @@ export default function AdminDashboardPage() {
               <h2 id="reopen-title" className="heading-section mt-1 text-[2rem]">Reopen {reopenTarget.iiitName}</h2>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
                 <li>The submitted roster becomes an editable draft for the coordinator, with all students, events and contact details kept.</li>
-                {reopenTarget.paymentProofPathname && <li className="font-semibold text-red-800">The submitted payment details and proof are deleted. The coordinator must submit payment again; refund or adjust any amount already paid outside this system.</li>}
+                {reopenTarget.paymentAmount > 0 && <li className="font-semibold text-ink">The payment of ₹{Number(reopenTarget.paymentAmount).toLocaleString("en-IN")} (UTR {reopenTarget.paymentTransactionId}) is kept as an earlier payment, with its receipt. When they save the roster again they pay only the difference, or are shown a refund if it shrank.</li>}
                 <li>The IIIT drops out of the entries list and statistics until the coordinator saves the roster again.</li>
               </ul>
               <div className="mt-5">
@@ -1026,7 +1066,12 @@ export default function AdminDashboardPage() {
             <form ref={verificationPanelRef} onSubmit={submitVerification} role="dialog" aria-modal="true" aria-labelledby="verify-payment-title" tabIndex={-1} className="w-full max-w-lg rounded-card border border-line bg-paper p-6 shadow-lift outline-none">
               <p className="eyebrow">Payment check</p>
               <h2 id="verify-payment-title" className="heading-section mt-1 text-[2rem]">Verify bank transfer</h2>
-              <p className="mt-2 text-sm text-ink-soft">{verificationTarget.iiitName} submitted a proof for ₹{Number(verificationTarget.paymentAmount).toLocaleString("en-IN")}. Check the bank statement before confirming receipt.</p>
+              <p className="mt-2 text-sm text-ink-soft">Check each of {verificationTarget.iiitName}&apos;s payments against the bank statement, one at a time. Still to verify:</p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {pendingPayments(verificationTarget).map((item) => (
+                  <li key={item.key} className="rounded-control bg-ivory px-3 py-2"><span className="font-semibold text-ink">{item.label}: ₹{item.amount.toLocaleString("en-IN")}</span> · <span className="font-mono">{item.transactionId}</span></li>
+                ))}
+              </ul>
               <div className="mt-5 space-y-4">
                 <div>
                   <label htmlFor="verify-utr" className="block text-sm font-semibold text-ink">UTR shown on bank statement</label>
