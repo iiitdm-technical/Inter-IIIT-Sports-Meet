@@ -56,6 +56,8 @@ Build/test failures leave the live process untouched. Startup/health failures re
   current -> releases/...       # last verified active release
   uploads/                      # payment proofs (PROOF_STORAGE=local), mode 700; back this up
   backups/                      # original migration backup/configuration
+  backups/auto/                 # 6-hourly MySQL snapshots (last 3 days) and backup.log
+  bin/                          # db-backup.sh and its PM2 config, outside releases
   update.lock                   # updater concurrency lock
 ```
 
@@ -90,3 +92,16 @@ pm2 save
 ```
 
 See `MYSQL_MIGRATION.md` for the original data cutover and protected PostgreSQL backups. After new MySQL writes, reverting to Neon without reconciling data would lose those writes.
+
+## Database backups
+
+`scripts/db-backup.sh` dumps MySQL (`mysqldump --single-transaction`), gzips it to `~/.local/share/inter-iiit/backups/auto/inter-iiit-<UTC time>.sql.gz`, deletes snapshots older than 3 days and logs each run to `backups/auto/backup.log`. It must run on the DreamHost VPS: the database refuses other IPs. PM2 runs it at 00:00, 06:00, 12:00 and 18:00 server time (Pacific) as the `db-backup` app; it shows `stopped` between runs, which is normal.
+
+`./update.sh` installs it automatically after each successful deploy: it copies the script and `ecosystem.backup.config.cjs` to `~/.local/share/inter-iiit/bin/` (outside the releases, so rollbacks and release pruning never remove it) and registers the PM2 app if it is missing. To install by hand:
+
+```bash
+cp scripts/db-backup.sh ecosystem.backup.config.cjs ~/.local/share/inter-iiit/bin/
+pm2 start ~/.local/share/inter-iiit/bin/ecosystem.backup.config.cjs && pm2 save
+```
+
+Restore a snapshot (overwrites the tables it contains): `zcat <file>.sql.gz | mysql --ssl-mode=REQUIRED -h sports.iiitdm.ac.in -u sports_admin -p inter_iiit_2026`.

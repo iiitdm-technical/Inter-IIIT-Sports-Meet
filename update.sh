@@ -258,6 +258,24 @@ run_step pm2 save
 deployment_committed=1
 printf '\nDeployment successful: %s\n' "$release"
 
+# Database backups: install the release's backup script outside the releases
+# (so rollbacks and pruning never remove it) and make sure PM2 schedules it.
+# Never fails the deploy; see DEPLOYMENT.md "Database backups".
+if [[ -f "$release/scripts/db-backup.sh" && -f "$release/ecosystem.backup.config.cjs" ]]; then
+  backup_bin="$deploy_root/bin"
+  if mkdir -p -- "$backup_bin" && chmod 700 -- "$backup_bin" \
+    && cp -- "$release/scripts/db-backup.sh" "$release/ecosystem.backup.config.cjs" "$backup_bin/" \
+    && chmod 700 -- "$backup_bin/db-backup.sh"; then
+    if ! pm2 describe db-backup >/dev/null 2>&1; then
+      { pm2 start "$backup_bin/ecosystem.backup.config.cjs" && pm2 save; } >/dev/null 2>&1 \
+        || printf 'WARNING: could not schedule db-backup in PM2.\n' >&2
+    fi
+    printf 'Database backup script installed in %s\n' "$backup_bin"
+  else
+    printf 'WARNING: could not install the database backup script.\n' >&2
+  fi
+fi
+
 # Storage: keep only the active release and the previous one (for rollback).
 removed=0
 for entry in "$deploy_root"/releases/*; do
