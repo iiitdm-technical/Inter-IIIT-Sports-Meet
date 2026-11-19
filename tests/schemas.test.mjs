@@ -122,8 +122,9 @@ describe("paymentSubmitSchema", () => {
     assert.equal(accepts({ ...payment(), rosterVersion: "short" }), false);
   });
 
-  test("requires transaction id, date and proof", () => {
-    for (const field of ["transactionId", "transactionDate", "proofPathname"]) {
+  test("requires date and proof; transaction id is optional", () => {
+    assert.equal(accepts(without("transactionId")), true);
+    for (const field of ["transactionDate", "proofPathname"]) {
       assert.equal(accepts(without(field)), false, `missing ${field} should be rejected`);
     }
   });
@@ -162,7 +163,6 @@ describe("paymentSubmitSchema", () => {
   });
 
   test("bounds the UTR length", () => {
-    assert.equal(accepts(payment({ transactionId: "1234" })), false);
     assert.equal(accepts(payment({ transactionId: "X".repeat(65) })), false);
   });
 });

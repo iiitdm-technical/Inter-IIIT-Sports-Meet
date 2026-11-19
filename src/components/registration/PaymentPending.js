@@ -69,12 +69,6 @@ export default function PaymentPending({ iiitCode, registrationData, onEditRoste
       today.setHours(23, 59, 59, 999);
       if (d > today) errors.transactionDate = "Transaction date cannot be in the future.";
     }
-    const transactionId = paymentDetails?.transactionId?.trim() || "";
-    if (!transactionId) {
-      errors.transactionId = "Transaction ID / UTR is required.";
-    } else if (transactionId.length < 5 || transactionId.length > 64) {
-      errors.transactionId = "Transaction ID / UTR must be 5 to 64 characters.";
-    }
     if (!paymentDetails?.proofPathname) {
       errors.proof = "Transaction proof is required.";
     }

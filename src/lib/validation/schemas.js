@@ -163,7 +163,7 @@ export const paymentDetailsSchema = z.object({
     const todayInIndia = new Date(Date.now() + IST_OFFSET_MS).toISOString().slice(0, 10);
     return val >= EARLIEST_PAYMENT_DATE && val <= todayInIndia;
   }, "Transaction date cannot be in the future or invalid"),
-  transactionId: z.string().trim().min(5, "Transaction ID/UTR must be at least 5 characters").max(64),
+  transactionId: z.string().trim().max(64).optional().default(""),
   proofPathname: z.string().min(5, "Payment proof is required"),
 });
 

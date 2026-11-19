@@ -403,31 +403,12 @@ export async function submitPayment(iiitCode, rawPayload, username) {
 
     if (amount > 0) {
       if (!payload.paymentDetails || !proofDetails) {
-        const error = new Error("Enter the transaction date and ID, and upload the receipt for the amount due.");
+        const error = new Error("Enter the transaction date and upload the receipt for the amount due.");
         error.statusCode = 400;
         throw error;
       }
-      // One bank transaction pays for one IIIT. A reference already used by
-      // another IIIT is almost always a copy-paste mistake.
-      const transactionId = payload.paymentDetails.transactionId;
-      const [reused] = await tx
-        .select({ id: paymentTransactions.id })
-        .from(paymentTransactions)
-        .where(and(
-          sql`LOWER(${paymentTransactions.transactionId}) = LOWER(${transactionId})`,
-          ne(paymentTransactions.registrationId, lockedReg.id)
-        ))
-        .limit(1);
-      if (reused) {
-        const conflict = new Error("This transaction ID is already used by another IIIT's payment. Check the reference on your receipt, or contact the Sports Cell.");
-        conflict.statusCode = 409;
-        throw conflict;
-      }
-      if (earlier.some((row) => row.transactionId.trim().toLowerCase() === transactionId.trim().toLowerCase())) {
-        const conflict = new Error("This is the transaction ID of your earlier payment. Pay the balance on the portal and enter the new transaction's ID.");
-        conflict.statusCode = 409;
-        throw conflict;
-      }
+      // The UTR field was removed from the payment form; keep the column filled.
+      const transactionId = payload.paymentDetails.transactionId || "";
 
       await tx.insert(paymentTransactions).values({
         registrationId: lockedReg.id,
@@ -445,6 +426,10 @@ export async function submitPayment(iiitCode, rawPayload, username) {
         proofFileName: proofDetails.pathname.split('/').pop(),
         proofContentType: proofDetails.contentType,
         proofSize: proofDetails.size,
+        // Manual bank verification is disabled: payments count as verified on submission.
+        verificationStatus: "verified",
+        verifiedAt: new Date(),
+        verifiedBy: "auto",
       });
     } else {
       // Already paid for (a reopened roster that did not grow): nothing to

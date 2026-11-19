@@ -71,7 +71,7 @@ export default function LockedRegistration({ registrationData }) {
             <div>
               <p className="eyebrow">{isPaymentVerified ? "All steps complete" : "Step 3 of 3 · Verification"}</p>
               <h1 className="heading-section mt-2">{isPaymentVerified ? "Registration complete" : "Payment submitted — awaiting verification"}</h1>
-              <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">{isPaymentVerified ? "The organizers have confirmed your bank transfer. Your registration is complete and locked." : "Your roster and payment details are locked. The organizers will check the transfer against their bank statement; this page updates when they do."}</p>
+              <p className="mt-3 max-w-2xl text-[15px] text-ink-soft">{isPaymentVerified ? "Your payment was successful. Your registration is complete and locked." : "Your roster and payment details are locked. The organizers will check the transfer against their bank statement; this page updates when they do."}</p>
             </div>
             <span className={`chip shrink-0 self-start ${isPaymentVerified ? "" : "chip-gold"}`}>
               {isPaymentVerified ? "Verified" : "Awaiting verification"}
@@ -166,7 +166,7 @@ export default function LockedRegistration({ registrationData }) {
               <h2 id="locked-payment-title" className="heading-card">Payment Details</h2>
               <div className="text-right">
                 <span role="status" aria-live="polite" className={`chip ${isPaymentVerified ? "" : "chip-gold"}`}>
-                  {isPaymentVerified ? "Bank Verified" : "Awaiting Bank Verification"}
+                  {isPaymentVerified ? "Successful" : "Awaiting Bank Verification"}
                 </span>
                 {isPaymentVerified && verification.verifiedAt && (
                   <span className="meta mt-1 block">Verified {new Date(verification.verifiedAt).toLocaleDateString("en-IN")}</span>
@@ -218,10 +218,6 @@ export default function LockedRegistration({ registrationData }) {
                 </div>
               </dl>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-                <div className="col-span-2">
-                  <dt className={detailLabel}>Transaction ID / UTR</dt>
-                  <dd className={`${detailValue} font-mono break-all`}>{payment.amount > 0 ? payment.transactionId : "None needed: covered by your earlier payment"}</dd>
-                </div>
                 <div>
                   <dt className={detailLabel}>Transaction date</dt>
                   <dd className={detailValue}>

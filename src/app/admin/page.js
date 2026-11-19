@@ -956,7 +956,7 @@ export default function AdminDashboardPage() {
                         <div className="flex flex-col items-center gap-2">
                           {row.status === "submitted"
                             ? <span className={`chip ${pendingPayments(row).length === 0 ? "" : "chip-gold"}`}>
-                                {pendingPayments(row).length === 0 ? "Bank Verified" : "Proof Submitted"}
+                                {pendingPayments(row).length === 0 ? "Successful" : "Proof Submitted"}
                               </span>
                             : row.status === "payment_pending"
                             ? <span className="chip chip-gold">{row.paidEarlier > 0 ? "Awaiting balance" : "Awaiting proof"}</span>

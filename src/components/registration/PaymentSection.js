@@ -287,30 +287,6 @@ export default function PaymentSection({ uniqueStudentsCount, earlierPayments = 
           )}
         </div>
 
-        {/* Transaction ID */}
-        <div>
-          <label htmlFor="payment-transaction-id" className="mb-1.5 block text-sm font-semibold text-ink">
-            Transaction ID / UTR / Reference No. <span className="text-red-700" aria-hidden="true">*</span>
-          </label>
-          <input
-            id="payment-transaction-id"
-            aria-invalid={Boolean(errors.transactionId) || undefined}
-            aria-describedby={errors.transactionId ? "payment-transaction-id-error" : undefined}
-            type="text"
-            placeholder="e.g. 423108765432"
-            value={paymentDetails?.transactionId || ""}
-            onChange={(e) => handleFieldChange("transactionId", e.target.value)}
-            className={`w-full rounded-control border bg-white px-3.5 py-2.5 text-[15px] text-ink outline-none transition-colors focus:ring-2 focus:ring-brand-primary/20 font-mono ${
-              errors.transactionId
-                ? "border-red-400 bg-red-50 focus:border-red-600"
-                : "border-line focus:border-brand-primary"
-            }`}
-          />
-          {errors.transactionId && (
-            <p id="payment-transaction-id-error" className="mt-1.5 text-sm font-medium text-red-700">{errors.transactionId}</p>
-          )}
-        </div>
-
         {/* Proof Upload */}
         <div className="sm:col-span-2">
           <p id="payment-proof-label" className="mb-1.5 block text-sm font-semibold text-ink">
