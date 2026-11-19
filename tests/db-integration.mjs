@@ -189,7 +189,7 @@ try {
     await db.insert(paymentTransactions).values({ registrationId: reg.id, uniqueStudentCount: 2, amount: 5000,
       transactionDate: new Date(), transactionId: "TEST-UTR", proofPathname: "test-only/not-an-object",
       proofFileName: "test.pdf", proofContentType: "application/pdf", proofSize: 42 });
-    const results = await Promise.allSettled(Array.from({ length: 2 }, () => verifyPayment(IIIT, "TEST-UTR", 5000, "test-admin")));
+    const results = await Promise.allSettled(Array.from({ length: 2 }, () => verifyPayment(IIIT, "test-admin")));
     assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
     assert.equal(results.find((result) => result.status === "rejected").reason.statusCode, 409);
   });

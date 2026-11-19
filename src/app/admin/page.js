@@ -71,9 +71,6 @@ export default function AdminDashboardPage() {
   const [reopenError, setReopenError] = useState("");
   const [reopenBusy, setReopenBusy] = useState(false);
   const [notice, setNotice] = useState("");
-  const [verificationUtr, setVerificationUtr] = useState("");
-  const [verificationAmount, setVerificationAmount] = useState("");
-  const [bankConfirmed, setBankConfirmed] = useState(false);
   const [verificationError, setVerificationError] = useState("");
   const [verificationBusy, setVerificationBusy] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -317,9 +314,6 @@ export default function AdminDashboardPage() {
 
   const openVerification = (row) => {
     setVerificationTarget(row);
-    setVerificationUtr("");
-    setVerificationAmount("");
-    setBankConfirmed(false);
     setVerificationError("");
   };
 
@@ -334,21 +328,14 @@ export default function AdminDashboardPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           iiitCode: verificationTarget.iiitCode,
-          transactionId: verificationUtr,
-          amount: Number(verificationAmount),
-          bankConfirmed,
         }),
       });
       const result = await response.json().catch(() => null);
       if (!response.ok) throw new Error(result?.error || "Could not verify payment");
       setRegistrationsOverview((current) => current.map((row) => {
         if (row.iiitCode !== verificationTarget.iiitCode) return row;
-        if (result.data.kind === "earlier") {
-          return { ...row, earlierPayments: row.earlierPayments.map((item) => item.id === result.data.earlierPaymentId
-            ? { ...item, verificationStatus: "verified", verifiedAt: result.data.verifiedAt, verifiedBy: result.data.verifiedBy }
-            : item) };
-        }
-        return { ...row, paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy };
+        const stamp = { verificationStatus: "verified", verifiedAt: result.data.verifiedAt, verifiedBy: result.data.verifiedBy };
+        return { ...row, earlierPayments: (row.earlierPayments || []).map((item) => ({ ...item, ...stamp })), paymentVerificationStatus: result.data.verificationStatus, paymentVerifiedAt: result.data.verifiedAt, paymentVerifiedBy: result.data.verifiedBy };
       }));
       setVerificationTarget(null);
       refreshStats().catch(() => {});
@@ -1065,31 +1052,17 @@ export default function AdminDashboardPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-dark/75 p-4 backdrop-blur-[2px]" onClick={(event) => { if (event.target === event.currentTarget) closeVerification(); }}>
             <form ref={verificationPanelRef} onSubmit={submitVerification} role="dialog" aria-modal="true" aria-labelledby="verify-payment-title" tabIndex={-1} className="w-full max-w-lg rounded-card border border-line bg-paper p-6 shadow-lift outline-none">
               <p className="eyebrow">Payment check</p>
-              <h2 id="verify-payment-title" className="heading-section mt-1 text-[2rem]">Verify bank transfer</h2>
-              <p className="mt-2 text-sm text-ink-soft">Check each of {verificationTarget.iiitName}&apos;s payments against the bank statement, one at a time. Still to verify:</p>
+              <h2 id="verify-payment-title" className="heading-section mt-1 text-[2rem]">Verify payment</h2>
+              <p className="mt-2 text-sm text-ink-soft">Mark {verificationTarget.iiitName}&apos;s payments as verified? The coordinator will see their registration as successful.</p>
               <ul className="mt-2 space-y-1 text-sm">
                 {pendingPayments(verificationTarget).map((item) => (
-                  <li key={item.key} className="rounded-control bg-ivory px-3 py-2"><span className="font-semibold text-ink">{item.label}: ₹{item.amount.toLocaleString("en-IN")}</span> · <span className="font-mono">{item.transactionId}</span></li>
+                  <li key={item.key} className="rounded-control bg-ivory px-3 py-2"><span className="font-semibold text-ink">{item.label}: ₹{item.amount.toLocaleString("en-IN")}</span></li>
                 ))}
               </ul>
-              <div className="mt-5 space-y-4">
-                <div>
-                  <label htmlFor="verify-utr" className="block text-sm font-semibold text-ink">UTR shown on bank statement</label>
-                  <input id="verify-utr" value={verificationUtr} onChange={(event) => setVerificationUtr(event.target.value)} required className="mt-1.5 w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink font-mono focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" />
-                </div>
-                <div>
-                  <label htmlFor="verify-amount" className="block text-sm font-semibold text-ink">Amount received (₹)</label>
-                  <input id="verify-amount" type="number" min="1" step="1" value={verificationAmount} onChange={(event) => setVerificationAmount(event.target.value)} required className="mt-1.5 w-full rounded-control border border-line bg-white px-3.5 py-2.5 text-[15px] text-ink focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20" />
-                </div>
-                <label className="flex items-start gap-3 rounded-control border border-amber-300 bg-gold-wash p-3 text-sm font-medium text-ink">
-                  <input type="checkbox" checked={bankConfirmed} onChange={(event) => setBankConfirmed(event.target.checked)} required className="mt-1 size-4 accent-brand-primary" />
-                  I matched the UTR and amount to an actual credit in the organizer&apos;s bank account.
-                </label>
-              </div>
               {verificationError && <p role="alert" className="mt-4 rounded-control border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{verificationError}</p>}
               <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button type="button" onClick={closeVerification} disabled={verificationBusy} className="btn btn-outline">Cancel</button>
-                <button type="submit" disabled={verificationBusy || !bankConfirmed} className="btn btn-primary">{verificationBusy ? "Verifying…" : "Mark verified"}</button>
+                <button type="submit" disabled={verificationBusy} className="btn btn-primary">{verificationBusy ? "Verifying…" : "Mark verified"}</button>
               </div>
             </form>
           </div>

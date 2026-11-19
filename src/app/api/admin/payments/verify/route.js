@@ -11,9 +11,6 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   iiitCode: z.string().min(1).max(64),
-  transactionId: z.string().trim().min(5).max(128),
-  amount: z.number().int().positive(),
-  bankConfirmed: z.literal(true),
 });
 
 export async function POST(request) {
@@ -22,11 +19,11 @@ export async function POST(request) {
     await enforce(`admin:${admin.userId}`, LIMITS.adminWrite);
     const parsed = bodySchema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: "Enter the UTR and amount, and confirm they match the bank statement" }, { status: 400 });
+      return NextResponse.json({ error: "Choose an IIIT to verify" }, { status: 400 });
     }
-    const { iiitCode, transactionId, amount } = parsed.data;
-    const result = await verifyPayment(iiitCode, transactionId, amount, admin.username);
-    await audit({ actor: admin.username, role: admin.role, action: "payment_verified", target: iiitCode, ip: await getClientIp(), details: { amount } });
+    const { iiitCode } = parsed.data;
+    const result = await verifyPayment(iiitCode, admin.username);
+    await audit({ actor: admin.username, role: admin.role, action: "payment_verified", target: iiitCode, ip: await getClientIp() });
     return NextResponse.json({ data: result });
   } catch (error) {
     console.error("Payment verification failed:", error);

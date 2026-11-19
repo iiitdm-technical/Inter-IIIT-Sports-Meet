@@ -86,12 +86,11 @@ export async function getAdminRegistrationsOverview() {
 }
 
 /**
- * Marks one payment as bank-verified: the current payment, or a payment made
- * before the roster was reopened. The UTR and amount must match one of them.
+ * Marks every pending payment from this IIIT as verified: the current payment
+ * and any made before the roster was reopened. The admin only confirms.
  */
-export async function verifyPayment(iiitCode, transactionId, amount, adminUsername) {
+export async function verifyPayment(iiitCode, adminUsername) {
   const db = getDb();
-  const utr = transactionId.trim().toUpperCase();
   const [registration] = await db.select({ id: registrations.id, status: registrations.status })
     .from(registrations).where(eq(registrations.iiitCode, iiitCode)).limit(1);
   const [payment] = registration?.status === "submitted"
@@ -99,7 +98,7 @@ export async function verifyPayment(iiitCode, transactionId, amount, adminUserna
     : [];
   const earlier = await listEarlierPayments(db, iiitCode);
 
-  const pendingCurrent = payment && payment.amount > 0 && payment.verificationStatus !== "verified" ? payment : null;
+  const pendingCurrent = payment && payment.verificationStatus !== "verified" ? payment : null;
   const pendingEarlier = earlier.filter((row) => row.verificationStatus !== "verified");
   if (!pendingCurrent && pendingEarlier.length === 0) {
     const error = new Error(payment || earlier.length ? "Every payment from this IIIT is already verified" : "Payment proof has not been submitted for this IIIT");
@@ -108,33 +107,24 @@ export async function verifyPayment(iiitCode, transactionId, amount, adminUserna
   }
 
   const verifiedAt = new Date();
-  const matches = (row) => row.transactionId.trim().toUpperCase() === utr && row.amount === amount;
-  if (pendingCurrent && matches(pendingCurrent)) {
-    const result = await db.update(paymentTransactions)
-      .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
-      .where(and(eq(paymentTransactions.id, pendingCurrent.id), eq(paymentTransactions.verificationStatus, "pending")));
-    if (affectedRows(result) === 0) {
+  const set = { verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
+  await db.transaction(async (tx) => {
+    let changed = 0;
+    if (pendingCurrent) {
+      changed += affectedRows(await tx.update(paymentTransactions).set(set)
+        .where(and(eq(paymentTransactions.id, pendingCurrent.id), eq(paymentTransactions.verificationStatus, "pending"))));
+    }
+    if (pendingEarlier.length) {
+      changed += affectedRows(await tx.update(earlierPayments).set(set)
+        .where(and(eq(earlierPayments.iiitCode, iiitCode), eq(earlierPayments.verificationStatus, "pending"))));
+    }
+    if (changed === 0) {
       const error = new Error("Payment verification changed; refresh and try again");
       error.statusCode = 409;
       throw error;
     }
-    return { kind: "current", verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
-  }
-  const earlierMatch = pendingEarlier.find(matches);
-  if (earlierMatch) {
-    const result = await db.update(earlierPayments)
-      .set({ verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername })
-      .where(and(eq(earlierPayments.id, earlierMatch.id), eq(earlierPayments.verificationStatus, "pending")));
-    if (affectedRows(result) === 0) {
-      const error = new Error("Payment verification changed; refresh and try again");
-      error.statusCode = 409;
-      throw error;
-    }
-    return { kind: "earlier", earlierPaymentId: earlierMatch.id, verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
-  }
-  const error = new Error("Entered UTR or amount does not match any unverified payment from this IIIT");
-  error.statusCode = 422;
-  throw error;
+  });
+  return { verificationStatus: "verified", verifiedAt, verifiedBy: adminUsername };
 }
 
 /**

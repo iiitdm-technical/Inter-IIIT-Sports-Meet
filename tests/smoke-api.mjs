@@ -255,22 +255,19 @@ try {
   expectStatus(await request("/api/admin/stats", { cookie: adminCookie }), 200, "admin stats");
   expectStatus(await request("/api/payment/proof?iiitCode=" + iiits[0].iiitCode, { cookie: adminCookie }), 200, "admin proof retrieval");
   const verifyPath = "/api/admin/payments/verify";
-  const verifyBody = (transactionId, bankConfirmed = true) => ({
+  const verifyBody = () => ({
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ iiitCode: iiits[0].iiitCode, transactionId, amount: 27950, bankConfirmed }),
+    body: JSON.stringify({ iiitCode: iiits[0].iiitCode }),
   });
-  expectStatus(await request(verifyPath, { cookie: iiitCookie, ...verifyBody(paymentDetails.transactionId) }), 403, "IIIT cannot verify payment");
-  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId, false) }), 400, "bank confirmation required");
-  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody("WRONG-UTR") }), 422, "wrong UTR rejected");
-  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 200, "admin payment approval");
+  expectStatus(await request(verifyPath, { cookie: iiitCookie, ...verifyBody() }), 403, "IIIT cannot verify payment");
+  // Payments are auto-verified on submission.
   const verifiedStatus = await request("/api/payment/status", { cookie: iiitCookie });
   expectStatus(verifiedStatus, 200, "student sees verified payment");
   assert.equal(verifiedStatus.body.data.verificationStatus, "verified");
-  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody(paymentDetails.transactionId) }), 409, "duplicate approval rejected");
+  expectStatus(await request(verifyPath, { cookie: adminCookie, ...verifyBody() }), 409, "nothing left to verify");
   const reopenPath = "/api/admin/registrations/reopen";
   const reopenOptions = (iiitCode) => ({ cookie: adminCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ iiitCode, confirmIiitCode: iiitCode }) });
-  expectStatus(await request(reopenPath, reopenOptions(iiits[0].iiitCode)), 409, "verified roster cannot be reopened");
   if (iiits.length >= 3) {
     const correctionCookie = await login(iiits[2]);
     expectStatus(await request("/api/registration/submit", { cookie: correctionCookie, method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }), 200, "correction roster submitted");

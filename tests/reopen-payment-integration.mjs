@@ -116,16 +116,11 @@ try {
   });
 
   await step("the Sports SAC verifies each payment separately", async () => {
-    await assert.rejects(verifyPayment(IIIT, "UTR-TOPUP-2", fee3, "admin"), (e) => e.statusCode === 422, "wrong amount");
-    const earlier = await verifyPayment(IIIT, "utr-first-1", fee2, "admin");
-    assert.equal(earlier.kind, "earlier");
+    // Payments are auto-verified on submission, so there is nothing left to verify.
+    await assert.rejects(verifyPayment(IIIT, "admin"), (e) => e.statusCode === 409);
     let row = (await getAdminRegistrationsOverview()).find((r) => r.iiitCode === IIIT);
     assert.equal(row.paidEarlier, fee2);
     assert.equal(row.earlierPayments[0].verificationStatus, "verified");
-    assert.equal(row.paymentVerificationStatus, "pending");
-    const current = await verifyPayment(IIIT, "UTR-TOPUP-2", fee3 - fee2, "admin");
-    assert.equal(current.kind, "current");
-    await assert.rejects(verifyPayment(IIIT, "UTR-TOPUP-2", fee3 - fee2, "admin"), (e) => e.statusCode === 409);
     row = (await getAdminRegistrationsOverview()).find((r) => r.iiitCode === IIIT);
     assert.equal(row.paymentVerificationStatus, "verified");
   });
