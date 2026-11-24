@@ -6,15 +6,15 @@ export const metadata = {
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16 text-neutral-900 dark:text-neutral-100">
-      <h1 className="text-3xl font-bold tracking-tight">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+    <main className="mx-auto max-w-3xl px-6 py-16 text-neutral-900">
+      <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Privacy Policy</h1>
+      <p className="mt-2 text-sm text-neutral-600">
         Last updated: November 24, 2026
       </p>
 
-      <div className="mt-8 space-y-6 text-base leading-relaxed text-neutral-700 dark:text-neutral-300">
+      <div className="mt-8 space-y-6 text-base leading-relaxed text-neutral-800">
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             1. Overview
           </h2>
           <p className="mt-2">
@@ -26,7 +26,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             2. Information We Collect
           </h2>
           <p className="mt-2">
@@ -55,7 +55,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             3. How We Use Information
           </h2>
           <p className="mt-2">
@@ -66,7 +66,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             4. Data Security &amp; Retention
           </h2>
           <p className="mt-2">
@@ -77,7 +77,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             5. Third-Party Services
           </h2>
           <p className="mt-2">
@@ -88,7 +88,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">
+          <h2 className="text-xl font-semibold text-neutral-900">
             6. Your Rights &amp; Contact
           </h2>
           <p className="mt-2">
