@@ -14,6 +14,8 @@ export async function GET(request) {
     const gender = searchParams.get("gender") || undefined;
     const rollNumber = searchParams.get("rollNumber") || undefined;
     const name = searchParams.get("name") || undefined;
+    const q = searchParams.get("q") || undefined;
+    const checkedIn = searchParams.get("checkedIn") || undefined;
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
@@ -24,6 +26,8 @@ export async function GET(request) {
       gender,
       rollNumber,
       name,
+      q,
+      checkedIn,
       page,
       limit,
     });

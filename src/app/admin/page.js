@@ -8,6 +8,7 @@ import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatTravelDate, formatTravelMode } from "@/lib/registration/arrival";
 import { totalTravelling } from "@/lib/registration/contingent";
+import RegistrationDeskPanel from "@/components/admin/RegistrationDeskPanel";
 
 const formatMB = (bytes) => {
   const mb = bytes / 1024 / 1024;
@@ -450,6 +451,11 @@ export default function AdminDashboardPage() {
             <div className="card p-5">
               <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique students</dt>
               <dd className="stat-number mt-2 text-5xl text-ink">{stats.totalStudents}</dd>
+              <dd className="mt-2">
+                <span className="chip">
+                  {stats.checkedInStudents ?? 0} checked in
+                </span>
+              </dd>
             </div>
             <div className="card p-5">
               <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-ink-muted">Unique boys</dt>
@@ -470,7 +476,7 @@ export default function AdminDashboardPage() {
 
         {/* Tab Nav */}
         <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
-          {[["entries", "Registration Entries"], ["students", "Unique Students"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
+          {[["entries", "Registration Entries"], ["students", "Unique Students"], ["checkin", "Registration Desk"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
             <button
               key={tab}
               type="button"
@@ -731,6 +737,7 @@ export default function AdminDashboardPage() {
                   <th scope="col" className={`${tableHead}`}>Roll Number</th>
                   <th scope="col" className={`${tableHead}`}>Student Name</th>
                   <th scope="col" className={`${tableHead} text-center`}>Gender</th>
+                  <th scope="col" className={`${tableHead}`}>Check-in</th>
                   <th scope="col" className={`${tableHead} text-center`}>Events</th>
                   <th scope="col" className={`${tableHead} w-full min-w-[22rem]`}>Entered In</th>
                 </tr>
@@ -738,7 +745,7 @@ export default function AdminDashboardPage() {
               <tbody className="divide-y divide-line bg-paper">
                 {!studentsData.rows || studentsData.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-ink-muted">
+                    <td colSpan={7} className="py-12 text-center text-ink-muted">
                       {studentsLoading ? "Searching database..." : (
                         <div className="flex flex-col items-center gap-2">
                           <svg className="w-8 h-8 text-ink-muted/50" fill="none" aria-hidden="true" viewBox="0 0 24 24" stroke="currentColor">
@@ -759,6 +766,28 @@ export default function AdminDashboardPage() {
                         <span className={`chip ${row.studentGender === 'F' ? 'chip-gold' : ''}`}>
                           {row.studentGender}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.checkedIn ? (
+                          <div>
+                            <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-brand-primary">
+                              Checked In
+                            </span>
+                            {row.checkedInAt && (
+                              <p className="mt-1 text-xs text-ink-muted">
+                                {new Date(row.checkedInAt).toLocaleString("en-IN", {
+                                  day: "2-digit",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                })}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-ink-muted">Not checked in</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center font-semibold text-ink">{row.events.length}</td>
                       <td className="min-w-[22rem] px-4 py-3 whitespace-normal text-ink-soft">
@@ -801,6 +830,16 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </div>
+        )}
+
+        {/* Registration Desk (Check-in & ID Cards) */}
+        {activeTab === "checkin" && (
+          <RegistrationDeskPanel
+            registrationsOverview={registrationsOverview}
+            onCheckInSuccess={() => {
+              refreshStats().catch(() => {});
+            }}
+          />
         )}
 
         {/* IIITs & Payments Tab */}

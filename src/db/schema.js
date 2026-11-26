@@ -101,6 +101,9 @@ export const students = mysqlTable("students", {
   rollNumber: varchar("roll_number", { length: 64 }).notNull(),
   name: varchar("name", { length: 128 }).notNull(),
   gender: varchar("gender", { length: 1 }).notNull(), // 'M' | 'F'
+  checkedIn: boolean("checked_in").default(false).notNull(),
+  checkedInAt: utcDateTime("checked_in_at"),
+  checkedInBy: varchar("checked_in_by", { length: 64 }),
   createdAt: currentUtcDateTime("created_at").notNull(),
   updatedAt: currentUtcDateTime("updated_at").notNull(),
 }, (table) => [

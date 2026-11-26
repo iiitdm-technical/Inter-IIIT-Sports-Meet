@@ -220,7 +220,7 @@ export async function getAdminFilteredEntries({
  * Filters for the unique-students view. Each student row is already unique per
  * (IIIT, roll number); sport and event match students with at least one such entry.
  */
-export function buildStudentFilterConditions({ iiit, sport, event, gender, rollNumber, name } = {}) {
+export function buildStudentFilterConditions({ iiit, sport, event, gender, rollNumber, name, q, checkedIn } = {}) {
   const conditions = [inArray(registrations.status, ["payment_pending", "submitted"])];
 
   if (iiit) {
@@ -242,6 +242,17 @@ export function buildStudentFilterConditions({ iiit, sport, event, gender, rollN
   }
   if (name) {
     conditions.push(sql`LOWER(${students.name}) LIKE LOWER(${`%${name.trim()}%`})`);
+  }
+  if (q && q.trim()) {
+    const pattern = `%${q.trim()}%`;
+    conditions.push(
+      sql`(LOWER(${students.name}) LIKE LOWER(${pattern}) OR LOWER(${students.rollNumber}) LIKE LOWER(${pattern}))`
+    );
+  }
+  if (checkedIn === "true" || checkedIn === true) {
+    conditions.push(eq(students.checkedIn, true));
+  } else if (checkedIn === "false" || checkedIn === false) {
+    conditions.push(eq(students.checkedIn, false));
   }
   return conditions;
 }
@@ -290,6 +301,9 @@ export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filter
       rollNumber: students.rollNumber,
       studentName: students.name,
       studentGender: students.gender,
+      checkedIn: students.checkedIn,
+      checkedInAt: students.checkedInAt,
+      checkedInBy: students.checkedInBy,
     })
     .from(students)
     .innerJoin(registrations, eq(students.registrationId, registrations.id))
@@ -325,13 +339,16 @@ export async function getAdminStats() {
   // entries list; payment progress is reported separately.
   const lockedStatuses = inArray(registrations.status, ["payment_pending", "submitted"]);
 
-  const [totalIIITsResult, registrationCounts, totalStudentsResult, totalEntriesResult, verifiedResult, storage] = await Promise.all([
+  const [totalIIITsResult, registrationCounts, totalStudentsResult, checkedInStudentsResult, totalEntriesResult, verifiedResult, storage] = await Promise.all([
     db.select({ count: count() }).from(users).where(eq(users.role, "iiit")),
     db.select({ status: registrations.status, count: count() }).from(registrations).where(lockedStatuses).groupBy(registrations.status),
     db.select({ gender: students.gender, count: count() }).from(students)
       .innerJoin(registrations, eq(students.registrationId, registrations.id))
       .where(lockedStatuses)
       .groupBy(students.gender),
+    db.select({ count: count() }).from(students)
+      .innerJoin(registrations, eq(students.registrationId, registrations.id))
+      .where(and(lockedStatuses, eq(students.checkedIn, true))),
     db.select({ count: count() }).from(studentEventParticipations)
       .innerJoin(registrations, eq(studentEventParticipations.registrationId, registrations.id))
       .where(lockedStatuses),
@@ -356,6 +373,7 @@ export async function getAdminStats() {
     paymentsSubmitted,
     paymentsVerified: verifiedResult.filter((row) => !pendingEarlier.has(row.iiitCode)).length,
     totalStudents,
+    checkedInStudents: Number(checkedInStudentsResult[0]?.count || 0),
     totalBoys: studentsByGender.M || 0,
     totalGirls: studentsByGender.F || 0,
     totalEventEntries: Number(totalEntriesResult[0]?.count || 0),
@@ -465,4 +483,111 @@ export async function reopenRegistration(iiitCode, adminUsername = null) {
     console.error("Could not tidy payment proofs after reopening:", error.message);
   }
   return result;
+}
+
+/**
+ * Fetch a single student with their IIIT info and registered events.
+ */
+export async function getStudentById(studentId) {
+  const db = getDb();
+  const [student] = await db
+    .select({
+      id: students.id,
+      registrationId: students.registrationId,
+      iiitCode: registrations.iiitCode,
+      iiitName: registrations.iiitName,
+      rollNumber: students.rollNumber,
+      studentName: students.name,
+      studentGender: students.gender,
+      checkedIn: students.checkedIn,
+      checkedInAt: students.checkedInAt,
+      checkedInBy: students.checkedInBy,
+    })
+    .from(students)
+    .innerJoin(registrations, eq(students.registrationId, registrations.id))
+    .where(and(eq(students.id, studentId), inArray(registrations.status, ["payment_pending", "submitted"])))
+    .limit(1);
+
+  if (!student) return null;
+  const events = await getParticipationsForStudents([student.id]);
+  return { ...student, events };
+}
+
+/**
+ * Marks a student as checked in with a UTC timestamp.
+ * Prevents duplicate check-in with 409 unless `override: true` is passed.
+ */
+export async function checkInStudent(studentId, adminUsername, { override = false } = {}) {
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    const [student] = await tx
+      .select({
+        id: students.id,
+        registrationId: students.registrationId,
+        iiitCode: students.iiitCode,
+        rollNumber: students.rollNumber,
+        studentName: students.name,
+        studentGender: students.gender,
+        checkedIn: students.checkedIn,
+        checkedInAt: students.checkedInAt,
+        checkedInBy: students.checkedInBy,
+      })
+      .from(students)
+      .where(eq(students.id, studentId))
+      .limit(1)
+      .for("update");
+
+    if (!student) {
+      const error = new Error("Student not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const [reg] = await tx
+      .select({ iiitName: registrations.iiitName, status: registrations.status })
+      .from(registrations)
+      .where(eq(registrations.id, student.registrationId))
+      .limit(1);
+
+    if (!reg || !["payment_pending", "submitted"].includes(reg.status)) {
+      const error = new Error("Student registration is not active");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (student.checkedIn && !override) {
+      const error = new Error("Student is already checked in. Enable override to check in again.");
+      error.statusCode = 409;
+      error.details = {
+        checkedInAt: student.checkedInAt,
+        checkedInBy: student.checkedInBy,
+      };
+      throw error;
+    }
+
+    const now = new Date();
+    await tx
+      .update(students)
+      .set({
+        checkedIn: true,
+        checkedInAt: now,
+        checkedInBy: adminUsername,
+        updatedAt: now,
+      })
+      .where(eq(students.id, student.id));
+
+    return {
+      id: student.id,
+      iiitCode: student.iiitCode,
+      iiitName: reg.iiitName,
+      rollNumber: student.rollNumber,
+      studentName: student.studentName,
+      studentGender: student.studentGender,
+      checkedIn: true,
+      checkedInAt: now,
+      checkedInBy: adminUsername,
+      wasAlreadyCheckedIn: Boolean(student.checkedIn),
+      previousCheckedInAt: student.checkedInAt || null,
+    };
+  });
 }

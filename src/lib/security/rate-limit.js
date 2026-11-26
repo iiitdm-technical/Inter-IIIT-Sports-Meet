@@ -18,6 +18,9 @@ export const LIMITS = {
   download: { limit: 300, windowSeconds: 60 * 60 },
   // Match photos: 5 per match, retakes included.
   photoUpload: { limit: 300, windowSeconds: 60 * 60 },
+  // Registration desk: busy check-in waves can process hundreds of students per hour.
+  checkIn: { limit: 1500, windowSeconds: 60 * 60 },
+  idCard: { limit: 1500, windowSeconds: 60 * 60 },
 };
 
 /**

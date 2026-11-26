@@ -71,6 +71,13 @@
       "when": 1795072657693,
       "tag": "0009_earlier_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1795722314913,
+      "tag": "0010_student_checkin",
+      "breakpoints": true
     }
   ]
 }
