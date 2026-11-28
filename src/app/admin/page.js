@@ -8,7 +8,8 @@ import { getAllSportsList } from "@/lib/sports/config";
 import useModalFocus from "@/components/useModalFocus";
 import { formatTravelDate, formatTravelMode } from "@/lib/registration/arrival";
 import { totalTravelling } from "@/lib/registration/contingent";
-import RegistrationDeskPanel from "@/components/admin/RegistrationDeskPanel";
+import CheckInPanel from "@/components/admin/CheckInPanel";
+import PrintIdsPanel from "@/components/admin/PrintIdsPanel";
 
 const formatMB = (bytes) => {
   const mb = bytes / 1024 / 1024;
@@ -476,7 +477,7 @@ export default function AdminDashboardPage() {
 
         {/* Tab Nav */}
         <div role="tablist" aria-label="Dashboard sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
-          {[["entries", "Registration Entries"], ["students", "Unique Students"], ["checkin", "Registration Desk"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
+          {[["entries", "Registration Entries"], ["students", "Unique Students"], ["checkin", "Check-in"], ["print", "Print IDs"], ["payments", "IIITs & Payments"], ["admins", "Admin Accounts"]].map(([tab, tabLabel]) => (
             <button
               key={tab}
               type="button"
@@ -832,14 +833,19 @@ export default function AdminDashboardPage() {
         </div>
         )}
 
-        {/* Registration Desk (Check-in & ID Cards) */}
+        {/* Student Check-in Tab */}
         {activeTab === "checkin" && (
-          <RegistrationDeskPanel
+          <CheckInPanel
             registrationsOverview={registrationsOverview}
             onCheckInSuccess={() => {
               refreshStats().catch(() => {});
             }}
           />
+        )}
+
+        {/* Print IDs Tab */}
+        {activeTab === "print" && (
+          <PrintIdsPanel registrationsOverview={registrationsOverview} />
         )}
 
         {/* IIITs & Payments Tab */}

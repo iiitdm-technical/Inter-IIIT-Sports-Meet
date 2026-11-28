@@ -16,6 +16,7 @@ export async function GET(request) {
     const name = searchParams.get("name") || undefined;
     const q = searchParams.get("q") || undefined;
     const checkedIn = searchParams.get("checkedIn") || undefined;
+    const sort = searchParams.get("sort") || undefined;
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
@@ -28,6 +29,7 @@ export async function GET(request) {
       name,
       q,
       checkedIn,
+      sort,
       page,
       limit,
     });

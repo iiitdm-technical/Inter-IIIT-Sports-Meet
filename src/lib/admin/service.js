@@ -1,4 +1,4 @@
-import { eq, and, sql, count, inArray } from "drizzle-orm";
+import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
 import { getDb } from "../../db/index.js";
 import { users, registrations, registrationDrafts, students, studentEventParticipations, paymentTransactions, earlierPayments } from "../../db/schema.js";
 import { describeEarlierPayment, earlierPaymentFrom, listEarlierPayments } from "../registration/earlier-payments.js";
@@ -276,7 +276,7 @@ export async function getParticipationsForStudents(studentIds) {
 /**
  * One row per attending student (per IIIT), with the events they are entered in.
  */
-export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filters } = {}) {
+export async function getAdminFilteredStudents({ page = 1, limit = 50, sort, ...filters } = {}) {
   const db = getDb();
   const where = and(...buildStudentFilterConditions(filters));
 
@@ -293,6 +293,10 @@ export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filter
   const byGender = Object.fromEntries(countResult.map((row) => [row.gender, Number(row.count)]));
   const total = countResult.reduce((sum, row) => sum + Number(row.count), 0);
 
+  const orderByClauses = sort === "checked_in_desc"
+    ? [desc(students.checkedInAt), registrations.iiitName, students.rollNumber]
+    : [registrations.iiitName, students.rollNumber];
+
   const studentRows = await db
     .select({
       id: students.id,
@@ -308,7 +312,7 @@ export async function getAdminFilteredStudents({ page = 1, limit = 50, ...filter
     .from(students)
     .innerJoin(registrations, eq(students.registrationId, registrations.id))
     .where(where)
-    .orderBy(registrations.iiitName, students.rollNumber)
+    .orderBy(...orderByClauses)
     .limit(limit)
     .offset(offset);
 
@@ -511,6 +515,31 @@ export async function getStudentById(studentId) {
   if (!student) return null;
   const events = await getParticipationsForStudents([student.id]);
   return { ...student, events };
+}
+
+/**
+ * Fetch multiple students by ID in the requested order (for batch ID sheet generation).
+ */
+export async function getStudentsByIds(studentIds) {
+  if (!Array.isArray(studentIds) || studentIds.length === 0) return [];
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: students.id,
+      iiitCode: registrations.iiitCode,
+      iiitName: registrations.iiitName,
+      rollNumber: students.rollNumber,
+      studentName: students.name,
+      studentGender: students.gender,
+      checkedIn: students.checkedIn,
+      checkedInAt: students.checkedInAt,
+    })
+    .from(students)
+    .innerJoin(registrations, eq(students.registrationId, registrations.id))
+    .where(and(inArray(students.id, studentIds), inArray(registrations.status, ["payment_pending", "submitted"])));
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return studentIds.map((id) => byId.get(id)).filter(Boolean);
 }
 
 /**
